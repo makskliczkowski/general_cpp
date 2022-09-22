@@ -18,7 +18,7 @@
 #endif
 
 
-
+#include <omp.h>
 #include <algorithm> 													// for std::ranges::copy depending on lib support
 #include <iostream>
 #include <ios>
@@ -63,8 +63,12 @@ R"(\)";
 #define stoutc(c) if(c) stout <<  std::setprecision(8) << std::fixed									// standard out conditional
 #define STR std::to_string
 #define STRP(str,prec) str_p(str, prec)
+#define DIAG arma::diagmat
 #define VEQ(name) valueEquals(#name,(name),2)
 #define VEQP(name,prec) valueEquals(#name,(name),prec)
+#define EYE(X) arma::eye(X,X)
+#define ZEROV(X) arma::zeros(X)
+#define ZEROM(X) arma::zeros(X,X)
 #define SPACE_VEC_D(Lx, Ly, Lz) v_3d<double>(Lx, v_2d<double>(Ly, v_1d<double>(Lz, 0)))
 #define SPACE_VEC(Lx, Ly, Lz) v_3d<int>(Lx, v_2d<int>(Ly, v_1d<int>(Lz, 0)))
 
@@ -87,7 +91,8 @@ const std::string kPS = std::string(kPSep);
 /*
 @brief Here we will state all the already implemented definitions that will help us building the user interfrace
 */
-namespace impDef {
+namespace impDef
+{
 	/*
 	/// Different Monte Carlo algorithms that can be provided inside the classes (for simplicity in enum form)
 	*/
@@ -104,6 +109,13 @@ namespace impDef {
 		hexagonal
 		//triangle,
 		//hexagonal
+	};
+
+	enum ham_types {
+		ising = 0,
+		heisenberg = 1,
+		heisenberg_dots = 2,
+		kitaev_heisenberg = 3
 	};
 }
 
