@@ -57,7 +57,7 @@ inline void user_interface::set_option(T& value, const v_1d<std::string>& argv, 
 		value = static_cast<T>(stod(option));													// set value to an option
 	if (geq_0 && value <= 0)																	// if the variable shall be bigger equal 0
 		this->set_default_msg(value, choosen_option.substr(1), \
-			choosen_option + " cannot be negative\n", rbm_ui::default_params);
+			choosen_option + " cannot be negative\n", default_params);
 }
 
 // string instance
