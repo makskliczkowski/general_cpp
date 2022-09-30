@@ -30,9 +30,13 @@ public:
 	int get_Ly()											const override { return this->Ly; };
 	int get_Lz()											const override { return this->Lz; };
 	int get_norm(int x, int y, int z)						const override { return this->spatialNorm[x][y][z]; };
+	int get_x_nn(int lat_site)								const override;
+	int get_y_nn(int lat_site)								const override;
+	int get_z_nn(int lat_site)								const override;
 	vec get_real_space_vec(int x, int y, int z)				const override;
 	v_1d<uint> get_nn_forward_number(int lat_site)			const override;
-
+	uint get_nn_forward_num(int lat_site)					const override;
+	uint get_nn_forward_num(int lat_site, int num)			const override;
 
 	// CALCULATORS
 	void calculate_nn_pbc() override;

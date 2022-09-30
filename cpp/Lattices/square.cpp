@@ -15,9 +15,14 @@ SquareLattice::SquareLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 	{
 	case 1:
 		this->Ly = 1; this->Lz = 1;
+		this->nn_forward = { 0 };
 		break;
 	case 2:
 		this->Lz = 1;
+		this->nn_forward = { 0,1 };
+		break;
+	case 3:
+		this->nn_forward = { 0,1,2 };
 		break;
 	default:
 		break;
@@ -35,6 +40,32 @@ SquareLattice::SquareLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 	// calculate k_space vectors
 	this->k_vectors = mat(this->Ns, 3, arma::fill::zeros);
 	this->calculate_k_vectors();
+}
+
+// ------------------------------------------------------------- Getters -------------------------------------------------------------
+
+/*
+* @brief returns the nn for a given x direction at a given lattice site
+*/
+int SquareLattice::get_x_nn(int lat_site) const
+{
+	return this->get_nn(lat_site, 0);
+}
+
+/*
+* @brief returns the nn for a given y direction at a given lattice site
+*/
+int SquareLattice::get_y_nn(int lat_site) const
+{
+	return this->dim == 2 ? this->get_nn(lat_site, 1) : this->get_nn(lat_site, 0);
+}
+
+/*
+* @brief returns the nn for a given z direction at a given lattice site
+*/
+int SquareLattice::get_z_nn(int lat_site) const
+{
+	return this->dim == 3 ? this->get_nn(lat_site, 2) : this->get_nn(lat_site, 0);
 }
 
 /*
@@ -55,7 +86,6 @@ void SquareLattice::calculate_nn_pbc()
 	case 1:
 		// One dimension 
 		this->nearest_neighbors = std::vector<std::vector<int>>(Lx, std::vector<int>(2, 0));
-		this->nearest_nei_forward_num = 1;
 		for (int i = 0; i < Lx; i++) {
 			this->nearest_neighbors[i][0] = myModuloEuclidean(i + 1, Lx);											// right
 			this->nearest_neighbors[i][1] = myModuloEuclidean(i - 1, Lx);											// left
@@ -65,7 +95,6 @@ void SquareLattice::calculate_nn_pbc()
 		// Two dimensions 
 		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
 		this->nearest_neighbors = std::vector<std::vector<int>>(Ns, std::vector<int>(4, 0));
-		this->nearest_nei_forward_num = 2;
 		for (int i = 0; i < Ns; i++) {
 			this->nearest_neighbors[i][0] = static_cast<int>(1.0 * i / Lx) * Lx + myModuloEuclidean(i + 1, Lx);		// right
 			this->nearest_neighbors[i][1] = myModuloEuclidean(i + Lx, Ns);											// top
@@ -183,8 +212,21 @@ void SquareLattice::calculate_k_vectors()
 */
 v_1d<uint> SquareLattice::get_nn_forward_number(int lat_site) const
 {
-	if (this->dim == 1)
-		return { 0 };
-	else
-		return { 0, 1 };
+	return this->nn_forward;
+}
+
+/*
+* @brief returns the integer number of neighbors for a given site
+*/
+uint SquareLattice::get_nn_forward_num(int lat_site) const
+{
+	return this->nn_forward.size();
+}
+
+/*
+* @brief returns the integer given neighbor for a given site
+*/
+uint SquareLattice::get_nn_forward_num(int lat_site, int num) const
+{
+	return this->nn_forward[num];
 }

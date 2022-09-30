@@ -27,7 +27,8 @@ protected:
 	string type;													// type of the lattice
 	int _BC = 0;													// boundary conditions 0 = PBC, 1 = OBC
 	v_2d<int> nearest_neighbors;									// vector of the nearest neighbors
-	uint nearest_nei_forward_num;									// number of nearest neighbors forward
+	v_1d<uint> nn_forward;											// number of nearest neighbors forward
+
 
 	v_2d<int> next_nearest_neighbors;								// vector of the next nearest neighbors
 	v_2d<int> coordinates;											// vector of real coordiates allowing to get the distance between lattice points
@@ -49,6 +50,12 @@ public:
 	virtual vec get_real_space_vec(int x, int y, int z)		const = 0;
 	virtual int get_norm(int x, int y, int z)				const = 0;
 	virtual v_1d<uint> get_nn_forward_number(int lat_site)	const = 0;
+	virtual uint get_nn_forward_num(int lat_site)			const = 0;
+	virtual uint get_nn_forward_num(int lat_site, int num)	const = 0;
+
+	virtual int get_x_nn(int lat_site)						const = 0;																// retruns nn in a given direction x 
+	virtual int get_y_nn(int lat_site)						const = 0;																// retruns nn in a given direction y
+	virtual int get_z_nn(int lat_site)						const = 0;																// retruns nn in a given direction z
 	auto get_Ns()											const RETURNS(this->Ns);												// returns the number of sites
 	auto get_Dim()											const RETURNS(this->dim);												// returns dimension of the lattice
 	auto get_BC()											const RETURNS(this->_BC);												// returns the boundary conditions
@@ -63,7 +70,7 @@ public:
 	auto get_type()											const RETURNS(this->type);												// returns the type of the lattice as a string
 	auto get_info()											const RETURNS(VEQ(type) + "," + VEQ(_BC) + "," + VEQ(dim) + "," + VEQ(Ns) + "," + VEQ(get_Lx()) + "," + VEQ(get_Ly()) + "," + VEQ(get_Lz()));
 	auto get_k_vectors()									const RETURNS(this->k_vectors);											// returns all k vectors in the RBZ
-	auto get_k_vectors(uint row)							RETURNS(this->k_vectors.row(row));								// returns the given k vector row
+	auto get_k_vectors(uint row)							RETURNS(this->k_vectors.row(row));										// returns the given k vector row
 	auto get_nei(int lat_site, int corr_len)				const;
 
 

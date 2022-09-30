@@ -14,9 +14,11 @@ HexagonalLattice::HexagonalLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 	{
 	case 1:
 		this->Ly = 1; this->Lz = 1;
+		this->nn_forward = { 0 };
 		break;
 	case 2:
 		this->Lz = 1;
+		this->nn_forward = { 0, 1, 2 };
 		break;
 	default:
 		break;
@@ -38,6 +40,32 @@ HexagonalLattice::HexagonalLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 
 	//! make vectors
 	this->calculate_k_vectors();
+}
+
+// ------------------------------------------------------------- Getters -------------------------------------------------------------
+
+/*
+* @brief returns the nn for a given x direction at a given lattice site
+*/
+int HexagonalLattice::get_x_nn(int lat_site) const
+{
+	return this->dim == 2 ? this->get_nn(lat_site, 2) : this->get_nn(lat_site, 0);
+}
+
+/*
+* @brief returns the nn for a given y direction at a given lattice site
+*/
+int HexagonalLattice::get_y_nn(int lat_site) const
+{
+	return this->dim == 2 ? this->get_nn(lat_site, 1) : this->get_nn(lat_site, 0);
+}
+
+/*
+* @brief returns the nn for a given z direction at a given lattice site
+*/
+int HexagonalLattice::get_z_nn(int lat_site) const
+{
+	return this->get_nn(lat_site, 0);
 }
 
 /*
@@ -68,7 +96,6 @@ void HexagonalLattice::calculate_nn_pbc()
 	case 1:
 		// One dimension 
 		this->nearest_neighbors = v_2d<int>(Ns, v_1d<int>(1, 0));
-		this->nearest_nei_forward_num = 1;
 		for (int i = 0; i < Lx; i++) {
 			// z bond only
 			this->nearest_neighbors[2 * i][0] = 2 * i + 1; // this is the neighbor top
@@ -79,7 +106,6 @@ void HexagonalLattice::calculate_nn_pbc()
 		// Two dimensions 
 		// numeration begins from the bottom as 0 to the second as 1 with lattice vectors move
 		this->nearest_neighbors = v_2d<int>(Ns, v_1d<int>(3, 0));
-		this->nearest_nei_forward_num = 2;
 		for (int i = 0; i < Lx; i++) {
 			for (int j = 0; j < Ly; j++) {
 				// current elements a corresponding to first site, b corresponding to the second one
@@ -307,4 +333,24 @@ v_1d<uint> HexagonalLattice::get_nn_forward_number(int lat_site) const
 		return { 0 };
 	else
 		return { 1,2 };
+}
+
+/*
+* @brief returns the integer number of neighbors for a given site
+*/
+uint HexagonalLattice::get_nn_forward_num(int lat_site) const
+{
+	//if (this->dim == 1 || (this->dim == 2 && lat_site % 2 == 0))
+	//	return 1;
+	//else
+	//	return 2;
+	return this->nn_forward.size();
+}
+
+/*
+* @brief returns the integer given neighbor for a given site
+*/
+uint HexagonalLattice::get_nn_forward_num(int lat_site, int num) const
+{
+	return this->nn_forward[num];
 }

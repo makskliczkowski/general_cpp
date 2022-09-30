@@ -15,6 +15,7 @@
 
 class user_interface {
 protected:
+	std::unordered_map <std::string, std::string> default_params;
 	int thread_number;																				 		// number of threads
 	int boundary_conditions;																		 		// boundary conditions - 0 - PBC, 1 - OBC, 2 - ABC,...
 	std::string saving_dir;
