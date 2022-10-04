@@ -39,7 +39,7 @@ using clk = std::chrono::steady_clock;
 #    define have_filesystem 1
 #    define experimental_filesystem
 namespace fs = std::experimental::filesystem;
-using clk = std::chrono::system_clock;
+using clk = std::chrono::steady_clock;
 #  else
 #    define have_filesystem 0
 #  endif
