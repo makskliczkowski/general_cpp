@@ -68,7 +68,7 @@ public:
 	auto get_spatial_norm()									const RETURNS(this->spatialNorm);										// returns the spatial norm
 	auto get_spatial_norm(int x, int y, int z)				const RETURNS(this->spatialNorm[x][y][z]);								// returns the spatial norm at x,y,z
 	auto get_type()											const RETURNS(this->type);												// returns the type of the lattice as a string
-	auto get_info()											const RETURNS(VEQ(type) + "," + VEQ(_BC) + "," + VEQ(dim) + "," + VEQ(Ns) + "," + VEQ(get_Lx()) + "," + VEQ(get_Ly()) + "," + VEQ(get_Lz()));
+	auto get_info()											const RETURNS(VEQ(type) + "," + VEQ(_BC) + "," + VEQ(dim) + "," + VEQ(Ns) + ",Lx=" + STR(get_Lx()) + ",Ly=" + STR(get_Ly()) + ",Lz=" + STR(get_Lz()));
 	auto get_k_vectors()									const RETURNS(this->k_vectors);											// returns all k vectors in the RBZ
 	auto get_k_vectors(uint row)							RETURNS(this->k_vectors.row(row));										// returns the given k vector row
 	auto get_nei(int lat_site, int corr_len)				const;
@@ -157,7 +157,7 @@ inline auto Lattice::get_nei(int lat_site, int corr_len) const
 * @return Three-dimensional tuple (vector of vec[i]-vec[j])
 */
 inline t_3d<int> Lattice::getSiteDifference(t_3d<int> i, uint j) const
-{	
+{
 	auto [x1, y1, z1] = i;
 	const int z = z1 - this->get_coordinates(j, 2);
 	const int y = y1 - this->get_coordinates(j, 1);
