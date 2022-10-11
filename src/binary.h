@@ -8,33 +8,33 @@
 
 // --------------------------------------------------------				SUPPRESS WARNINGS				--------------------------------------------------------
 #if defined(_MSC_VER)
-	#define DISABLE_WARNING_PUSH           __pragma(warning( push ))
-	#define DISABLE_WARNING_POP            __pragma(warning( pop )) 
-	#define DISABLE_WARNING(warningNumber) __pragma(warning( disable : warningNumber ))
-	
-	#define DISABLE_OVERFLOW								 DISABLE_WARNING(26451)
-	#define DISABLE_WARNING_UNREFERENCED_FORMAL_PARAMETER    DISABLE_WARNING(4100)
-	#define DISABLE_WARNING_UNREFERENCED_FUNCTION            DISABLE_WARNING(4505)
-	// other warnings you want to deactivate...
+#define DISABLE_WARNING_PUSH           __pragma(warning( push ))
+#define DISABLE_WARNING_POP            __pragma(warning( pop )) 
+#define DISABLE_WARNING(warningNumber) __pragma(warning( disable : warningNumber ))
+
+#define DISABLE_OVERFLOW								 DISABLE_WARNING(26451)
+#define DISABLE_WARNING_UNREFERENCED_FORMAL_PARAMETER    DISABLE_WARNING(4100)
+#define DISABLE_WARNING_UNREFERENCED_FUNCTION            DISABLE_WARNING(4505)
+// other warnings you want to deactivate...
 
 #elif defined(__GNUC__) || defined(__clang__)
-	#define DO_PRAGMA(X) _Pragma(#X)
-	#define DISABLE_WARNING_PUSH           DO_PRAGMA(GCC diagnostic push)
-	#define DISABLE_WARNING_POP            DO_PRAGMA(GCC diagnostic pop) 
-	#define DISABLE_WARNING(warningName)   DO_PRAGMA(GCC diagnostic ignored #warningName)
+#define DO_PRAGMA(X) _Pragma(#X)
+#define DISABLE_WARNING_PUSH           DO_PRAGMA(GCC diagnostic push)
+#define DISABLE_WARNING_POP            DO_PRAGMA(GCC diagnostic pop) 
+#define DISABLE_WARNING(warningName)   DO_PRAGMA(GCC diagnostic ignored #warningName)
 
-	#define DISABLE_OVERFLOW								 DISABLE_WARNING(-Wstrict-overflow)
-	#define DISABLE_WARNING_UNREFERENCED_FORMAL_PARAMETER    DISABLE_WARNING(-Wunused-parameter)
-	#define DISABLE_WARNING_UNREFERENCED_FUNCTION            DISABLE_WARNING(-Wunused-function)
-	// other warnings you want to deactivate... 
+#define DISABLE_OVERFLOW								 DISABLE_WARNING(-Wstrict-overflow)
+#define DISABLE_WARNING_UNREFERENCED_FORMAL_PARAMETER    DISABLE_WARNING(-Wunused-parameter)
+#define DISABLE_WARNING_UNREFERENCED_FUNCTION            DISABLE_WARNING(-Wunused-function)
+// other warnings you want to deactivate... 
 
 #else
 	// another compiler: intel,...
-	#define DISABLE_WARNING_PUSH
-	#define DISABLE_WARNING_POP
-	#define DISABLE_WARNING_UNREFERENCED_FORMAL_PARAMETER
-	#define DISABLE_WARNING_UNREFERENCED_FUNCTION
-	// other warnings you want to deactivate... 
+#define DISABLE_WARNING_PUSH
+#define DISABLE_WARNING_POP
+#define DISABLE_WARNING_UNREFERENCED_FORMAL_PARAMETER
+#define DISABLE_WARNING_UNREFERENCED_FUNCTION
+// other warnings you want to deactivate... 
 #endif
 
 #define NO_OVERFLOW(X)\
@@ -59,15 +59,15 @@ DISABLE_WARNING_PUSH // include <armadillo> and suppress its warnings, cause dev
 
 // use binary representation 0/1 instead of -1/1
 #ifdef USE_BINARY
-	#undef SPIN
+#undef SPIN
 #endif
 
 #ifdef SPIN
-	#define INT_TO_BASE_BIT intToBaseBitSpin
-	#define BASE_TO_INT baseToIntSpin
+#define INT_TO_BASE_BIT intToBaseBitSpin
+#define BASE_TO_INT baseToIntSpin
 #else
-	#define INT_TO_BASE_BIT intToBaseBit
-	#define BASE_TO_INT baseToInt
+#define INT_TO_BASE_BIT intToBaseBit
+#define BASE_TO_INT baseToInt
 #endif // SPIN
 
 
@@ -86,16 +86,18 @@ const v_1d<u64> BinaryPowers = { ULLPOW(0), ULLPOW(1), ULLPOW(2), ULLPOW(3),
 								ULLPOW(16), ULLPOW(17), ULLPOW(18), ULLPOW(19),
 								ULLPOW(20), ULLPOW(21), ULLPOW(22), ULLPOW(23),
 								ULLPOW(24), ULLPOW(25), ULLPOW(26), ULLPOW(27),
-								ULLPOW(28), ULLPOW(29), ULLPOW(30), ULLPOW(31) };                   
+								ULLPOW(28), ULLPOW(29), ULLPOW(30), ULLPOW(31),
+								ULLPOW(32), ULLPOW(33), ULLPOW(34), ULLPOW(35),
+								ULLPOW(36), ULLPOW(37), ULLPOW(38), ULLPOW(39) };
 // ----------------------------------------------------------------------------- 				  binary search  				 -----------------------------------------------------------------------------
 
 /*
 * @brief Finding index of base vector in mapping to reduced basis
-* @typeparam T 
-* @param arr arary/vector conataing the mapping to the reduced basis 
-* @param l_point left maring for binary search 
-* @param r_point right margin for binary search 
-* @param element element to search in the array 
+* @typeparam T
+* @param arr arary/vector conataing the mapping to the reduced basis
+* @param l_point left maring for binary search
+* @param r_point right margin for binary search
+* @param element element to search in the array
 * @returns -1 if not found else index of @ref element
 */
 template <class T>
@@ -231,7 +233,7 @@ inline void intToBaseBitSpin(u64 idx, v_1d<T>& vec) {
 #ifdef DEBUG_BINARY
 	auto start = std::chrono::high_resolution_clock::now();
 #endif // DEBUG
-//#pragma omp parallel for
+	//#pragma omp parallel for
 	for (int k = 0; k < size; k++)
 		vec[k] = checkBit(idx, size - 1 - k) ? 1.0 : -1.0;
 #ifdef DEBUG_BINARY
@@ -243,8 +245,8 @@ inline void intToBaseBitSpin(u64 idx, v_1d<T>& vec) {
 
 /*
 *@brief Conversion to system vector of a given base (modulo)
-*@param idx numner for conversion 
-*@param vec vector containing the binary string 
+*@param idx numner for conversion
+*@param vec vector containing the binary string
 *@param base base to covert to
 */
 inline void intToBase(u64 idx, v_1d<int>& vec, int base = 2) {
@@ -320,9 +322,9 @@ inline void intToBase(u64 idx, Col<T>& vec, const v_1d<u64>& powers) {
 
 /*
 *@brief Conversion from base vector to an integer
-*@param vec string 
+*@param vec string
 *@param base base to covert to
-*@returns unsigned long long integer 
+*@returns unsigned long long integer
 */
 inline u64 baseToInt(const v_1d<int>& vec, int base = 2) {
 	u64 val = 0;
@@ -337,15 +339,15 @@ inline u64 baseToInt(const v_1d<int>& vec, int base = 2) {
 
 /*
 *@brief Conversion from base vector to an integer
-*@param vec string 
+*@param vec string
 *@param powers precalculated powers vector
 *@param base base to covert to
-*@returns unsigned long long integer 
+*@returns unsigned long long integer
 */
 inline u64 baseToInt(const v_1d<int>& vec, const v_1d<u64>& powers) {
 	u64 val = 0;
 	const u64 size = vec.size();
-//#pragma omp parallel for reduction(+:val)
+	//#pragma omp parallel for reduction(+:val)
 	for (int k = 0; k < size; k++)
 		val += static_cast<u64>(vec[size - 1 - k]) * powers[k];
 	return val;
@@ -362,7 +364,7 @@ template<typename T>
 inline u64 baseToInt(const Col<T>& vec, const v_1d<u64>& powers) {
 	u64 val = 0;
 	const u64 size = vec.size();
-//#pragma omp parallel for reduction(+:val)
+	//#pragma omp parallel for reduction(+:val)
 	for (int k = 0; k < size; k++)
 		val += static_cast<u64>(vec(size - 1 - k)) * powers[k];
 	return val;
@@ -379,7 +381,7 @@ template<typename T>
 inline u64 baseToInt(const Col<T>& vec) {
 	u64 val = 0;
 	const u64 size = vec.size();
-//#pragma omp parallel for reduction(+:val)
+	//#pragma omp parallel for reduction(+:val)
 	for (int k = 0; k < size; k++)
 		val += static_cast<u64>(vec(size - 1 - k)) * BinaryPowers[k];
 	return val;
@@ -397,9 +399,9 @@ template<typename T>
 inline u64 baseToIntSpin(const Col<T>& vec, const v_1d<u64>& powers) {
 	u64 val = 0;
 	const u64 size = vec.size();
-//#pragma omp parallel for reduction(+:val)
+	//#pragma omp parallel for reduction(+:val)
 	for (int k = 0; k < size; k++)
-		val += static_cast<u64>((vec(size - 1 - k) + 1.0)/2.0) * powers[k];
+		val += static_cast<u64>((vec(size - 1 - k) + 1.0) / 2.0) * powers[k];
 	return val;
 }
 
@@ -407,7 +409,7 @@ template<typename T>
 inline u64 baseToIntSpin(const Col<T>& vec) {
 	u64 val = 0;
 	const u64 size = vec.size();
-//#pragma omp parallel for reduction(+:val)
+	//#pragma omp parallel for reduction(+:val)
 	for (int k = 0; k < size; k++)
 		val += static_cast<u64>((std::real(vec(size - 1 - k)) + 1.0) / 2.0) * BinaryPowers[k];
 	return val;
@@ -419,7 +421,7 @@ template<typename T1, typename T2>
 inline T1 cdotm(arma::Col<T1> lv, arma::Col<T2> rv, int numthreads = 1) {
 	//if (lv.size() != rv.size()) throw "not matching sizes";
 	T1 acc = 0;
-//#pragma omp parallel for reduction(+ : acc) numthreads(numthreads)
+	//#pragma omp parallel for reduction(+ : acc) numthreads(numthreads)
 	for (auto i = 0; i < lv.size(); i++)
 		acc += std::conj(lv(i)) * rv(i);
 	return acc;
@@ -429,7 +431,7 @@ template<typename T1, typename T2>
 inline T1 dotm(arma::Col<T1> lv, arma::Col<T2> rv, int numthreads = 1) {
 	//if (lv.size() != rv.size()) throw "not matching sizes";
 	T1 acc = 0;
-//#pragma omp parallel for reduction(+ : acc) numthreads(numthreads)
+	//#pragma omp parallel for reduction(+ : acc) numthreads(numthreads)
 	for (auto i = 0; i < lv.size(); i++)
 		acc += (lv(i)) * rv(i);
 	return acc;

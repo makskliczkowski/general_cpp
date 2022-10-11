@@ -130,10 +130,12 @@ void SquareLattice::calculate_nn_obc()
 		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
 		this->nearest_neighbors = std::vector<std::vector<int>>(Ns, std::vector<int>(4, 0));
 		for (int i = 0; i < Ns; i++) {
-			this->nearest_neighbors[i][0] = (i + 1) < Lx ? static_cast<int>(1.0 * i / Lx) * Lx + i + 1 : -1;		// right
-			this->nearest_neighbors[i][1] = (i - 1) >= 0 ? static_cast<int>(1.0 * i / Lx) * Lx + i - 1 : -1;		// left
-			this->nearest_neighbors[i][2] = i + Lx < Ns ? i + Lx : -1;												// top
-			this->nearest_neighbors[i][3] = i - Lx >= 0 ? i - Lx : -1;												// bottom
+			auto x = i % Lx;
+			auto y = static_cast<int>(1.0 * i / Lx) % Ly;
+			this->nearest_neighbors[i][0] = (i + 1) < (y + 1) * Lx ? y * Lx + x + 1 : -1;					// right
+			this->nearest_neighbors[i][1] = i + Lx < Ns ? i + Lx : -1;										// top
+			this->nearest_neighbors[i][2] = (i - 1) >= y * Lx ? y * Lx + x - 1 : -1;						// left
+			this->nearest_neighbors[i][3] = i - Lx >= 0 ? i - Lx : -1;										// bottom
 		}
 		break;
 	case 3:
