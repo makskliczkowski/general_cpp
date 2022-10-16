@@ -18,7 +18,7 @@ private:
 	// lattice parameters
 	double a = 1;
 	double c = 1;
-	
+
 
 public:
 	// CONSTRUCTORS
@@ -30,19 +30,27 @@ public:
 	int get_Lx()												const override { return this->Lx; };
 	int get_Ly()												const override { return this->Ly; };
 	int get_Lz()												const override { return this->Lz; };
-	int get_norm(int x, int y, int z) const override			{ return this->spatialNorm[x][y][z]; };
+	int get_norm(int x, int y, int z)							const override { return this->spatialNorm[x][y][z]; };
 	int get_x_nn(int lat_site)									const override;
 	int get_y_nn(int lat_site)									const override;
 	int get_z_nn(int lat_site)									const override;
 	vec get_real_space_vec(int x, int y, int z)					const override;
+
+	// ----------------------- GETTERS NEI
 	v_1d<uint> get_nn_forward_number(int lat_site)				const override;
-	uint get_nn_forward_num(int lat_site)						const override;
+	v_1d<uint> get_nnn_forward_number(int lat_site)				const override;
 	uint get_nn_forward_num(int lat_site, int num)				const override;
+	uint get_nnn_forward_num(int lat_site, int num)				const override;
 
 	// CALCULATORS
+	// --- nn --- 
 	void calculate_nn_pbc() override;
 	void calculate_nn_obc() override;
+	void calculate_nn_mbc() override;
+	// --- nnn --- 
 	void calculate_nnn_pbc() override;
+	void calculate_nnn_obc() override;
+	// --- coords --- 
 	void calculate_coordinates() override;
 
 	// SYMMETRIES

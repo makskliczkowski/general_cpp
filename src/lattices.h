@@ -25,12 +25,14 @@ protected:
 	unsigned int dim = 1;											// the dimensionality of the lattice 1,2,3
 	unsigned int Ns = 1;											// number of lattice sites
 	string type;													// type of the lattice
-	int _BC = 0;													// boundary conditions 0 = PBC, 1 = OBC
+	int _BC = 0;													// boundary conditions 0 = PBC, 1 = OBC, 2 = MBC [PBC->x;OBC->y],
+	// --- nn --- 
 	v_2d<int> nearest_neighbors;									// vector of the nearest neighbors
 	v_1d<uint> nn_forward;											// number of nearest neighbors forward
-
-
+	// --- nnn --- 
 	v_2d<int> next_nearest_neighbors;								// vector of the next nearest neighbors
+	v_1d<uint> nnn_forward;											// number of nearest neighbors forward
+	// --- coords ---
 	v_2d<int> coordinates;											// vector of real coordiates allowing to get the distance between lattice points
 	v_3d<int> spatialNorm;											// norm for averaging over all spatial sites
 
@@ -49,10 +51,16 @@ public:
 	// ----------------------- GETTERS
 	virtual vec get_real_space_vec(int x, int y, int z)		const = 0;
 	virtual int get_norm(int x, int y, int z)				const = 0;
-	virtual v_1d<uint> get_nn_forward_number(int lat_site)	const = 0;
-	virtual uint get_nn_forward_num(int lat_site)			const = 0;
-	virtual uint get_nn_forward_num(int lat_site, int num)	const = 0;
 
+	// ----------------------- GETTERS NEI
+	virtual v_1d<uint> get_nn_forward_number(int lat_site)	const = 0;
+	virtual v_1d<uint> get_nnn_forward_number(int lat_site)	const = 0;
+	auto get_nn_forward_num(int lat_site)					const RETURNS(this->nn_forward.size());
+	auto get_nnn_forward_num(int lat_site)					const RETURNS(this->nnn_forward.size());
+	virtual uint get_nn_forward_num(int lat_site, int num)	const = 0;
+	virtual uint get_nnn_forward_num(int lat_site, int num)	const = 0;
+
+	// ----------------------- GETTERS OTHER
 	virtual int get_x_nn(int lat_site)						const = 0;																// retruns nn in a given direction x 
 	virtual int get_y_nn(int lat_site)						const = 0;																// retruns nn in a given direction y
 	virtual int get_z_nn(int lat_site)						const = 0;																// retruns nn in a given direction z
@@ -63,7 +71,7 @@ public:
 	auto get_nnn(int lat_site, int nei_num)					const RETURNS(this->next_nearest_neighbors[lat_site][nei_num]);			// returns given next nearest nei at given lat site
 	auto get_nn_number(int lat_site)						const RETURNS(this->nearest_neighbors[lat_site].size());				// returns the number of nn
 	auto get_nnn_number(int lat_site)						const RETURNS(this->next_nearest_neighbors[lat_site].size());			// returns the number of nnn
-	//auto get_coordinates(int lat_site)						const RETURNS(make_tuple(this->coordinates[lat_site][0], this->coordinates[lat_site][1], this->coordinates[lat_site][2]));
+
 	auto get_coordinates(int lat_site, int axis)			const RETURNS(this->coordinates[lat_site][axis]);						// returns the given coordinate
 	auto get_spatial_norm()									const RETURNS(this->spatialNorm);										// returns the spatial norm
 	auto get_spatial_norm(int x, int y, int z)				const RETURNS(this->spatialNorm[x][y][z]);								// returns the spatial norm at x,y,z
@@ -76,10 +84,16 @@ public:
 
 	// ----------------------- CALCULATORS
 	void calculate_nn();
+	void calculate_nnn();
 	void calculate_spatial_norm();
+	// --- nn --- 
 	virtual void calculate_nn_pbc() = 0;
 	virtual void calculate_nn_obc() = 0;
+	virtual void calculate_nn_mbc() = 0;
+	// --- nnn --- 
 	virtual void calculate_nnn_pbc() = 0;
+	virtual void calculate_nnn_obc() = 0;
+	// --- coords --- 
 	virtual void calculate_coordinates() = 0;
 
 	// ----------------------- SYMMETRY
@@ -101,12 +115,38 @@ inline void Lattice::calculate_nn() {
 	{
 	case 0:
 		this->calculate_nn_pbc();
-		stout << "->Using PBC" << EL;
+		stout << "->nn -- using PBC" << EL;
 		//this->calculate_nnn_pbc();
 		break;
 	case 1:
 		this->calculate_nn_obc();
-		stout << "->Using OBC" << EL;
+		stout << "->nn -- using OBC" << EL;
+		break;
+	case 2:
+		this->calculate_nn_mbc();
+		stout << "->nn -- using MBC" << EL;
+		break;
+	default:
+		this->calculate_nn_pbc();
+		break;
+	}
+}
+
+/*
+* @brief calculates the next nearest neighbors
+*/
+inline void Lattice::calculate_nnn()
+{
+	switch (this->_BC)
+	{
+	case 0:
+		this->calculate_nnn_pbc();
+		stout << "->nnn -- using PBC" << EL;
+		//this->calculate_nnn_pbc();
+		break;
+	case 1:
+		this->calculate_nnn_obc();
+		stout << "->nnn -- using OBC" << EL;
 		break;
 	default:
 		this->calculate_nn_pbc();

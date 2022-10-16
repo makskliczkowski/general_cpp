@@ -21,7 +21,7 @@ private:
 
 public:
 	// CONSTRUCTORS
-	~SquareLattice() = default;	
+	~SquareLattice() = default;
 	SquareLattice() = default;
 	SquareLattice(int Lx, int Ly = 1, int Lz = 1, int dim = 1, int _BC = 0);											// general constructor
 
@@ -34,37 +34,45 @@ public:
 	int get_y_nn(int lat_site)								const override;
 	int get_z_nn(int lat_site)								const override;
 	vec get_real_space_vec(int x, int y, int z)				const override;
+
+	// ----------------------- GETTERS NEI
 	v_1d<uint> get_nn_forward_number(int lat_site)			const override;
-	uint get_nn_forward_num(int lat_site)					const override;
+	v_1d<uint> get_nnn_forward_number(int lat_site)			const override;
 	uint get_nn_forward_num(int lat_site, int num)			const override;
+	uint get_nnn_forward_num(int lat_site, int num)			const override;
 
 	// CALCULATORS
+	// --- nn ---
 	void calculate_nn_pbc() override;
 	void calculate_nn_obc() override;
+	void calculate_nn_mbc() override;
+	// --- nnn --- 
 	void calculate_nnn_pbc() override;
+	void calculate_nnn_obc() override;
+	// --- coords --- 
 	void calculate_coordinates() override;
-	
+
 	// SYMMETRIES
 	std::tuple<int, int, int> getNumElems() override {
-		if(!this->symmetry)
+		if (!this->symmetry)
 			return std::make_tuple(2 * this->Lx - 1, 2 * this->Ly - 1, 2 * this->Lz - 1);
 
 		switch (this->_BC)
 		{
-		//case 0:
-		//	return std::make_tuple(this->Lx / 2, this->Ly / 2, this->Lz / 2);
-		//	break;
+			//case 0:
+			//	return std::make_tuple(this->Lx / 2, this->Ly / 2, this->Lz / 2);
+			//	break;
 		default:
 			return std::make_tuple(this->Lx, this->Ly, this->Lz);
 			break;
 		}
 	}
-	
+
 	t_3d<int> getSymPos(int x, int y, int z) override {
 		if (!this->symmetry)
 			return std::make_tuple(x + Lx - 1, y + Ly - 1, z + Lz - 1);
 	}
-	
+
 	t_3d<int> getSymPosInv(int x, int y, int z) override {
 		if (!this->symmetry)
 			return std::make_tuple(x - (Lx - 1), y - (Ly - 1), z - (Lz - 1));
