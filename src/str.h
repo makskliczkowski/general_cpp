@@ -32,7 +32,7 @@ using t_2d = std::pair<T, T>;										// 2d tuple - pair
 * @return splitted string
 */
 inline v_1d<std::string> split_str(const std::string& s, std::string delimiter) {
-	size_t pos_start = 0, pos_end, delim_len = delimiter.length();
+	uint pos_start = 0, pos_end, delim_len = delimiter.length();
 	std::string token;
 	std::vector<std::string> res;
 

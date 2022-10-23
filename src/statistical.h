@@ -11,7 +11,7 @@
 * @returns average in each bin
 */
 //template<typename T>
-//inline v_1d<T> binning(const v_1d<T>& seriesData, size_t nBins, size_t binSize){
+//inline v_1d<T> binning(const v_1d<T>& seriesData, uint nBins, uint binSize){
 //    v_1d<T> bins(nBins, 0);
 //    if(binSize * nBins > seriesData.size()) throw "Cannot create bins of insufficient elements";
 //    for(int i = 0; i < bins.size(); i++)
@@ -26,7 +26,7 @@
 //* @param binSize the size of a given single bin
 //*/
 //template<typename T>
-//inline v_1d<T> binning(const v_1d<T>& seriesData, v_1d<T>& bins, size_t binSize){
+//inline v_1d<T> binning(const v_1d<T>& seriesData, v_1d<T>& bins, uint binSize){
 //    if(binSize * bins.size() > seriesData.size()) throw "Cannot create bins of insufficient elements";
 //    for(int i = 0; i < bins.size(); i++)
 //        bins[i] = std::accumulate(seriesData.begin() + binSize * i, seriesData.end() + binSize * (i+1) - 1,  decltype(vector)::value_type(0))/binSize;
@@ -39,7 +39,7 @@
 * @param binSize the size of a given single bin
 */
 template<typename T>
-inline v_1d<T> binning(const arma::Col<T>& seriesData, arma::Col<T>& bins, size_t binSize){
+inline v_1d<T> binning(const arma::Col<T>& seriesData, arma::Col<T>& bins, uint binSize){
     if(binSize * bins.size() > seriesData.size()) throw "Cannot create bins of insufficient elements";
     for(int i = 0; i < bins.size(); i++)
         bins(i) = arma::mean(seriesData.subvec(binSize * i, binSize*(i+1) - 1));
