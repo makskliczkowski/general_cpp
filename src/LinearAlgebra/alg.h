@@ -1,7 +1,8 @@
 #pragma once
 #ifndef ALG_H
 #define ALG_H
-
+#define DH5_USE_110_API
+#define D_HDF5USEDLL_ 
 // armadillo flags:
 #define ARMA_USE_LAPACK                                                                     
 //#define ARMA_BLAS_LONG_LONG                                                                 // using long long inside LAPACK call
@@ -11,6 +12,7 @@
 #define ARMA_USE_MKL_TYPES
 #define ARMA_WARN_LEVEL 1
 #define ARMA_DONT_USE_OPENMP
+#define ARMA_USE_HDF5
 ////#define ARMA_USE_OPENMP
 //#define ARMA_ALLOW_FAKE_GCC
 #include <armadillo>
@@ -245,7 +247,7 @@ void inline setUDTDecomp(const arma::mat& mat, arma::mat& Q, arma::mat& R, arma:
 arma::mat inline stableMultiplication(const arma::mat& left, const arma::mat& right,
 	arma::mat& Ql, arma::vec& Dl, arma::mat& Tl,
 	arma::mat& Qr, arma::vec& Dr, arma::mat& Tr)
-{	
+{
 
 	// use SVD decomposition for stable multiplication
 	arma::svd(Ql, Dl, Tl, left, "std");
@@ -323,12 +325,12 @@ void inline makeTwoScalesFromUDT(arma::mat& R, arma::vec& D) {
 	{
 		if (abs(R(i, i)) > 1)
 			R(i, i) = 1;				// min(1,R(i,i))
-			// R(i,i) = 1
-			// D(i,i) = 1/R(i,i)
+		// R(i,i) = 1
+		// D(i,i) = 1/R(i,i)
 		else
 			D(i) = 1;					// inv of max(1,R(i,i))
-			// R(i,i) = R(i,i)
-			// D(i,i) = 1
+		// R(i,i) = R(i,i)
+		// D(i,i) = 1
 	}
 }
 

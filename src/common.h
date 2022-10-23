@@ -17,7 +17,6 @@
 #include "str.h"
 #endif
 
-
 #include <omp.h>
 #include <algorithm> 													// for std::ranges::copy depending on lib support
 #include <iostream>
