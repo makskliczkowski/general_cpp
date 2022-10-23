@@ -32,7 +32,9 @@ using t_2d = std::pair<T, T>;										// 2d tuple - pair
 * @return splitted string
 */
 inline v_1d<std::string> split_str(const std::string& s, std::string delimiter) {
-	uint pos_start = 0, pos_end, delim_len = delimiter.length();
+	unsigned long long pos_start = 0;
+	unsigned long long pos_end;
+	auto delim_len = delimiter.length();
 	std::string token;
 	std::vector<std::string> res;
 
@@ -48,8 +50,8 @@ inline v_1d<std::string> split_str(const std::string& s, std::string delimiter) 
 
 /*
 * We want to handle files so let's make the c-way input a string. This way we will parse the command line arguments
-* @param argc number of main input arguments 
-* @param argv main input arguments 
+* @param argc number of main input arguments
+* @param argv main input arguments
 * @returns vector of strings with the arguments from command line
 */
 inline v_1d<std::string> changeInpToVec(int argc, char** argv) {
