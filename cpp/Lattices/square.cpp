@@ -238,7 +238,7 @@ void SquareLattice::calculate_nnn_pbc()
 	case 2:
 		// Two dimensions 
 		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
-		this->nearest_neighbors = std::vector<std::vector<int>>(Ns, std::vector<int>(4, 0));
+		this->next_nearest_neighbors = std::vector<std::vector<int>>(Ns, std::vector<int>(4, 0));
 		for (int i = 0; i < Ns; i++) {
 			this->next_nearest_neighbors[i][0] = static_cast<int>(1.0 * i / Lx) * Lx + myModuloEuclidean(i + 2, Lx);		// right
 			this->next_nearest_neighbors[i][1] = myModuloEuclidean(i + 2 * Lx, Ns);											// top
