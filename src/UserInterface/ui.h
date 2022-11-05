@@ -18,17 +18,18 @@ protected:
 	std::unordered_map <std::string, std::string> default_params;
 	int thread_number;																				 		// number of threads
 	int boundary_conditions;																		 		// boundary conditions - 0 - PBC, 1 - OBC, 2 - ABC,...
+	int choosen_funtion = -1;
 	std::string saving_dir;
 
 	std::string getCmdOption(const v_1d<std::string>& vec, std::string option) const;				 		// get the option from cmd input
 	
 	template <typename T>
-	void set_option(T& value, const v_1d<std::string>& argv, std::string choosen_option, bool geq_0 = true);	// set an option
+	void set_option(T& value, const v_1d<std::string>& argv, std::string choosen_option, bool geq_0 = true);// set an option
 
 	template <typename T>
 	void set_default_msg(T& value, std::string option, std::string message, \
 		const std::unordered_map <std::string, std::string>& map) const;									// setting value to default and sending a message
-	// std::unique_ptr<LatticeModel> model;															 			// a unique pointer to the model used
+	// std::unique_ptr<LatticeModel> model;															 		// a unique pointer to the model used
 
 public:
 	virtual ~user_interface() = default;
@@ -37,7 +38,8 @@ public:
 
 	virtual void exit_with_help() = 0;
 	// ----------------------- REAL PARSING
-	virtual void parseModel(int argc, const v_1d<std::string>& argv) = 0;									 // the function to parse the command line
+	virtual void parseModel(int argc, const v_1d<std::string>& argv) = 0;									// the function to parse the command line
+	virtual void functionChoice() = 0;																		// allows to choose the method without recompilation of the whole code
 	// ----------------------- HELPING FUNCIONS
 	virtual void set_default() = 0;																	 		// set default parameters
 	// ----------------------- NON-VIRTUALS
