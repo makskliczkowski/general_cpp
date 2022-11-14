@@ -28,7 +28,6 @@ public:
 	}
 	
 	void printWithTime(std::string message) {
-#pragma omp critical
 		{
 			stout << "\t\t\t\t-> time: " << tim_s(timer) << message << " : \n";
 			this->print();
