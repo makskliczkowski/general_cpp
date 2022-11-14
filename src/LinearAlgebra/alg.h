@@ -310,25 +310,30 @@ void inline multiplyMatricesQrFromRight(const arma::mat& mat_to_multiply, arma::
 	T = ((DIAG(D) * R) * P.t()) * T;
 }
 
-
 void inline multiplyMatricesSVDFromRight(const arma::mat& mat_to_multiply, arma::mat& U, arma::vec& s, arma::mat& V, arma::mat& tmpV) {
 	svd(U, s, tmpV, mat_to_multiply * U * DIAG(s));
 	V = V * tmpV;
 }
+
 /*
 * @brief Loh's decomposition to two scales in UDT QR decomposition. One is lower than 0 and second higher. Uses R again to save memory
 * @param R the R matrix from QR decompositon. As it's diagonal is mostly not used anymore it will be used to store (<= 1) elements of previous R
 * @param D vector to store (> 1) elements of previous R -> IT IS ALREADY INVERSE OF R DIAGONAL
 */
 void inline makeTwoScalesFromUDT(arma::mat& R, arma::vec& D) {
+
+	// min(1, R) -> we save that in R -> therefore change is only made to set R(i,i) to 1
+	// max(1, R) -> we set that as an inverse onto D already
+
+
 	for (int i = 0; i < R.n_rows; i++)
 	{
 		if (abs(R(i, i)) > 1)
 			R(i, i) = 1;				// min(1,R(i,i))
 		// R(i,i) = 1
 		// D(i,i) = 1/R(i,i)
-		else
-			D(i) = 1;					// inv of max(1,R(i,i))
+		else //(abs(R(i, i)) <= 1)
+			D(i) = 1;					// inv of max(1,R(i,i)) because D is already an inverse
 		// R(i,i) = R(i,i)
 		// D(i,i) = 1
 	}
@@ -340,14 +345,17 @@ void inline makeTwoScalesFromUDT(arma::mat& R, arma::vec& D) {
 * @param D vector to store (> 1) elements of previous R
 */
 void inline makeTwoScalesFromUDT(const arma::mat& R, arma::vec& Db, arma::vec& Ds) {
-	Db.ones();
-	Ds.ones();
+
 	for (int i = 0; i < R.n_rows; i++)
 	{
-		if (abs(R(i, i)) > 1)
+		if (abs(R(i, i)) > 1.0) {
 			Db(i) = R(i, i);
-		else
+			Ds(i) = 1.0;
+		}
+		else {
 			Ds(i) = R(i, i);
+			Db(i) = 1.0;
+		}
 	}
 }
 

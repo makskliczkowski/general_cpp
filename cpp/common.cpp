@@ -49,9 +49,9 @@ void setMatrixFromSubmatrix(arma::mat& M2Set, const arma::mat& MSet, uint row, u
 			for (int a = 0; a < Nrows; a++)
 				for (int b = 0; b < Ncols; b++)
 					M2Set(a, b) += MSet(row + a, col + b);
-		else 
-			for (int a = 0; a < Nrows; a++) 
-				for (int b = 0; b < Ncols; b++) 
+		else
+			for (int a = 0; a < Nrows; a++)
+				for (int b = 0; b < Ncols; b++)
 					M2Set(a, b) -= MSet(row + a, col + b);
 	else
 		for (int a = 0; a < Nrows; a++)
@@ -60,26 +60,26 @@ void setMatrixFromSubmatrix(arma::mat& M2Set, const arma::mat& MSet, uint row, u
 }
 
 /**
- * @brief 
- * 
+ * @brief
+ *
  * R diagonal has elements smaller than one -> D_m
  * D is already inversed and has elements bigg
- * @param Ql 
- * @param Rl 
- * @param Pl 
- * @param Tl 
- * @param Dl 
- * @param Qr 
- * @param Rr 
- * @param Pr 
- * @param Tr 
- * @param Dr 
- * @param Dtmp 
- * @return arma::mat 
+ * @param Ql
+ * @param Rl
+ * @param Pl
+ * @param Tl
+ * @param Dl
+ * @param Qr
+ * @param Rr
+ * @param Pr
+ * @param Tr
+ * @param Dr
+ * @param Dtmp
+ * @return arma::mat
  */
 arma::mat inv_left_plus_right_qr(arma::mat& Ql, arma::mat& Rl, arma::umat& Pl, arma::mat& Tl, arma::vec& Dl, arma::mat& Qr, arma::mat& Rr, arma::umat& Pr, arma::mat& Tr, arma::vec& Dr, arma::vec& Dtmp)
 {
-	const auto loh = false;
+	const auto loh = true;
 	if (loh) {
 		// using loh
 
@@ -91,7 +91,7 @@ arma::mat inv_left_plus_right_qr(arma::mat& Ql, arma::mat& Rl, arma::umat& Pl, a
 			Ql.t() * Qr * (DIAG(Dl) * DIAG(Rr)),
 			Qr, Rl, Pl, Tl, Dtmp);
 		//! D_rp^{-1}
-		setUDTDecomp(diagmat(Dr) * arma::inv(Tl) * diagmat(Dtmp) * Qr.t() * diagmat(Dl), Qr, Rl, Pl, Tl, Dtmp);
+		setUDTDecomp(DIAG(Dr) * arma::inv(Qr * DIAG(Rl) * Tl) * DIAG(Dl), Qr, Rl, Pl, Tl, Dtmp);
 		//? direct inversion
 		//setUDTDecomp(DIAG(Dr) * arma::inv(Qr * DIAG(Rl) * Tl) * DIAG(Dl), Qr, Rl, Pl, Tl);
 		return (arma::inv(Tr) * Qr) * DIAG(Rl) * (Tl * Ql.t());
