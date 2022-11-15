@@ -149,7 +149,7 @@ inline void Lattice::calculate_nnn()
 		stout << "->nnn -- using OBC" << EL;
 		break;
 	default:
-		this->calculate_nn_pbc();
+		this->calculate_nnn_pbc();
 		break;
 	}
 }
