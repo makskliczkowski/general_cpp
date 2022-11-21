@@ -130,6 +130,7 @@ inline void Lattice::calculate_nn() {
 	case 3:
 		this->calculate_nn_sbc();
 		stout << "->nn -- using SBC" << EL;
+		break;
 	default:
 		this->calculate_nn_pbc();
 		break;
