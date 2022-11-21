@@ -46,6 +46,7 @@ public:
 	void calculate_nn_pbc() override;
 	void calculate_nn_obc() override;
 	void calculate_nn_mbc() override;
+	void calculate_nn_sbc() override;
 	// --- nnn --- 
 	void calculate_nnn_pbc() override;
 	void calculate_nnn_obc() override;

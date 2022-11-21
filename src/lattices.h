@@ -25,7 +25,7 @@ protected:
 	unsigned int dim = 1;											// the dimensionality of the lattice 1,2,3
 	unsigned int Ns = 1;											// number of lattice sites
 	string type;													// type of the lattice
-	int _BC = 0;													// boundary conditions 0 = PBC, 1 = OBC, 2 = MBC [PBC->x;OBC->y],
+	int _BC = 0;													// boundary conditions 0 = PBC, 1 = OBC, 2 = MBC [PBC->x;OBC->y, OBC->z], 3 = SBC [OBC->x, PBC->y, OBC->z],
 	// --- nn --- 
 	v_2d<int> nearest_neighbors;									// vector of the nearest neighbors
 	v_1d<uint> nn_forward;											// number of nearest neighbors forward
@@ -90,6 +90,7 @@ public:
 	virtual void calculate_nn_pbc() = 0;
 	virtual void calculate_nn_obc() = 0;
 	virtual void calculate_nn_mbc() = 0;
+	virtual void calculate_nn_sbc() = 0;
 	// --- nnn --- 
 	virtual void calculate_nnn_pbc() = 0;
 	virtual void calculate_nnn_obc() = 0;
@@ -126,6 +127,9 @@ inline void Lattice::calculate_nn() {
 		this->calculate_nn_mbc();
 		stout << "->nn -- using MBC" << EL;
 		break;
+	case 3:
+		this->calculate_nn_sbc();
+		stout << "->nn -- using SBC" << EL;
 	default:
 		this->calculate_nn_pbc();
 		break;

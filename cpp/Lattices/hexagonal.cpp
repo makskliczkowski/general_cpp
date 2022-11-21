@@ -357,6 +357,95 @@ void HexagonalLattice::calculate_nn_mbc()
 	}
 }
 
+/*
+* @brief Calculate the nearest neighbors with SBC - WORKING HELLA FINE 2D
+*/
+void HexagonalLattice::calculate_nn_sbc()
+{
+	switch (this->dim)
+	{
+	case 1:
+		// One dimension - just a chain of 2*Lx elems
+		this->nearest_neighbors = v_2d<int>(this->Ns, v_1d<int>(2, 0));
+		for (int i = 0; i < Ns; i++) {
+			// z bond only
+			this->nearest_neighbors[i][0] = (i + 1) % Ns;							// this is the neighbor top
+			this->nearest_neighbors[i][1] = myModuloEuclidean(i - 1, Ns);			// this is the neighbor bottom
+		}
+		break;
+	case 2:
+		// Two dimensions 
+		// numeration begins from the bottom as 0 to the second as 1 with lattice vectors move
+		this->nearest_neighbors = v_2d<int>(Ns, v_1d<int>(3, 0));
+		// over Lx
+		for (int i = 0; i < Lx; i++) {
+			// over big Y
+			for (int j = 0; j < Ly; j++) {
+				// current elements a corresponding to first site, b corresponding to the second one
+				auto current_elem_a = 2 * i + 2 * Lx * j;								// lower
+				auto current_elem_b = 2 * i + 2 * Lx * j + 1;							// upper
+
+				// check the elementary cells
+				auto up = myModuloEuclidean(j + 1, Ly);
+				auto down = myModuloEuclidean(j - 1, Ly);
+				auto right = i + 1;
+				auto left = i - 1;
+
+				// y and x bonding depends on current y level as the hopping between sites changes 
+
+				auto y_bond_a = -1;
+				auto y_bond_b = -1;
+				auto x_bond_a = -1;
+				auto x_bond_b = -1;
+				if (myModuloEuclidean(j, 2) == 0) {
+					// right 
+					// neighbor x does not change for a but y changes -> y_bond
+					y_bond_a = down >= 0 ? (2 * i + 2 * down * Lx + 1) : -1;							// site b is the neighbor for a
+
+					// left 
+					// neighbor y does change for a and x changes -> x_bond
+					x_bond_a = left >= 0 && down >= 0 ? (2 * left + 2 * down * Lx + 1) : -1;			// site b is the neighbor for a
+
+					// left 
+					// neighbor x does change for a and y changes -> x_bond
+					y_bond_b = left >= 0 && up < Ly ? (2 * left + 2 * up * Lx) : -1;
+
+					// right 
+					// neighbor x does not change for a but y changes -> y_bond
+					x_bond_b = up < Ly ? (2 * i + 2 * up * Lx) : -1;
+				}
+				else
+				{
+					// right a - x changes for a, y changes for a
+					y_bond_a = right < Lx&& down >= 0 ? (2 * right + 2 * down * Lx + 1) : -1;
+					// left b - x does not change y changes
+					y_bond_b = up < Ly ? (2 * i + 2 * up * Lx) : -1;
+					// left a - x does not change, y changes;
+					x_bond_a = down >= 0 ? (2 * i + 2 * down * Lx + 1) : -1;
+					// right b - x changes, y changes;
+					x_bond_b = right < Lx&& up < Ly ? (2 * right + 2 * up * Lx) : -1;
+				}
+
+				// x bonding
+				this->nearest_neighbors[current_elem_a][2] = x_bond_a;
+				this->nearest_neighbors[current_elem_b][2] = x_bond_b;
+				// y bonding
+				this->nearest_neighbors[current_elem_a][1] = y_bond_a;
+				this->nearest_neighbors[current_elem_b][1] = y_bond_b;
+				// z bonding
+				this->nearest_neighbors[current_elem_a][0] = current_elem_a + 1;
+				this->nearest_neighbors[current_elem_b][0] = current_elem_b - 1;
+			}
+		}
+		stout << this->nearest_neighbors << EL;
+		break;
+	case 3:
+		/* Three dimensions */
+		break;
+	default:
+		break;
+	}
+}
 // ------------------------------------------------------------- next nearest neighbors -------------------------------------------------------------
 
 /*

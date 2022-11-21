@@ -183,7 +183,7 @@ void SquareLattice::calculate_nn_obc()
 }
 
 /*
-* @brief Calculate the nearest neighbors with MBC [PBC->x;OBC->y]
+* @brief Calculate the nearest neighbors with MBC [PBC->x;OBC->y] TODEFINE
 */
 void SquareLattice::calculate_nn_mbc()
 {
@@ -218,6 +218,41 @@ void SquareLattice::calculate_nn_mbc()
 	}
 }
 
+/*
+* @brief Calculate the nearest neighbors with SBC [OBC->x;PBC->y,] TODEFINE
+*/
+void SquareLattice::calculate_nn_sbc()
+{
+	switch (this->dim)
+	{
+	case 1:
+		//* One dimension 
+		this->nearest_neighbors = std::vector<std::vector<int>>(Lx, std::vector<int>(2, 0));
+		for (int i = 0; i < Lx; i++) {
+			this->nearest_neighbors[i][0] = (i + 1) >= Lx ? -1 : i + 1;										// right
+			this->nearest_neighbors[i][1] = (i - 1) == 0 ? -1 : i - 1;										// left
+		}
+		break;
+	case 2:
+		// Two dimensions 
+		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
+		this->nearest_neighbors = std::vector<std::vector<int>>(Ns, std::vector<int>(4, 0));
+		for (int i = 0; i < Ns; i++) {
+			auto x = i % Lx;
+			auto y = static_cast<int>(1.0 * i / Lx) % Ly;
+			//this->nearest_neighbors[i][0] = (i + 1) < (y + 1) * Lx ? y * Lx + x + 1 : -1;					// right
+			//this->nearest_neighbors[i][1] = i + Lx < Ns ? i + Lx : -1;										// top
+			//this->nearest_neighbors[i][2] = (i - 1) >= y * Lx ? y * Lx + x - 1 : -1;						// left
+			//this->nearest_neighbors[i][3] = i - Lx >= 0 ? i - Lx : -1;										// bottom
+		}
+		break;
+	case 3:
+		/* Three dimensions */
+		break;
+	default:
+		break;
+	}
+}
 // ------------------------------------------------------------- next nearest neighbors -------------------------------------------------------------
 
 /*
