@@ -7,9 +7,9 @@
 #define ARMA_USE_LAPACK                                                                     
 //#define ARMA_BLAS_LONG_LONG                                                                 // using long long inside LAPACK call
 //#define ARMA_DONT_USE_FORTRAN_HIDDEN_ARGS
-////#define ARMA_DONT_USE_WRAPPER
-#define ARMA_USE_SUPERLU
-#define ARMA_USE_ARPACK 
+//#define ARMA_DONT_USE_WRAPPER
+//#define ARMA_USE_SUPERLU
+//#define ARMA_USE_ARPACK 
 #define ARMA_USE_MKL_ALLOC
 #define ARMA_USE_MKL_TYPES
 #define ARMA_WARN_LEVEL 1
