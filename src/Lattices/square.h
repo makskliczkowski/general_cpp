@@ -72,11 +72,15 @@ public:
 	t_3d<int> getSymPos(int x, int y, int z) override {
 		if (!this->symmetry)
 			return std::make_tuple(x + Lx - 1, y + Ly - 1, z + Lz - 1);
+		else
+			return std::make_tuple(x, y, z);
 	}
 
 	t_3d<int> getSymPosInv(int x, int y, int z) override {
 		if (!this->symmetry)
 			return std::make_tuple(x - (Lx - 1), y - (Ly - 1), z - (Lz - 1));
+		else
+			return std::make_tuple(x, y, z);
 	}
 
 	bool symmetry_checker(int xx, int yy, int zz) override {

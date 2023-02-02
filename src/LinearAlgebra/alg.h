@@ -17,7 +17,7 @@
 #define ARMA_DONT_USE_OPENMP
 #define ARMA_USE_HDF5
 ////#define ARMA_USE_OPENMP
-//#define ARMA_ALLOW_FAKE_GCC
+#define ARMA_ALLOW_FAKE_GCC
 #include <armadillo>
 
 #define DIAG arma::diagmat
