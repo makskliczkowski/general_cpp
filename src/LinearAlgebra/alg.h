@@ -20,28 +20,30 @@
 #define ARMA_ALLOW_FAKE_GCC
 #include <armadillo>
 
+// ############################################################# DEFINITIONS FROM ARMADILLO #############################################################
+
 #define DIAG arma::diagmat
 #define EYE(X) arma::eye(X,X)
 #define ZEROV(X) arma::zeros(X)
 #define ZEROM(X) arma::zeros(X,X)
 
+// ############################################################# OTHER DEFINITIONS #############################################################
+
 using uint = unsigned int;
-// ----------------------------------------------------------------------------- MATRIX MULTIPLICATION
+
+// ############################################################# MATRIX MULTIPLICATION #############################################################
 /*
-* @brief Allows to calculate the matrix consisting of Column vector times row vector
+* @brief Allows to calculate the matrix consisting of COL vector times ROW vector
 * @param setMat matrix to set the elements onto
 * @param setVec column vector to set the elements from
 */
 template <typename _type>
-inline void setColumnTimesRow(arma::Mat<_type>& setMat, const arma::Col<_type>& setVec) {
-#pragma omp parallel for
-	for (auto i = 0; i < setMat.n_rows; i++)
-		for (auto j = 0; j < setMat.n_cols; j++)
-			setMat(i, j) = conj(setVec(i)) * setVec(j);
+inline void setBraKet(arma::Mat<_type>& setMat, const arma::Col<_type>& setVec) {
+	setMat = std::move(arma::cdot(setVec, setVec.as_row());
 }
 
 /*
-* @brief Allows to calculate the matrix consisting of Column vector times row vector but updates it instead of overwritng
+* @brief Allows to calculate the matrix consisting of COL vector times ROW vector but updates it instead of overwritng
 * @param setMat matrix to set the elements onto
 * @param setVec column vector to set the elements from
 * @param plus if add or substract
@@ -59,8 +61,6 @@ inline void setColumnTimesRow(arma::Mat<_type>& setMat, const arma::Col<_type>& 
 			for (auto j = 0; j < setMat.n_cols; j++)
 				setMat(i, j) -= conj(setVec(i)) * setVec(j);
 }
-
-
 
 /*
 * @brief Allows to calculate the constant times column vector but updates it instead of overwritng

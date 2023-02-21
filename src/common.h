@@ -1,68 +1,42 @@
 #pragma once
-/// user includes
-#include "random.h"
-
-// --------------------------------------------------------				ARMA				--------------------------------------------------------
-
-//-- SUPPRESS WARNINGS
-
 #ifndef COMMON_H
 #define COMMON_H
 
+// ########################################################				RANDOM				########################################################
+#include "random.h"
+
+// ########################################################				 ARMA				########################################################
+
 #ifndef ALG_H
-#include "LinearAlgebra/alg.h"
+	#include "LinearAlgebra/alg.h"
 #endif // !ALG_H
 
-#ifndef STR_H
-#include "str.h"
-#endif
+// ########################################################				 OTHER				########################################################
 
-#include <omp.h>
-#include <algorithm> 													// for std::ranges::copy depending on lib support
-#include <iostream>
-#include <ios>
-#include <iomanip>
-#include <thread>
+// --- SUPPRESS WARNINGS ---
+
+#ifndef STR_H
+	#include "str.h"
+#endif
+#include "directories.h"
+#include "files.h"
+
 #include <cmath>
+#include <omp.h>
+#include <thread>
 #include <complex>
-#include <cassert>
-/// filesystem for directory creation
-#ifdef __has_include
-#  if __has_include(<filesystem>)
-#    include <filesystem>
-#    define have_filesystem 1
-namespace fs = std::filesystem;
-#  elif __has_include(<experimental/filesystem>)
-#    include <experimental/filesystem>
-#    define have_filesystem 1
-#    define experimental_filesystem
-namespace fs = std::experimental::filesystem;
-#  else
-#    define have_filesystem 0
-#  endif
-#endif
-using clk = std::chrono::steady_clock;
-static const char* kPSep =
-#ifdef _WIN32
-R"(\)";
-#else
-"/";
-#endif
+
+
+
+
 
 #define RETURNS(...) -> decltype((__VA_ARGS__)) { return (__VA_ARGS__); }
 // --------------------------------------------------------				DEFINITIONS				--------------------------------------------------------
 
-#define EL std::endl
-#define stout std::cout << std::setprecision(8) << std::fixed											// standard out
-#define stouts(text, start) stout << text << " -> time : " << tim_s(start) << "s" << EL					// standard out seconds
-#define stoutms(text, start) stout << text << " -> time : " << tim_ms(start) << "ms" << EL				// standard out miliseconds
-#define stoutmus(text, start) stout << text << " -> time : " << tim_mus(start) << "mus" << EL			// standard out microseconds
-#define stoutc(c) if(c) stout <<  std::setprecision(8) << std::fixed									// standard out conditional
-#define STR std::to_string
-#define STRP(str,prec) str_p(str, prec)
+							// standard out conditional
+
 #define DIAG arma::diagmat
-#define VEQ(name) valueEquals(#name,(name),2)
-#define VEQP(name,prec) valueEquals(#name,(name),prec)
+
 #define EYE(X) arma::eye(X,X)
 #define ZEROV(X) arma::zeros(X)
 #define ZEROM(X) arma::zeros(X,X)
@@ -82,7 +56,6 @@ constexpr long double TWOPI = 2 * PI;										// it is me, 2pi
 constexpr long double PI_half = PI / 2.0;									// it is me, half a pi
 constexpr cpx imn = cpx(0, 1);												// complex number
 const auto global_seed = std::random_device{}();							// global seed for classes
-const std::string kPS = std::string(kPSep);
 // --------------------------------------------------------				ALGORITHMS FOR MC				--------------------------------------------------------
 
 /*
@@ -119,102 +92,56 @@ namespace impDef
 // --------------------------------------------------------				COMMON UTILITIES				 --------------------------------------------------------
 using namespace arma;
 using vecMat = v_1d<arma::mat>;
-// -----------------------------------------------------------------------------				TIME FUNCTIONS				-----------------------------------------------------------------------------
-/*
-* return the duration in seconds from a given time point
-* @param point in time from which we calculate the interval
-*/
-inline double tim_s(clk::time_point start) {
-	return double(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::duration(\
-		std::chrono::high_resolution_clock::now() - start)).count()) / 1000.0;
-}
-/*
-*/
-inline double tim_ms(clk::time_point start) {
-	return double(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::duration(\
-		std::chrono::high_resolution_clock::now() - start)).count());
-}
-/*
-*/
-inline double tim_mus(clk::time_point start) {
-	return double(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::duration(\
-		std::chrono::high_resolution_clock::now() - start)).count());
-}
-
-// debug definitions for compiler
-#ifdef DEBUG
-#define PRT(time_point, cond) stoutc(cond) << #cond << " -> time : " << tim_mus(time_point) << "mus" << EL;
-#else
-#define PRT(time_point, cond)
-#endif
-
-
-// -----------------------------------------------------------------------------				TOOLS				-----------------------------------------------------------------------------
-//v_1d<double> fourierTransform(std::initializer_list<const arma::mat&> matToTransform, std::tuple<double,double,double> k, std::tuple<int,int,int> L);
-
-
-
-//! ----------------------------------------------------------------------------- FILE AND STREAMS
-
-/*
-* @brief Opens a file
-* @param filename filename
-* @param mode std::ios_base::openmode
-*/
-template <typename T>
-inline void openFile(T& file, std::string filename, std::ios_base::openmode mode = std::ios::out) {
-	file.open(filename, mode);
-	if (!file.is_open()) {
-		stout << "couldn't open a file: " + filename + "\n";
-		throw "couldn't open a file: " + filename + "\n";
-	}
-}
-
-
-
-// ----------------------------------------------------------------------------- DIRECTORIES -----------------------------------------------------------------------------
-
-/*
-* @brief Creates a single directory given a string path
-* @param dir the directory
-*/
-inline void createDirs(const std::string& dir) {
-	fs::create_directories(dir);
-}
-
-/*
-* @brief Creates a variadic directory set given a string paths
-* @param dir the directory
-*/
-template <typename... _Ty>
-inline void createDirs(const std::string& dir, const _Ty&... dirs) {
-	createDirs(dir);
-	createDirs(dirs...);
-}
 
 
 //? ------------------------------------------------------------------------------ VALUE EQUALS ------------------------------------------------------------------------------
+
+#define EQP(value, equals, prec) valueEqualsPrecision(value, equals, prec)
+#define EQ(value, equals) valueEqualsPrecision(value, equals)
 /*
-* checks if value is equal to some param up to given tolerance
+* @brief Checks if value is equal to some param up to given tolerance
 */
-template <typename T>
-inline bool valueEqualsPrec(T value, T eq, T tol) {
-	return std::abs(value - eq) < tol;
+template <typename _T1, typename _T2, typename _T3>
+inline bool valueEqualsPrecision(_T1 value, _T2 equals, _T3 tolerance) {
+	return std::abs(value - equals) <= tolerance;
 }
 
+template <typename _T1, typename _T2>
+inline bool valueEqualsPrecision(_T1 value, _T2 equals) {
+	return std::abs(value - equals) == 0;
+}
 
+#define STR std::to_string
+#define STRP(str,prec) str_p(str, prec)
 /*
-*Changes a value to a string with a given precision
-*@param a_value Value to be transformed
-*@param n Precision @n default 2
+*@brief Changes a value to a string with a given precision
+*@param v Value to be transformed
+*@param n Precision default 2
 *@returns String of a value
 */
-template <typename T>
-inline std::string str_p(const T a_value, const int n = 2) {
+template <typename _T>
+inline std::string str_p(const _T v, const int n = 2) {
 	std::ostringstream out;
 	out.precision(n);
-	out << std::fixed << a_value;
+	out << std::fixed << v;
 	return out.str();
+}
+
+#define VEQ(name) valueEquals(#name,(name),2)
+#define VEQP(name,prec) valueEquals(#name,(name),prec)
+/*
+* @brief Given the char* name it prints its value in a format "name=val"
+* @param name name of the variable
+* @param value value of the variable
+* @returns "name=val" string
+*/
+template <typename T>
+inline std::string valueEquals(const char name[], T value, int prec = 2) {
+	return std::string(name) + "=" + str_p(value, prec);
+}
+
+inline std::string valueEquals(const char name[], std::string value, int prec) {
+	return std::string(name) + "=" + value;
 }
 
 /*
@@ -242,27 +169,7 @@ inline std::string print_cpx(cpx val, int n = 2) {
 	return absolute + phase_str;
 }
 
-/*
-* given the char* name it prints its value in a format "name=val"
-*@param name name of the variable
-*@param value of the variable
-*@returns "name=val" string
-*/
-template <typename T>
-inline std::string valueEquals(const char name[], T value, int prec = 2) {
-	return std::string(name) + "=" + str_p(value, prec);
-}
 
-
-/*
-* given the char* name it prints its value in a format "name=val" specialization for string
-*@param name name of the variable
-*@param value of the variable
-*@returns "name=val" string
-*/
-inline std::string valueEquals(const char name[], std::string value, int prec) {
-	return std::string(name) + "=" + value;
-}
 
 // -------------------------------------------------------------------------------------------- PRINT SEPARATED -----------------------------------------------------------------------------
 
@@ -367,17 +274,16 @@ inline void printSeparatedP(std::ostream& output, char separator, arma::u16 widt
 	if (endline) output << std::endl;
 }
 
-// ---------------------------------------------------------------------------------------- STREAM OVERLOADED
+// ######################################################## STREAM OVERLOADED ########################################################
 
 /*
-*Overwritten standard stream redirection operator for 2D vectors separated by commas
+*@brief Overwritten standard stream redirection operator for 2D vectors separated by commas
 *@param out outstream to be used
 *@param v 1D vector
 */
 template <typename T>
 std::ostream& operator<< (std::ostream& out, const v_1d<T>& v) {
 	if (!v.empty()) {
-		//out << '[';
 		for (int i = 0; i < v.size(); i++)
 			out << v[i] << ",";
 		out << "\b"; // use two ANSI backspace characters '\b' to overwrite final ", "
@@ -391,17 +297,32 @@ std::ostream& operator<< (std::ostream& out, const v_1d<T>& v) {
 * @param v 2D vector
 */
 template <typename T>
-std::ostream& operator << (std::ostream& out, const v_2d<T>& v) {
-	if (!v.empty()) {
-		for (auto it : v) {
-			out << "\t\t\t\t";
-			for (int i = 0; i < it.size(); i++)
-				out << it[i] << '\t';
-			out << "\n";
-		}
-	}
+std::ostream& operator<< (std::ostream& out, const v_2d<T>& v) {
+	if (!v.empty())
+		for (auto it : v)
+			out << "\t" << it << EL;
 	return out;
 }
+
+std::ostream& operator<< (std::ostream& out, const cpx v)
+{
+	auto phase = std::arg(v) / PI;
+	while (phase < 0)
+		phase += 2.0;
+	std::string absolute = "+" + STRP(std::abs(v),2);
+	std::string phase_str = "";
+	if (EQP(phase, 0.0, 1e-3) || EQP(phase, 2.0, 1e-3))
+		phase_str = "";
+	else if (EQP(phase, 1.0, 1e-3)) {
+		absolute = "-" + STRP(std::abs(v),2);
+		phase_str = "";
+	}
+	else
+		phase_str = "*exp(" + STRP(phase,2) + "*pi*i)";
+	out << absolute + phase_str;
+	return out;
+}
+
 //! ----------------------------------------------------------------------------- HELPERS -----------------------------------------------------------------------------
 
 /*
