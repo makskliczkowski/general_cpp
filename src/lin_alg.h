@@ -1,6 +1,8 @@
 #pragma once
 #ifndef ALG_H
-#define ALG_H
+	#define ALG_H
+#endif
+
 #define DH5_USE_110_API
 #define D_HDF5USEDLL_ 
 #include "../Include/statistical.h"
@@ -354,7 +356,3 @@ void inline multiplyMatricesSVDFromRight(const arma::mat& mat_to_multiply, arma:
 	svd(U, s, tmpV, mat_to_multiply * U * DIAG(s));
 	V = V * tmpV;
 }
-
-
-
-#endif
