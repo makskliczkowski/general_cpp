@@ -5,7 +5,7 @@
 // ########################################################				 ARMA				########################################################
 
 #ifndef ALG_H
-	#include "LinearAlgebra/lin_alg.h"
+	#include "lin_alg.h"
 #endif // !ALG_H
 
 // ########################################################				 OTHER				########################################################
@@ -66,7 +66,7 @@ using t_3d = std::tuple<T, T, T>;									// 3d tuple
 template<class T>
 using t_2d = std::pair<T, T>;										// 2d tuple - pair
 
-// ######################################################## STREAM OVERLOADED ########################################################
+// ########################################################				 STREAM OVERLOADED				 ########################################################
 
 /*
 *@brief Overwritten standard stream redirection operator for 2D vectors separated by commas
@@ -118,7 +118,7 @@ std::ostream& operator<< (std::ostream& out, const cpx v)
 	return out;
 }
 
-// ######################################################## VALUE EQUALS ########################################################
+// ########################################################				   VALUE EQUALS				########################################################
 
 #define EQP(value, equals, prec) valueEqualsPrecision(value, equals, prec)
 #define EQ(value, equals) valueEqualsPrecision(value, equals)
