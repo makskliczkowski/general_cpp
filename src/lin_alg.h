@@ -181,6 +181,7 @@ public:
 
 	virtual void factMult(const arma::Mat<_T> Ml) = 0;
 	virtual arma::Mat<_T> inv1P() = 0;
+	virtual arma::Mat<_T> invSum(const UDT_QR& right) = 0;
 };
 
 /*
@@ -288,8 +289,8 @@ class UDT_QR : public UDT<_T>{
 				Ds(i) = 1.0;	// min (R(i,i), 1)
 			}
 			else {
-				Ds(i) = Di(i);
 				Db(i) = 1.0;
+				Ds(i) = D(i);
 			}
 		}
 	}
@@ -310,7 +311,7 @@ class UDT_QR : public UDT<_T>{
 	}
 
 	// ----------------------------------- MULTIPLICATION
-
+	// https://github.com/carstenbauer/StableDQMC.jl/blob/master/src/qr_udt.jl
 	/*
 	* @brief Multiply the UDT decomposition by a matrix from the left
 	* @param Ml left matrix
@@ -323,15 +324,22 @@ class UDT_QR : public UDT<_T>{
 		// premultiply old T by new T from left
 		T = ((DIAG(Di) * R) * P.t()) * T;
 	}
-
+	
+	/*
+	* @brief (UDT + 1)^(-1) with QR decomposition.
+	*/
 	arma::Mat<_T> inv1P() override {
 		// decompose first
 		loh_inv();
-		return arma::solve(arma::inv(DIAG(Ds)) * U.t() + DIAG(Db) * T, arma::inv(DIAG(Ds)) * U.t());
-
-
+		return arma::solve(DIAG(Db) * U.t() + DIAG(Ds) * T, DIAG(Db) * U.t());
+		// loh();
+		// return arma::solve(arma::inv(DIAG(Db)) * U.t() + DIAG(Ds) * T, arma::inv(DIAG(Db)) * U.t());
 		// without the decomposition
 		// return = arma::inv(DIAG(Di) * U.t() + D * T) * DIAG(D_up) * Q_up.t();
+	}
+
+	arma::Mat<_T> invSum(const UDT_QR& right) override {
+
 	}
 };
 
