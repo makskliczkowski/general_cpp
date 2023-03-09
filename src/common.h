@@ -28,13 +28,13 @@ using cpx = std::complex<double>;
 using uint = unsigned int;
 using ul = unsigned long;
 using ull = unsigned long long;
+using u64 = ull;
 using ld = long double;
 
 // constexpressions
 constexpr long double PI = 3.141592653589793238462643383279502884L;										// it is me, pi
 constexpr long double TWOPI = 2.0L * PI;																// it is me, 2pi
 constexpr long double PI_half = PI / 2.0L;																// it is me, half a pi
-constexpr cpx imn = cpx(0., 1.);																		// complex number
 const auto global_seed = std::random_device{}();														// global seed for classes
 
 #define EL std::endl
@@ -65,6 +65,9 @@ template<class T>
 using t_3d = std::tuple<T, T, T>;									// 3d tuple
 template<class T>
 using t_2d = std::pair<T, T>;										// 2d tuple - pair
+
+#define EQP(value, equals, prec) valueEqualsPrecision(value, equals, prec)
+#define EQ(value, equals) valueEqualsPrecision(value, equals)
 
 // ########################################################				 STREAM OVERLOADED				 ########################################################
 
@@ -120,8 +123,6 @@ std::ostream& operator<< (std::ostream& out, const cpx v)
 
 // ########################################################				   VALUE EQUALS				########################################################
 
-#define EQP(value, equals, prec) valueEqualsPrecision(value, equals, prec)
-#define EQ(value, equals) valueEqualsPrecision(value, equals)
 /*
 * @brief Checks if value is equal to some param up to given tolerance
 */
@@ -143,12 +144,12 @@ inline auto valueEquals(const char name[], T value, int prec = 2) RETURNS(std::s
 inline auto valueEquals(const char name[], std::string value, int prec) RETURNS(std::string(name) + "=" + value);
 
 // ########################################################				TIME FUNCTIONS				########################################################
-using clk = std::chrono::system_clock;
+using clk = std::chrono::steady_clock;
 #define NOW std::chrono::high_resolution_clock::now()	    
 #define stouts(text, start) stout << text << " -> time : " << tim_s(start) << "s" << EL					// standard out seconds
 #define stoutms(text, start) stout << text << " -> time : " << tim_ms(start) << "ms" << EL				// standard out miliseconds
 #define stoutmus(text, start) stout << text << " -> time : " << tim_mus(start) << "mus" << EL			// standard out microseconds
-#define DURATION(t1, t2) static_cast<long double>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::duration(NOW - start)).count())
+#define DURATION(t1, t2) static_cast<long double>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::duration(t1 - t2)).count())
 /*
 * @brief The duration in seconds from a given time point
 * @param point in time from which we calculate the interval
@@ -166,6 +167,44 @@ inline auto t_ms(clk::time_point start) RETURNS(DURATION(NOW, start) / 1e3);
 * @param point in time from which we calculate the interval
 */
 inline auto t_mus(clk::time_point start) RETURNS(DURATION(NOW, start));
+
+// ########################################################				BINARY SEARCH				########################################################
+
+/*
+* @brief Finding index of base vector in mapping to reduced basis
+* @typeparam T
+* @param arr arary/vector conataing the mapping to the reduced basis
+* @param l_point left maring for binary search
+* @param r_point right margin for binary search
+* @param element element to search in the array
+* @returns -1 if not found else index of @ref element
+*/
+template <typename _T>
+inline ull binarySearch(const v_1d<_T>& arr, ull l_point, ull r_point, _T elem) {
+	if (l_point < 0 || r_point >= arr.size())
+		return -1;
+
+	ull middle = l_point + (r_point - l_point) / 2;												// find the middle point
+
+	if (arr[middle] == elem) return middle;														// if found return
+	else if (arr[middle] < elem) return binarySearch(arr, middle + 1, r_point, elem);			// else check the other boundaries
+	else return binarySearch(arr, l_point, middle - 1, elem);
+}
+
+template <>
+inline ull binarySearch(const v_1d<double>& arr, ull l_point, ull r_point, double elem) {
+	if (l_point < 0 || r_point >= arr.size())
+		return -1;
+
+	ull middle = l_point + (r_point - l_point) / 2;
+
+	if (EQP(arr[middle], elem, 1e-12)) return middle;
+	else if (arr[middle] < elem) return binarySearch(arr, middle + 1, r_point, elem);
+	else return binarySearch(arr, l_point, middle - 1, elem);
+
+	return -1;
+}
+
 
 
 #endif // !COMMON_H

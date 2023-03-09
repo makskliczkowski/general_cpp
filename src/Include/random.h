@@ -2,7 +2,7 @@
 #ifndef RANDOM_H
 #define RANDOM_H
 
-#include "xoshiro_pp.h"
+#include "../xoshiro_pp.h"
 #include <random>
 #include <ctime>
 #include <numeric>
@@ -24,7 +24,7 @@ public:
 	/*
 	* @brief move integer to get optimal seed
 	*/
-	uint64_t SeedInit(uint64_t n) const
+	uint64_t seedInit(uint64_t n) const
 	{
 		uint64_t z = (n += 0x9e3779b97f4a7c15);
 		z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9;
@@ -36,7 +36,7 @@ public:
 	* @brief initialize seed
 	*/
 	void newSeed(std::uint64_t seed) {
-		this->engine = XoshiroCpp::Xoshiro256PlusPlus(this->SeedInit(seed));
+		this->engine = XoshiroCpp::Xoshiro256PlusPlus(this->seedInit(seed));
 	}
 
 	// --------------------- WRAPPERS ON RANDOM FUNCTIONS ---------------------

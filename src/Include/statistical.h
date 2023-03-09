@@ -1,5 +1,5 @@
 #pragma once
-#include "common.h"
+#include "../common.h"
 // armadillo flags:
 #define ARMA_USE_LAPACK             
 #define ARMA_PRINT_EXCEPTIONS
@@ -25,8 +25,8 @@
 * @param bins the vector to save the average into
 * @param binSize the size of a given single bin
 */
-template<typename A_T>
-inline void binning(const A_T& seriesData, A_T& bins, uint binSize) {
+template<typename _T>
+inline void binning(const _T& seriesData, _T& bins, uint binSize) {
 	if (binSize * bins.size() > seriesData.size()) throw "Cannot create bins of insufficient elements";
 	for (int i = 0; i < bins.size(); i++)
 		bins[i] = arma::mean(seriesData.subvec(binSize * i, binSize * (i + 1) - 1));
@@ -40,20 +40,20 @@ inline void binning(const A_T& seriesData, A_T& bins, uint binSize) {
 * @param bins the bin average of the data
 * @returns approximation of a statistical correlation error
 */
-template<typename T>
-inline T correlationError(const arma::Col<T>& bins) {
+template<typename _T>
+inline _T correlationError(const arma::Col<_T>& bins) {
 	return arma::real(sqrt(arma::var(bins) / bins.size()));
 }
 
 /*
 * @brief for an std::vector calculates the standard deviation
 */
-template <typename T>
-T stddev(const v_1d<T>& v)
+template <typename _T>
+_T stddev(const v_1d<_T>& v)
 {
-	T mean = std::accumulate(v.begin(), v.end(), T(0.0)) / T(v.size());
-	v_1d<T> diff(v.size());
+	_T mean = std::accumulate(v.begin(), v.end(), T(0.0)) / T(v.size());
+	v_1d<_T> diff(v.size());
 	std::transform(v.begin(), v.end(), diff.begin(), [mean](T x) { return x - mean; });
-	T sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), T(0.0));
+	_T sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), T(0.0));
 	return std::sqrt(sq_sum / cpx(v.size()));
 }
