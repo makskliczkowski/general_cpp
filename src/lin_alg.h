@@ -100,7 +100,7 @@ template<typename _T>
 class UDT{
 public:
 	arma::Mat<_T> U;
-	arma::Col<_T> D;			//
+	arma::Col<_T> D;			// here we will put D vector - diagonal part of R
 	arma::Col<_T> Di;			// here we will put D vector inverse
 	arma::Mat<_T> T;
 
@@ -180,8 +180,13 @@ public:
 	}
 
 	virtual void factMult(const arma::Mat<_T> Ml) = 0;
+
+	// (1+A)^(-1)
 	virtual arma::Mat<_T> inv1P() = 0;
+
+	// (A+B)^(-1)
 	virtual arma::Mat<_T> invSum(const UDT_QR& right) = 0;
+	virtual arma::Mat<_T> invSum(const UDT_QR& right, const arma::Mat<_T> setMat) = 0;
 };
 
 /*
@@ -190,7 +195,7 @@ public:
 */
 template<typename _T>
 class UDT_QR : public UDT<_T>{
-	// arma::Mat<_T> U = Q;		// in this case the U matrix serves as U	
+	// arma::Mat<_T> U = Q;		// in this case the U matrix serves as Q	
 	arma::Mat<_T> R;			// right triangular matrix
 	arma::umat P;				// permutation matrix
 	arma::Col<_T> Db;			// Dmax
@@ -212,8 +217,7 @@ class UDT_QR : public UDT<_T>{
 		Ds = ZEROS_LIKE(q.col(0));
 	}
 	UDT_QR(const UDT_QR<_T>& o): R(o.R), P(o.P), Db(o.Db), Ds(o.Ds), UDT(o) {};
-	UDT_QR(UDT_QR<_T>&& o) noexcept
-		: R(std::move(o.R)), P(std::move(o.P)), Db(std::move(o.Db)), Ds(std::move(Ds)), UDT(std::move(o)){};
+	UDT_QR(UDT_QR<_T>&& o) noexcept : R(std::move(o.R)), P(std::move(o.P)), Db(std::move(o.Db)), Ds(std::move(Ds)), UDT(std::move(o)){};
 
 	/*
 	* @brief copy assignment operator
@@ -337,10 +341,53 @@ class UDT_QR : public UDT<_T>{
 		// without the decomposition
 		// return = arma::inv(DIAG(Di) * U.t() + D * T) * DIAG(D_up) * Q_up.t();
 	}
+	// ########################################## (A+B)^(-1) ##########################################
+	
+	/*
+	* @brief Stabilized calculation of [UaDaTa + UbDbTb]^{-1}
+	*/
+	arma::Mat<_T> invSum(UDT<_T>* right) override {
+		// calculate loh decomposition
+		loh();
+		right.loh();
+		// dimension
+		auto d = Ds.size();
 
-	arma::Mat<_T> invSum(const UDT_QR& right) override {
+		// matL = D_min_a * Ta * Tb^{-1} / D_max_b
+		arma::Mat<_T> matL = T * arma::inv(arma::trimatu(right->T));
+		for(int i = 0; i < d; i++)
+			for(int j = 0; j < d; j++)
+				matL(i,j) *= Ds(i) / right->Db(j);
+
+		// matR = 1/(D_max_a) * Ua^\dag * Ub * D_min_b
+		arma::Mat<_T> matR = U.t() * right->U;
+		for(int i = 0; i < d; i++)
+			for(int j = 0; j < d; j++)
+				matL(i,j) *= right->Ds(i) / Db(j);
+
+		// add two matrices
+		mat1 += mat2;
+
+		// create inner decomposition
+		UDT_QR<_T> inner(mat1);
+		matR = arma::inv(arma::trimatu(inner.T) * DIAGMAT(inner.Di);
+		matR = matR * U.t();
+		for(int i = 0; i < d; i++)
+			for(int j = 0; j < d; j++)
+				matR(i,j) /= right->Db(i) * Db(j);
+		
+		// decompose again
+		inner.decompose(matR);
+		inner.U = arma::inv(arma::trimatu(right->T)) * inner.U;
+		inner.T = inner.T * U.t();
 
 	}
+
+	arma::Mat<_T> invSum(const UDT_QR& right, const arma::Mat<_T> setMat){
+
+
+	}
+
 };
 
 // #############################################################				   MATRIX MULTIPLICATION				   #############################################################
