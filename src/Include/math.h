@@ -19,10 +19,9 @@ inline T1 sgn(T2 val) {
 * @return euclidean a%b
 * @link https://en.wikipedia.org/wiki/Modulo_operation
 */
-template <typename T>
-inline T modEUC(T a, T b)
+inline long long modEUC(long long a, long long b)
 {
-	T m = a % b;
+	long long m = a % b;
 	if (m < 0) m = (b < 0) ? m - b : m + b;
 	return m;
 }

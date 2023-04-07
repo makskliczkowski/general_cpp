@@ -1,11 +1,28 @@
 #pragma once
 #ifndef ALG_H
 	#define ALG_H
-#endif
+using uint = unsigned int;
+// #############################################################				   INCLUDE FROM ARMADILLO				   #############################################################
+
+#define ARMA_USE_LAPACK             
+#define ARMA_PRINT_EXCEPTIONS
+//#define ARMA_BLAS_LONG_LONG                                                                 // using long long inside LAPACK call
+//#define ARMA_DONT_USE_FORTRAN_HIDDEN_ARGS
+//#define ARMA_DONT_USE_WRAPPER
+//#define ARMA_USE_SUPERLU
+//#define ARMA_USE_ARPACK 
+#define ARMA_USE_MKL_ALLOC
+#define ARMA_USE_MKL_TYPES
+#define ARMA_WARN_LEVEL 1
+#define ARMA_DONT_USE_OPENMP
+#define ARMA_USE_HDF5
+////#define ARMA_USE_OPENMP
+#define ARMA_ALLOW_FAKE_GCC
+#include <armadillo>
+
 
 #define DH5_USE_110_API
 #define D_HDF5USEDLL_ 
-#include "Include/statistical.h"
 
 // #############################################################				   DEFINITIONS FROM ARMADILLO				   #############################################################
 
@@ -74,24 +91,6 @@ void setMFromSubM(arma::Mat<_type1>& m2Set, const arma::Mat<_type2>& mSet, uint 
 	else
 		mSet = SUBM(m2Set, row, col, row + nrow, col + ncol);
 }
-
-/*
-* @brief Is used to calculate the equation of the form (U_l * D_l * T_l + U_r * D_r * T_r).
-* @details UDT we get from QR decomposition with column pivoting
-* @param Ql
-* @param Rl
-* @param Pl
-* @param Tl
-* @param Dl
-* @param Qr
-* @param Rr
-* @param Pr
-* @param Tr
-* @param Dr
-* @param Dtmp
-* @warning Uses the UDT decomposition from QR with column pivoting
-*/
-arma::mat inv_left_plus_right_qr(arma::mat& Ql, arma::mat& Rl, arma::umat& Pl, arma::mat& Tl, arma::vec& Dl, arma::mat& Qr, arma::mat& Rr, arma::umat& Pr, arma::mat& Tr, arma::vec& Dr, arma::vec& Dtmp);
 
 // #############################################################				   MATRIX DECOMPOSITIONS				   #############################################################
 
@@ -206,20 +205,21 @@ class UDT_QR : public UDT<_T>{
 
 	~UDT_QR() = default;
 	UDT_QR() = default;
-	UDT_QR(const arma::Mat<_T>& M){
+	UDT_QR(const arma::Mat<_T>& M) : UDT<_T>()
+	{
 		decompose(M);
-		Db = ZEROV(M.col(0).n_rows);
-		Ds = ZEROV(M.col(0).n_rows);
+		this->Db = ZEROV(M.col(0).n_rows);
+		this->Ds = ZEROV(M.col(0).n_rows);
 	};
 	UDT_QR(const arma::Mat<_T>& q, const arma::Mat<_T>& r, const arma::umat& p)
 		: R(r), P(p), UDT<_T>(q, arma::ones(q.n_rows), ZEROM(q.n_rows))
 	{
 		decompose();
-		Db = ZEROV(q.col(0).n_rows);
-		Ds = ZEROV(q.col(0).n_rows);
+		this->Db = ZEROV(q.col(0).n_rows);
+		this->Ds = ZEROV(q.col(0).n_rows);
 	};
-	UDT_QR(const UDT_QR<_T>& o): R(o.R), P(o.P), Db(o.Db), Ds(o.Ds), UDT<_T>(o) {};
-	UDT_QR(UDT_QR<_T>&& o) noexcept : R(std::move(o.R)), P(std::move(o.P)), Db(std::move(o.Db)), Ds(std::move(Ds)), UDT<_T>(std::move(o)){};
+	UDT_QR(const UDT_QR<_T>& o): R(o.R), P(o.P), UDT<_T>(o) {};
+	UDT_QR(UDT_QR<_T>&& o) noexcept : R(std::move(o.R)), P(std::move(o.P)), UDT<_T>(std::move(o)) {};
 
 	/*
 	* @brief copy assignment operator
@@ -228,8 +228,8 @@ class UDT_QR : public UDT<_T>{
 		UDT<_T>::operator=(o);
 		R = o.R;
 		P = o.P;
-		Db = o.Db;
-		Ds = o.Ds;
+		this->Db = o.Db;
+		this->Ds = o.Ds;
 		return *this;
 	}
 
@@ -240,8 +240,8 @@ class UDT_QR : public UDT<_T>{
 		UDT<_T>::operator=(std::move(o));
 		R = std::move(o.R);
 		P = std::move(o.P);
-		Db = std::move(o.Db);
-		Ds = std::move(o.Ds);
+		this->Db = std::move(o.Db);
+		this->Ds = std::move(o.Ds);
 		return *this;
 	}
 
@@ -252,9 +252,9 @@ class UDT_QR : public UDT<_T>{
 	*/
 	void decompose() override {
 		// inverse the vector D during setting
-		D = R.diag();
-		Di = 1.0 / R.diag();
-		T = (DIAG(Di) * R) * P.t();
+		this->D = R.diag();
+		this->Di = 1.0 / R.diag();
+		this->T = (DIAG(this->Di) * R) * P.t();
 	}
 	
 	/*
@@ -262,7 +262,7 @@ class UDT_QR : public UDT<_T>{
 	* @param M Matrix to decompose
 	*/
 	void decompose(const arma::Mat<_T>& M) override {
-		if (!arma::qr(U, R, P, M)) throw "Decomposition failed\n";
+		if (!arma::qr(this->U, R, P, M)) throw "Decomposition failed\n";
 		decompose();
 	}
 
@@ -272,13 +272,13 @@ class UDT_QR : public UDT<_T>{
 	void loh(){	
 		for (auto i = 0; i < R.n_rows; i++)
 		{
-			if (abs(D(i)) > 1.0) {
-				Db(i) = D(i);	// max (R(i,i), 1)
-				Ds(i) = 1.0;	// min (R(i,i), 1)
+			if (abs(this->D(i)) > 1.0) {
+				this->Db(i) = this->D(i);	// max (R(i,i), 1)
+				this->Ds(i) = 1.0;			// min (R(i,i), 1)
 			}
 			else {
-				Ds(i) = D(i);
-				Db(i) = 1.0;
+				this->Ds(i) = this->D(i);
+				this->Db(i) = 1.0;
 			}
 		}
 	}
@@ -290,13 +290,13 @@ class UDT_QR : public UDT<_T>{
 	void loh_inv(){
 		for (auto i = 0; i < R.n_rows; i++)
 		{
-			if (abs(D(i)) > 1.0) {
-				Db(i) = Di(i);	// max (R(i,i), 1)
-				Ds(i) = 1.0;	// min (R(i,i), 1)
+			if (abs(this->D(i)) > 1.0) {
+				this->Db(i) = this->Di(i);	// max (R(i,i), 1)
+				this->Ds(i) = 1.0;	// min (R(i,i), 1)
 			}
 			else {
-				Db(i) = 1.0;
-				Ds(i) = D(i);
+				this->Db(i) = 1.0;
+				this->Ds(i) = this->D(i);
 			}
 		}
 	}
@@ -312,23 +312,24 @@ class UDT_QR : public UDT<_T>{
 			if (abs(R(i, i)) > 1)
 				R(i, i) = 1;				// min(1,R(i,i))
 			else 							// (abs(R(i, i)) <= 1)
-				Di(i) = 1;					// inv of max(1,R(i,i)) because Di is already an inverse
+				this->Di(i) = 1;			// inv of max(1,R(i,i)) because Di is already an inverse
 		}
 	}
 
 	// ########################################## MULTIPLICATION ##########################################
-	// https://github.com/carstenbauer/StableDQMC.jl/blob/master/src/qr_udt.jl
+	
 	/*
 	* @brief Multiply the UDT decomposition by a matrix from the left
 	* @param Ml left matrix
+	* @link https://github.com/carstenbauer/StableDQMC.jl/blob/master/src/qr_udt.jl
 	*/
 	void factMult(const arma::Mat<_T> Ml) override {
-		if (!arma::qr(U, R, P, (Ml * Q) * DIAG(D))) throw "decomposition failed\n";
+		if (!arma::qr(this->U, R, P, (Ml * this->U) * DIAG(this->D))) throw "decomposition failed\n";
 		// inverse during setting
-		D = R.diag();
-		Di = 1.0 / D;
+		this->D = R.diag();
+		this->Di = 1.0 / this->D;
 		// premultiply old T by new T from left
-		T = ((DIAG(Di) * R) * P.t()) * T;
+		this->T = ((DIAG(this->Di) * R) * P.t()) * this->T;
 	}
 	
 	/*
@@ -337,7 +338,7 @@ class UDT_QR : public UDT<_T>{
 	arma::Mat<_T> inv1P() override {
 		// decompose first
 		loh_inv();
-		return arma::solve(DIAG(Db) * U.t() + DIAG(Ds) * T, DIAG(Db) * U.t());
+		return arma::solve(DIAG(this->Db) * this->U.t() + DIAG(this->Ds) * this->T, DIAG(this->Db) * this->U.t());
 		// loh();
 		// return arma::solve(arma::inv(DIAG(Db)) * U.t() + DIAG(Ds) * T, arma::inv(DIAG(Db)) * U.t());
 		// without the decomposition
@@ -357,19 +358,19 @@ class UDT_QR : public UDT<_T>{
 		right->loh();
 
 		// dimension
-		const auto d = Ds.n_elem;
+		const auto d = this->Ds.n_elem;
 
 		// matL = D_min_a * Ta * Tb^{-1} / D_max_b
-		arma::Mat<_T> matL = T * arma::inv(arma::trimatu(right->T));
+		arma::Mat<_T> matL = this->T * arma::inv(arma::trimatu(right->T));
 		for(int i = 0; i < d; i++)
 			for(int j = 0; j < d; j++)
-				matL(i,j) *= Ds(i) / right->Db(j);
+				matL(i,j) *= this->Ds(i) / right->Db(j);
 
 		// matR = 1/(D_max_a) * Ua^\dag * Ub * D_min_b
-		arma::Mat<_T> matR = U.t() * right->U;
+		arma::Mat<_T> matR = this->U.t() * right->U;
 		for(int i = 0; i < d; i++)
 			for(int j = 0; j < d; j++)
-				matL(i,j) *= right->Ds(i) / Db(j);
+				matL(i,j) *= right->Ds(i) / this->Db(j);
 
 		// add two matrices
 		matL += matR;
@@ -377,15 +378,15 @@ class UDT_QR : public UDT<_T>{
 		// create inner decomposition arma::solve(T, Di)
 		UDT_QR<_T> inner(matL);
 		matR = DIAG(inner.D) * inner.T;//arma::solve(inner.T, DIAG(inner.Di)); //arma::inv(arma::trimatu() * DIAG(inner.Di);
-		matR = arma::solve(matR, U.t());
+		matR = arma::solve(matR, this->U.t());
 		for(int i = 0; i < d; i++)
 			for(int j = 0; j < d; j++)
-				matR(i,j) /= right->Db(i) * Db(j);
+				matR(i,j) /= right->Db(i) * this->Db(j);
 		
 		// decompose again
 		inner.decompose(matR);
 		inner.U = arma::solve(arma::trimatu(right->T), inner.U);
-		inner.T = inner.T * U.t();
+		inner.T = inner.T * this->U.t();
 
 		// return evaluated one
 		return inner.eval();
@@ -396,3 +397,5 @@ class UDT_QR : public UDT<_T>{
 	}
 
 };
+
+#endif

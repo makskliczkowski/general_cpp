@@ -1,5 +1,10 @@
 #pragma once
 
+/*******************************
+* Contains the possible methods
+* for directories creation etc.
+*******************************/
+
 // --- FILESYSTEM : DIRECTORY CREATION ---
 #ifdef __has_include
 #	if __has_include(<filesystem>)
@@ -23,7 +28,7 @@ static const char* kPSep =
 #else 
     "/"; 
 #endif
-const std::string kPS = std::string(kPSep);
+const std::string kPS				=				std::string(kPSep);
 
 
 // ############################################################# DIRECTORIES #############################################################
@@ -32,9 +37,7 @@ const std::string kPS = std::string(kPSep);
 * @brief Creates a single directory given a string path
 * @param dir the directory
 */
-inline void createDir(const std::string& dir) {
-	fs::create_directories(dir);
-}
+inline void createDir(const std::string& dir)		{ fs::create_directories(dir); }
 
 /*
 * @brief Creates a variadic directory set given a string paths

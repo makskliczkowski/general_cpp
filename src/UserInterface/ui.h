@@ -2,93 +2,76 @@
 #ifndef UI_H
 #define UI_H
 
+#ifndef COMMON_H
 #include "../common.h"
+#endif
 
-#include <stdlib.h>
-#include <string>
-#include <iostream>
-#include <sstream>
-#include <utility>
-#include <functional>
+#define SETOPTION(n, S) this->setOption(n.S, argv, #S)
 
 // -------------------------------------------------------- Make a User interface class --------------------------------------------------------
+inline std::string higherThanZero(std::string s)		{ if (stod(s) <= 0) return "must be higher than 0"; else return ""; };
+inline std::string defaultReturn(std::string s)			{ return ""; };
 
-class user_interface {
+class UserInterface {
 protected:
-	std::unordered_map <std::string, std::string> default_params;
-	int thread_number;																				 		// number of threads
-	int boundary_conditions;																		 		// boundary conditions - 0 - PBC, 1 - OBC, 2 - ABC,...
-	int choosen_funtion = -1;
-	std::string saving_dir;
+	typedef v_1d<std::string> cmdArg;
+	typedef std::unordered_map<std::string, std::tuple<std::string, std::function<std::string(std::string)>>> cmdMap;
 
-	std::string getCmdOption(const v_1d<std::string>& vec, std::string option) const;				 		// get the option from cmd input
+	std::string main_dir = "." + kPS;																		// main directory - to be saved onto
+	int chosen_funtion									= -1;												// chosen function to be used later
+	uint thread_number									= 1;	
 	
-	template <typename T>
-	void set_option(T& value, const v_1d<std::string>& argv, std::string choosen_option, bool geq_0 = true);// set an option
+	// ------------- CHOICES and OPTIONS and DEFAULTS
+	cmdMap default_params;																					// default parameters
 
-	template <typename T>
-	void set_default_msg(T& value, std::string option, std::string message, \
-		const std::unordered_map <std::string, std::string>& map) const;									// setting value to default and sending a message
-	// std::unique_ptr<LatticeModel> model;															 		// a unique pointer to the model used
+	// ------------ FUNCTIONS ------------
+
+	std::string getCmdOption(cmdArg& vec, std::string option) const;				 						// get the option from cmd input
+	std::string setDefaultMsg(std::string v, std::string opt, std::string message, const cmdMap& map) const;// setting value to default and sending a message
+	
+	template <typename _T>
+	void setOption(_T& value, cmdArg& argv, std::string choice);											// set an option
+
 
 public:
-	virtual ~user_interface() = default;
+	virtual ~UserInterface() = default;
 
-	virtual void make_simulation() = 0;
+	// general functions to override
+	virtual void exitWithHelp()							= 0;
 
-	virtual void exit_with_help() = 0;
 	// ----------------------- REAL PARSING
-	virtual void parseModel(int argc, const v_1d<std::string>& argv) = 0;									// the function to parse the command line
-	virtual void functionChoice() = 0;																		// allows to choose the method without recompilation of the whole code
+	virtual void funChoice()							= 0;												// allows to choose the method without recompilation of the whole code
+	virtual void parseModel(int argc, cmdArg& argv)		= 0;												// the function to parse the command line
+	virtual cmdArg parseInputFile(std::string filename);													// if the input is taken from file we need to make it look the same way as the command line does
+	
 	// ----------------------- HELPING FUNCIONS
-	virtual void set_default() = 0;																	 		// set default parameters
+	virtual void setDefault()							= 0;										 		// set default parameters
+	
 	// ----------------------- NON-VIRTUALS
-	v_1d<std::string> parseInputFile(std::string filename);													// if the input is taken from file we need to make it look the same way as the command line does
 };
 
 /*
 * @brief sets option from a given cmd options
-* @param value
-* @param argv
-* @param choosen_option
-* @param geq_0
+* @param value a value to be set onto
+* @param argv arguments to find the corresponding option
+* @param choice chosen option
+* @param c constraint on the option
 */
-template<typename T>
-inline void user_interface::set_option(T& value, const v_1d<std::string>& argv, std::string choosen_option, bool geq_0)
+template<typename _T>
+inline void UserInterface::setOption(_T& value, cmdArg& argv, std::string choice)
 {
-	if (std::string option = this->getCmdOption(argv, choosen_option); option != "")
-		value = static_cast<T>(stod(option));													// set value to an option
-	if (geq_0 && value <= 0)																	// if the variable shall be bigger equal 0
-		this->set_default_msg(value, choosen_option.substr(1), \
-			choosen_option + " cannot be negative\n", default_params);
-}
-
-// string instance
-template<>
-inline void user_interface::set_option<std::string>(std::string& value, const v_1d<std::string>& argv, std::string choosen_option, bool geq_0) {
-	if (std::string option = this->getCmdOption(argv, choosen_option); option != "")
-		value = option;
-}
-
-/*
-* @brief sets the message sent to user to default
-* @param value
-* @param option
-* @param message
-*/
-template<typename T>
-inline void user_interface::set_default_msg(T& value, std::string option, std::string message, const std::unordered_map <std::string, std::string>& map) const
-{
-	std::cout << message;																// print warning
-	std::string value_str = "";																// we will set this to value
-	auto it = map.find(option);
-	if (it != map.end()) {
-		value_str = it->second;															// if in table - we take the enum
+	if (std::string option = this->getCmdOption(argv, "-" + choice); option != "") {
+		option = this->setDefaultMsg(option, choice.substr(1), choice + ":\n", default_params);
+		value = static_cast<_T>(stod(option));																// set value to an option
+		
 	}
-	value = static_cast<T>(stod(value_str));
 }
 
-
+template<>
+inline void UserInterface::setOption<std::string>(std::string& value, cmdArg& argv, std::string choice) {
+	if (std::string option = this->getCmdOption(argv, "-" + choice); option != "")
+		value = this->setDefaultMsg(option, std::string(choice.substr(1)), std::string(choice + ":\n"), default_params);
+}
 
 #endif // !UI_H
 

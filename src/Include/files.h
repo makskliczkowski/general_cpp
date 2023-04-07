@@ -2,6 +2,8 @@
 #include <ios>
 #include <iostream>
 #include <algorithm> 
+#include <fstream>
+#include "str.h"
 
 // ########################################################			    FILE AND STREAMS			########################################################
 
@@ -11,15 +13,17 @@
 * @param mode std::ios_base::openmode of file to be opened
 */
 template <typename T>
-inline void openFile(T& file, std::string fileName, std::ios_base::openmode mode = std::ios::out) {
+inline int openFile(T& file, std::string fileName, std::ios_base::openmode mode = std::ios::out) {
     try{
-        file.open(filename, mode);
+        file.open(fileName, mode);
         if (!file.is_open())
-            throw "Couldn't open a file: " + filename + "\n";
+            throw ("Couldn't open a file: " + fileName + "\n");
     }
-    catch(const ifstream::failure& e){
+    catch(const std::ifstream::failure& e){
         std::cerr << "Exception opening/reading/closing file\n";
+        return 0;
     }
+    return 1;
 }
 
 // ######################################################## PRINT SEPARATED
@@ -30,7 +34,7 @@ inline void printSepP(std::ostream& output, char sep, uint16_t width, uint16_t p
 }
 template <typename Type, typename... Types>
 inline void printSepP(std::ostream& output, char sep, uint16_t width, uint16_t prec, Type arg, Types... elements) {
-	printSepP(output, sep, width, prec, arg);	printSepP(output, separator, width, prec, elements...);
+	printSepP(output, sep, width, prec, arg);	printSepP(output, sep, width, prec, elements...);
 }
 
 /*

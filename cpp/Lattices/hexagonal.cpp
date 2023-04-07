@@ -14,13 +14,13 @@ HexagonalLattice::HexagonalLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 	{
 	case 1:
 		this->Ly = 1; this->Lz = 1;
-		this->nn_forward = { 0 };
-		this->nnn_forward = { 0 };
+		this->nnForward = { 0 };
+		this->nnnForward = { 0 };
 		break;
 	case 2:
 		this->Lz = 1;
-		this->nn_forward = { 0, 1, 2 };
-		this->nnn_forward = { 0, 1, 2 };
+		this->nnForward = { 0, 1, 2 };
+		this->nnnForward = { 0, 1, 2 };
 		break;
 	default:
 		break;
@@ -38,14 +38,14 @@ HexagonalLattice::HexagonalLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 	this->calculate_spatial_norm();
 
 
-	this->a1 = vec({ sqrt(3) * this->a / 2.0, 3 * this->a / 2.0, 0 });
-	this->a2 = vec({ -sqrt(3) * this->a / 2.0, 3 * this->a / 2.0, 0 });
-	this->a3 = vec({ 0, 0, this->c });
+	this->a1 = arma::vec({ sqrt(3) * this->a / 2.0, 3 * this->a / 2.0, 0 });
+	this->a2 = arma::vec({ -sqrt(3) * this->a / 2.0, 3 * this->a / 2.0, 0 });
+	this->a3 = arma::vec({ 0, 0, this->c });
 
-	this->k_vectors = mat(this->Lx * this->Ly * this->Lz, 3, arma::fill::zeros);
+	this->kVec = arma::mat(this->Lx * this->Ly * this->Lz, 3, arma::fill::zeros);
 
 	//! make vectors
-	this->calculate_k_vectors();
+	this->calculate_kVec();
 }
 
 // ------------------------------------------------------------- Getters -------------------------------------------------------------
@@ -53,40 +53,37 @@ HexagonalLattice::HexagonalLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 /*
 * @brief returns the nn for a given x direction at a given lattice site
 */
-int HexagonalLattice::get_x_nn(int lat_site) const
+int HexagonalLattice::get_nn(int site, Lattice::direction d) const
 {
-	return this->dim == 2 ? this->get_nn(lat_site, 2) : this->get_nn(lat_site, 0);
-}
-
-/*
-* @brief returns the nn for a given y direction at a given lattice site
-*/
-int HexagonalLattice::get_y_nn(int lat_site) const
-{
-	return this->dim == 2 ? this->get_nn(lat_site, 1) : this->get_nn(lat_site, 0);
-}
-
-/*
-* @brief returns the nn for a given z direction at a given lattice site
-*/
-int HexagonalLattice::get_z_nn(int lat_site) const
-{
-	return this->get_nn(lat_site, 0);
+	switch (d) {
+	case X:
+		return this->nn[site][0];
+		break;
+	case Y:
+		return this->dim >= 2 ? this->nn[site][1] : this->nn[site][0];
+		break;
+	case Z:
+		return this->dim == 3 ? this->nn[site][2] : this->nn[site][0];
+		break;
+	default:
+		return this->nn[site][0];
+		break;
+	}
 }
 
 /*
 * @brief returns the real space vector for a given multipliers of reciprocal vectors
 */
-vec HexagonalLattice::get_real_space_vec(int x, int y, int z) const
+arma::vec HexagonalLattice::getRealVec(int x, int y, int z) const
 {
 	// elementary cell Y value (two atoms in each elementary cell)
-	auto Y = std::floor(double(y) / 2.0);
+	auto yFloor = std::floor(double(y) / 2.0);
 	// how much should we move in y direction with a1 + a2 (each y / 4 gives additional movement in a1 + a2)
-	auto y_movement = std::floor(double(Y) / 2.0);
+	auto yMove = std::floor(double(yFloor) / 2.0);
 
 	// go in y direction
-	vec tmp = (y_movement * (this->a1 + this->a2)) + (z * this->a3);
-	tmp += myModuloEuclidean(Y, 2) * this->a1;
+	arma::vec tmp = (yMove * (this->a1 + this->a2)) + (z * this->a3);
+	tmp += modEUC(Y, 2) * this->a1;
 
 	// go in x is direction, working for negative
 	return tmp + x * (this->a1 - this->a2);
@@ -103,17 +100,17 @@ void HexagonalLattice::calculate_nn_pbc()
 	{
 	case 1:
 		// One dimension - just a chain of 2*Lx elems
-		this->nearest_neighbors = v_2d<int>(this->Ns, v_1d<int>(2, 0));
+		this->nn = v_2d<int>(this->Ns, v_1d<int>(2, 0));
 		for (int i = 0; i < Ns; i++) {
 			// z bond only
-			this->nearest_neighbors[i][0] = (i + 1) % Ns;							// this is the neighbor top
-			this->nearest_neighbors[i][1] = myModuloEuclidean(i-1, Ns);			// this is the neighbor bottom
+			this->nn[i][0] = (i + 1) % this->Ns;			// this is the neighbor top
+			this->nn[i][1] = modEUC(i-1, this->Ns);			// this is the neighbor bottom
 		}
 		break;
 	case 2:
 		// Two dimensions 
 		// numeration begins from the bottom as 0 to the second as 1 with lattice vectors move
-		this->nearest_neighbors = v_2d<int>(Ns, v_1d<int>(3, 0));
+		this->nn = v_2d<int>(Ns, v_1d<int>(3, 0));
 		// over Lx
 		for (int i = 0; i < Lx; i++) {
 			// over big Y
@@ -123,10 +120,10 @@ void HexagonalLattice::calculate_nn_pbc()
 				auto current_elem_b = 2 * i + 2 * Lx * j + 1;							// upper
 
 				// check the elementary cells
-				auto up = myModuloEuclidean(j + 1, Ly);
-				auto down = myModuloEuclidean(j - 1, Ly);
-				auto right = myModuloEuclidean(i + 1, Lx);
-				auto left = myModuloEuclidean(i - 1, Lx);
+				auto up = modEUC(j + 1, this->Ly);
+				auto down = modEUC(j - 1, this->Ly);
+				auto right = modEUC(i + 1, this->Lx);
+				auto left = modEUC(i - 1, this->Lx);
 
 				// y and x bonding depends on current y level as the hopping between sites changes 
 				
@@ -134,46 +131,46 @@ void HexagonalLattice::calculate_nn_pbc()
 				auto y_bond_b = -1;
 				auto x_bond_a = -1;
 				auto x_bond_b = -1;
-				if (myModuloEuclidean(j, 2) == 0) {
+				if (modEUC(j, 2) == 0) {
 					// right 
 					// neighbor x does not change for a but y changes -> y_bond
-					y_bond_a = (2 * i + 2 * down * Lx + 1);							// site b is the neighbor for a
+					y_bond_a = (2 * i + 2 * down * this->Lx + 1);							// site b is the neighbor for a
 
 					// left 
 					// neighbor y does change for a and x changes -> x_bond
-					x_bond_a = (2 * left + 2 * down * Lx + 1);							// site b is the neighbor for a
+					x_bond_a = (2 * left + 2 * down * this->Lx + 1);							// site b is the neighbor for a
 
 					// left 
 					// neighbor x does change for a and y changes -> x_bond
-					y_bond_b = (2 * left + 2 * up * Lx);
+					y_bond_b = (2 * left + 2 * up * this->Lx);
 					// right 
 					// neighbor x does not change for a but y changes -> y_bond
-					x_bond_b = (2 * i + 2 * up * Lx);
+					x_bond_b = (2 * i + 2 * up * this->Lx);
 				}
 				else
 				{
 					// right a - x changes for a, y changes for a
-					y_bond_a = (2 * right + 2 * down * Lx + 1);
+					y_bond_a = (2 * right + 2 * down * this->Lx + 1);
 					// left b - x does not change y changes
-					y_bond_b = (2 * i + 2 * up * Lx);
+					y_bond_b = (2 * i + 2 * up * this->Lx);
 					// left a - x does not change, y changes;
-					x_bond_a = (2 * i + 2 * down * Lx + 1);
+					x_bond_a = (2 * i + 2 * down * this->Lx + 1);
 					// right b - x changes, y changes;
-					x_bond_b = (2 * right + 2 * up * Lx);
+					x_bond_b = (2 * right + 2 * up * this->Lx);
 				}
 
 				// x bonding
-				this->nearest_neighbors[current_elem_a][2] = x_bond_a;
-				this->nearest_neighbors[current_elem_b][2] = x_bond_b;
+				this->nn[current_elem_a][2] = x_bond_a;
+				this->nn[current_elem_b][2] = x_bond_b;
 				// y bonding
-				this->nearest_neighbors[current_elem_a][1] = y_bond_a;
-				this->nearest_neighbors[current_elem_b][1] = y_bond_b;
+				this->nn[current_elem_a][1] = y_bond_a;
+				this->nn[current_elem_b][1] = y_bond_b;
 				// z bonding
-				this->nearest_neighbors[current_elem_a][0] = current_elem_a + 1;
-				this->nearest_neighbors[current_elem_b][0] = current_elem_b - 1;
+				this->nn[current_elem_a][0] = current_elem_a + 1;
+				this->nn[current_elem_b][0] = current_elem_b - 1;
 			}
 		}
-		stout << this->nearest_neighbors << EL;
+		stout << this->nn << EL;
 		break;
 	case 3:
 		/* Three dimensions */
@@ -192,17 +189,17 @@ void HexagonalLattice::calculate_nn_obc()
 	{
 	case 1:
 		// One dimension - just a chain of 2*Lx elems
-		this->nearest_neighbors = v_2d<int>(this->Ns, v_1d<int>(2, 0));
+		this->nn = v_2d<int>(this->Ns, v_1d<int>(2, 0));
 		for (int i = 0; i < Ns; i++) {
 			// z bond only
-			this->nearest_neighbors[i][0] = (i + 1) >= Ns ? i + 1 : -1;						// this is the neighbor top
-			this->nearest_neighbors[i][1] = myModuloEuclidean(i - 1, Ns);					// this is the neighbor bottom
+			this->nn[i][0] = (i + 1) >= this->Ns ? i + 1 : -1;						// this is the neighbor top
+			this->nn[i][1] = modEUC(i - 1, this->Ns);					// this is the neighbor bottom
 		}
 		break;
 	case 2:
 		// Two dimensions 
 		// numeration begins from the bottom as 0 to the second as 1 with lattice vectors move
-		this->nearest_neighbors = std::vector<std::vector<int>>(Ns, std::vector<int>(3, -1));
+		this->nn = std::vector<std::vector<int>>(Ns, std::vector<int>(3, -1));
 		for (int i = 0; i < Lx; i++) {
 			for (int j = 0; j < Ly; j++) {
 				auto current_elem_a = 2 * i + 2 * Lx * j;
@@ -217,7 +214,7 @@ void HexagonalLattice::calculate_nn_obc()
 				auto y_bond_b = -1;
 				auto x_bond_a = -1;
 				auto x_bond_b = -1;
-				if (myModuloEuclidean(j, 2) == 0) {
+				if (modEUC(j, 2) == 0) {
 					// right 
 					// neighbor x does not change for a but y changes -> y_bond
 					y_bond_a = down >= 0 ? (2 * i + 2 * down * Lx + 1) : -1;							// site b is the neighbor for a
@@ -247,17 +244,17 @@ void HexagonalLattice::calculate_nn_obc()
 				}
 
 				// x bonding
-				this->nearest_neighbors[current_elem_a][2] = x_bond_a;
-				this->nearest_neighbors[current_elem_b][2] = x_bond_b;
+				this->nn[current_elem_a][2] = x_bond_a;
+				this->nn[current_elem_b][2] = x_bond_b;
 				// y bonding
-				this->nearest_neighbors[current_elem_a][1] = y_bond_a;
-				this->nearest_neighbors[current_elem_b][1] = y_bond_b;
+				this->nn[current_elem_a][1] = y_bond_a;
+				this->nn[current_elem_b][1] = y_bond_b;
 				// z bonding
-				this->nearest_neighbors[current_elem_a][0] = current_elem_a + 1;
-				this->nearest_neighbors[current_elem_b][0] = current_elem_b - 1;
+				this->nn[current_elem_a][0] = current_elem_a + 1;
+				this->nn[current_elem_b][0] = current_elem_b - 1;
 			}
 		}
-		// stout << this->nearest_neighbors << EL;
+		// stout << this->nn << EL;
 		break;
 	case 3:
 		/* Three dimensions */
@@ -276,17 +273,17 @@ void HexagonalLattice::calculate_nn_mbc()
 	{
 	case 1:
 		// One dimension - just a chain of 2*Lx elems
-		this->nearest_neighbors = v_2d<int>(this->Ns, v_1d<int>(2, 0));
+		this->nn = v_2d<int>(this->Ns, v_1d<int>(2, 0));
 		for (int i = 0; i < Ns; i++) {
 			// z bond only
-			this->nearest_neighbors[i][0] = (i + 1) % Ns;							// this is the neighbor top
-			this->nearest_neighbors[i][1] = myModuloEuclidean(i - 1, Ns);			// this is the neighbor bottom
+			this->nn[i][0] = (i + 1) % Ns;							// this is the neighbor top
+			this->nn[i][1] = modEUC(i - 1, Ns);			// this is the neighbor bottom
 		}
 		break;
 	case 2:
 		// Two dimensions 
 		// numeration begins from the bottom as 0 to the second as 1 with lattice vectors move
-		this->nearest_neighbors = v_2d<int>(Ns, v_1d<int>(3, 0));
+		this->nn = v_2d<int>(Ns, v_1d<int>(3, 0));
 		// over Lx
 		for (int i = 0; i < Lx; i++) {
 			// over big Y
@@ -298,8 +295,8 @@ void HexagonalLattice::calculate_nn_mbc()
 				// check the elementary cells
 				auto up = j + 1;
 				auto down = j - 1;
-				auto right = myModuloEuclidean(i + 1, Lx);
-				auto left = myModuloEuclidean(i - 1, Lx);
+				auto right = modEUC(i + 1, Lx);
+				auto left = modEUC(i - 1, Lx);
 
 				// y and x bonding depends on current y level as the hopping between sites changes 
 
@@ -307,7 +304,7 @@ void HexagonalLattice::calculate_nn_mbc()
 				auto y_bond_b = -1;
 				auto x_bond_a = -1;
 				auto x_bond_b = -1;
-				if (myModuloEuclidean(j, 2) == 0) {
+				if (modEUC(j, 2) == 0) {
 					// right 
 					// neighbor x does not change for a but y changes -> y_bond
 					y_bond_a = down >= 0 ? (2 * i + 2 * down * Lx + 1) : -1;							// site b is the neighbor for a
@@ -337,17 +334,17 @@ void HexagonalLattice::calculate_nn_mbc()
 				}
 
 				// x bonding
-				this->nearest_neighbors[current_elem_a][2] = x_bond_a;
-				this->nearest_neighbors[current_elem_b][2] = x_bond_b;
+				this->nn[current_elem_a][2] = x_bond_a;
+				this->nn[current_elem_b][2] = x_bond_b;
 				// y bonding
-				this->nearest_neighbors[current_elem_a][1] = y_bond_a;
-				this->nearest_neighbors[current_elem_b][1] = y_bond_b;
+				this->nn[current_elem_a][1] = y_bond_a;
+				this->nn[current_elem_b][1] = y_bond_b;
 				// z bonding
-				this->nearest_neighbors[current_elem_a][0] = current_elem_a + 1;
-				this->nearest_neighbors[current_elem_b][0] = current_elem_b - 1;
+				this->nn[current_elem_a][0] = current_elem_a + 1;
+				this->nn[current_elem_b][0] = current_elem_b - 1;
 			}
 		}
-		stout << this->nearest_neighbors << EL;
+		stout << this->nn << EL;
 		break;
 	case 3:
 		/* Three dimensions */
@@ -362,21 +359,22 @@ void HexagonalLattice::calculate_nn_mbc()
 */
 void HexagonalLattice::calculate_nn_sbc()
 {
+	this->nn = v_2d<int>(this->Ns);
 	switch (this->dim)
 	{
 	case 1:
 		// One dimension - just a chain of 2*Lx elems
-		this->nearest_neighbors = v_2d<int>(this->Ns, v_1d<int>(2, 0));
 		for (int i = 0; i < Ns; i++) {
+			this->nn[i] = v_1d<int>(2, 0);
 			// z bond only
-			this->nearest_neighbors[i][0] = (i + 1) % Ns;							// this is the neighbor top
-			this->nearest_neighbors[i][1] = myModuloEuclidean(i - 1, Ns);			// this is the neighbor bottom
+			this->nn[i][0] = (i + 1) % Ns;							// this is the neighbor top
+			this->nn[i][1] = modEUC(i - 1, Ns);				// this is the neighbor bottom
 		}
 		break;
 	case 2:
 		// Two dimensions 
 		// numeration begins from the bottom as 0 to the second as 1 with lattice vectors move
-		this->nearest_neighbors = v_2d<int>(Ns, v_1d<int>(3, 0));
+		this->nn = v_2d<int>(Ns, v_1d<int>(3, 0));
 		// over Lx
 		for (int i = 0; i < Lx; i++) {
 			// over big Y
@@ -386,8 +384,8 @@ void HexagonalLattice::calculate_nn_sbc()
 				auto current_elem_b = 2 * i + 2 * Lx * j + 1;							// upper
 
 				// check the elementary cells
-				auto up = myModuloEuclidean(j + 1, Ly);
-				auto down = myModuloEuclidean(j - 1, Ly);
+				auto up = modEUC(j + 1, Ly);
+				auto down = modEUC(j - 1, Ly);
 				auto right = i + 1;
 				auto left = i - 1;
 
@@ -397,7 +395,7 @@ void HexagonalLattice::calculate_nn_sbc()
 				auto y_bond_b = -1;
 				auto x_bond_a = -1;
 				auto x_bond_b = -1;
-				if (myModuloEuclidean(j, 2) == 0) {
+				if (modEUC(j, 2) == 0) {
 					// right 
 					// neighbor x does not change for a but y changes -> y_bond
 					y_bond_a = down >= 0 ? (2 * i + 2 * down * Lx + 1) : -1;							// site b is the neighbor for a
@@ -427,17 +425,17 @@ void HexagonalLattice::calculate_nn_sbc()
 				}
 
 				// x bonding
-				this->nearest_neighbors[current_elem_a][2] = x_bond_a;
-				this->nearest_neighbors[current_elem_b][2] = x_bond_b;
+				this->nn[current_elem_a][2] = x_bond_a;
+				this->nn[current_elem_b][2] = x_bond_b;
 				// y bonding
-				this->nearest_neighbors[current_elem_a][1] = y_bond_a;
-				this->nearest_neighbors[current_elem_b][1] = y_bond_b;
+				this->nn[current_elem_a][1] = y_bond_a;
+				this->nn[current_elem_b][1] = y_bond_b;
 				// z bonding
-				this->nearest_neighbors[current_elem_a][0] = current_elem_a + 1;
-				this->nearest_neighbors[current_elem_b][0] = current_elem_b - 1;
+				this->nn[current_elem_a][0] = current_elem_a + 1;
+				this->nn[current_elem_b][0] = current_elem_b - 1;
 			}
 		}
-		stout << this->nearest_neighbors << EL;
+		stout << this->nn << EL;
 		break;
 	case 3:
 		/* Three dimensions */
@@ -453,6 +451,7 @@ void HexagonalLattice::calculate_nn_sbc()
 */
 void HexagonalLattice::calculate_nnn_pbc()
 {
+	this->nnn = v_2d<int>(this->Ns);
 	switch (this->dim)
 	{
 	case 1:
@@ -474,6 +473,7 @@ void HexagonalLattice::calculate_nnn_pbc()
 */
 void HexagonalLattice::calculate_nnn_obc()
 {
+	this->nnn = v_2d<int>(this->Ns);
 	switch (this->dim)
 	{
 	case 1:
@@ -498,18 +498,18 @@ void HexagonalLattice::calculate_nnn_obc()
 void HexagonalLattice::calculate_coordinates()
 {
 	const int LxLy = Lx * Ly;
-	this->coordinates = v_2d<int>(this->Ns, v_1d<int>(3, 0));
+	this->coord = v_2d<int>(this->Ns, v_1d<int>(3, 0));
 	// we must categorize elements by pairs
 	for (int i = 0; i < Ns; i++) {
-		this->coordinates[i][0] = (static_cast<int>(1.0 * i / 2.0)) % Lx;						// x axis coordinate
-		this->coordinates[i][1] = (static_cast<int>(1.0 * i / (2.0 * Lx))) % Ly;				// y axis coordinate
-		this->coordinates[i][2] = (static_cast<int>(1.0 * i / (LxLy))) % Lz;					// z axis coordinate			
+		this->coord[i][0] = (int(1.0 * i / 2.0)) % Lx;						// x axis coordinate
+		this->coord[i][1] = (int(1.0 * i / (2.0 * Lx))) % Ly;				// y axis coordinate
+		this->coord[i][2] = (int(1.0 * i / (LxLy))) % Lz;					// z axis coordinate			
 
 		// we calculate the big Y that is enumerated normally accordingly and then calculate the small y which is twice bigger or twice bigger + 1
 		if (i % 2 == 0)
-			this->coordinates[i][1] = this->coordinates[i][1] * 2;
+			this->coord[i][1] = this->coord[i][1] * 2;
 		else
-			this->coordinates[i][1] = this->coordinates[i][1] * 2 + 1;
+			this->coord[i][1] = this->coord[i][1] * 2 + 1;
 
 		//stout << VEQ(i) << "->(" << this->coordinates[i][0] << "," << this->coordinates[i][1] << "," << this->coordinates[i][2] << ")\n";
 	}
@@ -520,15 +520,15 @@ void HexagonalLattice::calculate_coordinates()
 /*
 * @brief calculates the matrix of all k vectors
 */
-void HexagonalLattice::calculate_k_vectors()
+void HexagonalLattice::calculate_kVec()
 {
 	const auto two_pi_over_Lx = TWOPI / Lx / a;
 	const auto two_pi_over_Ly = TWOPI / Ly / a;
 	const auto two_pi_over_Lz = TWOPI / Lz / c;
 
-	const vec b1 = { 1. / sqrt(3), 1. / 3., 0 };
-	const vec b2 = { -1. / sqrt(3), 1. / 3., 0 };
-	const vec b3 = { 0, 0, 1 };
+	const arma::vec b1 = { 1. / sqrt(3), 1. / 3., 0 };
+	const arma::vec b2 = { -1. / sqrt(3), 1. / 3., 0 };
+	const arma::vec b3 = { 0, 0, 1 };
 
 
 	for (int qx = 0; qx < Lx; qx++) {
@@ -538,53 +538,9 @@ void HexagonalLattice::calculate_k_vectors()
 			for (int qz = 0; qz < Lz; qz++) {
 				double kz = -PI + two_pi_over_Lz * qz;
 				uint iter = qz * (Lx * Ly) + qy * Lx + qx;
-				this->k_vectors.row(iter) = (kx * b1 + ky * b2 + kz * b3).st();
+				this->kVec.row(iter) = (kx * b1 + ky * b2 + kz * b3).st();
 			}
 		}
 	}
 
-}
-
-// ------------------------------------------------------------- forwards -------------------------------------------------------------
-
-// ------------------------------------------------------------- nn 
-
-/*
-* @brief returns forward neighbors number
-*/
-v_1d<uint> HexagonalLattice::get_nn_forward_number(int lat_site) const
-{
-	if (this->dim == 1 || lat_site % 2 == 0)
-		return { 0 };
-	else
-		return { 1,2 };
-}
-
-/*
-* @brief returns the integer given neighbor for a given site
-*/
-uint HexagonalLattice::get_nn_forward_num(int lat_site, int num) const
-{
-	return this->nn_forward[num];
-}
-
-/*
-* @brief returns forward neighbors number
-*/
-v_1d<uint> HexagonalLattice::get_nnn_forward_number(int lat_site) const
-{
-	if (this->dim == 1 || lat_site % 2 == 0)
-		return { 0 };
-	else
-		return { 1,2 };
-}
-
-// ------------------------------------------------------------- nnn
-
-/*
-* @brief returns the integer given neighbor for a given site
-*/
-uint HexagonalLattice::get_nnn_forward_num(int lat_site, int num) const
-{
-	return this->nn_forward[num];
 }

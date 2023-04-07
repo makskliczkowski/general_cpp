@@ -6,6 +6,11 @@
 #include "common.h"
 #endif
 
+#include <bit>
+#include <bitset>
+#include <cstdint>
+#include <iostream>
+
 // --------------------------------------------------------				SUPPRESS WARNINGS				--------------------------------------------------------
 #if defined(_MSC_VER)
 #define DISABLE_WARNING_PUSH           __pragma(warning( push ))
@@ -62,17 +67,12 @@ DISABLE_WARNING_PUSH // include <armadillo> and suppress its warnings, cause dev
 #endif
 
 #ifdef SPIN
-#define INT_TO_BASE intToBaseSpin
-#define BASE_TO_INT baseToIntSpin
+	#define INT_TO_BASE intToBaseSpin
+	#define BASE_TO_INT baseToIntSpin
 #else
-#define INT_TO_BASE_BIT intToBase
-#define BASE_TO_INT baseToInt
+	#define INT_TO_BASE_BIT intToBase
+	#define BASE_TO_INT baseToInt
 #endif // SPIN
-
-
-
-
-
 
 // The macro `REVERSE_BITS` generates the table
 const ull lookup[256] = { REVERSE_BITS };
@@ -93,14 +93,14 @@ const v_1d<ull> BinaryPowers = { ULLPOW(0), ULLPOW(1), ULLPOW(2), ULLPOW(3),
 // ---------------------------------- check bit ----------------------------------
 
 /*
-*@brief Check the k'th bit
-*@param n Number on which the bit shall be checked
-*@param k Number of bit (from 0 to 63) - count from right!!!
-*@returns Bool on if the bit is set or not
+* @brief Check the k'th bit
+* @param n Number on which the bit shall be checked
+* @param k Number of bit (from 0 to 63) - count from right!!!
+* @returns Bool on if the bit is set or not
 */
 template <typename _T>
 inline _T checkBit(_T n, int k) {
-	return _T1(n & (_T(1) << k));
+	return _T(n & (_T(1) << k));
 }
 
 template <typename _T>
@@ -281,10 +281,11 @@ inline _T1 dotm(arma::Col<_T1> lv, arma::Col<_T2> rv) {
 *@returns rotated number
 */
 template <typename _T>
-inline _T rotateLeft(_T n, int L) {
+inline _T rotateLeft(_T n, int32_t L) {
 	_T maxPower = BinaryPowers[L - int32_t(1)];
 	return (n >= maxPower) ? (((int64_t)n - (int64_t)maxPower) * 2 + 1) : n * 2;
 }
+
 template <typename _T>
 inline _T rotateLeft(_T n, int L, int base) {
 	_T val = rotateLeft(n, L);

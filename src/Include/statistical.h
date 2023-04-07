@@ -1,21 +1,8 @@
 #pragma once
-#include "../common.h"
-// armadillo flags:
-#define ARMA_USE_LAPACK             
-#define ARMA_PRINT_EXCEPTIONS
-//#define ARMA_BLAS_LONG_LONG                                                                 // using long long inside LAPACK call
-//#define ARMA_DONT_USE_FORTRAN_HIDDEN_ARGS
-//#define ARMA_DONT_USE_WRAPPER
-//#define ARMA_USE_SUPERLU
-//#define ARMA_USE_ARPACK 
-#define ARMA_USE_MKL_ALLOC
-#define ARMA_USE_MKL_TYPES
-#define ARMA_WARN_LEVEL 1
-#define ARMA_DONT_USE_OPENMP
-#define ARMA_USE_HDF5
-////#define ARMA_USE_OPENMP
-#define ARMA_ALLOW_FAKE_GCC
-#include <armadillo>
+
+#ifndef ALG_H
+#include "../lin_alg.h"
+#endif // !ALG_H
 
 // ######################################################## binning ########################################################
 
@@ -45,15 +32,14 @@ inline _T correlationError(const arma::Col<_T>& bins) {
 	return arma::real(sqrt(arma::var(bins) / bins.size()));
 }
 
-/*
-* @brief for an std::vector calculates the standard deviation
-*/
-template <typename _T>
-_T stddev(const v_1d<_T>& v)
-{
-	_T mean = std::accumulate(v.begin(), v.end(), T(0.0)) / T(v.size());
-	v_1d<_T> diff(v.size());
-	std::transform(v.begin(), v.end(), diff.begin(), [mean](T x) { return x - mean; });
-	_T sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), T(0.0));
-	return std::sqrt(sq_sum / cpx(v.size()));
-}
+///*
+//* @brief for an std::vector calculates the standard deviation
+//*/
+//inline double stddev(const v_1d<double>& v)
+//{
+//	auto mean = std::accumulate(v.begin(), v.end(), 0.0) / double(v.size());
+//	v_1d<double> diff(v.size());
+//	std::transform(v.begin(), v.end(), diff.begin(), [mean](double x) { return x - mean; });
+//	auto sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
+//	return std::sqrt(sq_sum / double(v.size()));
+//}

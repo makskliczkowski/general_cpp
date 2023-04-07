@@ -1,22 +1,33 @@
 #pragma once
+
+/*******************************
+* Stores all the common functions
+* used throughtly in the codes
+*******************************/
+
 #ifndef COMMON_H
 #define COMMON_H
 
 // ########################################################				 ARMA				########################################################
 
-#ifndef ALG_H
-	#include "lin_alg.h"
-#endif // !ALG_H
+#include "Include/statistical.h"
 
 // ########################################################				 OTHER				########################################################
 
 #include "Include/random.h"
-#include "Include/str.h"
 #include "Include/math.h"
 #include "Include/files.h"
 #include "Include/directories.h"
 #include <omp.h>
 #include <thread>
+
+// ########################################################					ENUMS				########################################################
+
+#define DECL_ENUM_ELEMENT( element )	#element
+#define BEGIN_ENUM( ENUM_NAME )			static const char* eSTR##ENUM_NAME [] =
+#define END_ENUM( ENUM_NAME )			; inline const char* getSTR_##ENUM_NAME(enum \
+														  ENUM_NAME index)\
+										{ return eSTR##ENUM_NAME [index]; };
 
 // ########################################################				DEFINITIONS				########################################################
 
@@ -24,18 +35,19 @@
 #define DOES(...) { return (__VA_ARGS__); }																// for single line void functions
 
 // using types
-using cpx = std::complex<double>;
-using uint = unsigned int;
-using ul = unsigned long;
-using ull = unsigned long long;
-using u64 = ull;
-using ld = long double;
+using cpx						=					std::complex<double>;
+using uint						=					unsigned int;
+using ul						=					unsigned long;
+using ull						=					unsigned long long;
+using u64						=					ull;
+using ld						=					long double;
 
 // constexpressions
-constexpr long double PI = 3.141592653589793238462643383279502884L;										// it is me, pi
-constexpr long double TWOPI = 2.0L * PI;																// it is me, 2pi
-constexpr long double PI_half = PI / 2.0L;																// it is me, half a pi
-const auto global_seed = std::random_device{}();														// global seed for classes
+constexpr long double PI		=					3.141592653589793238462643383279502884L;			// it is me, pi
+constexpr long double TWOPI		=					2.0L * PI;											// it is me, 2pi
+constexpr long double PIHALF	=					PI / 2.0L;											// it is me, half a pi
+constexpr cpx I					=					cpx(0, 1);											// imaginary unit
+const auto global_seed			=					std::random_device{}();								// global seed for classes
 
 #define EL std::endl
 #define stout std::cout << std::setprecision(8) << std::fixed											// standard out
@@ -53,21 +65,9 @@ const auto global_seed = std::random_device{}();														// global seed for
 // ########################################################				COMMON UTILITIES				 ########################################################
 
 #define SPACE_VEC(Lx, Ly, Lz, T) v_3d<T>(Lx, v_2d<T>(Ly, v_1d<T>(Lz)))
-template<class T>
-using v_3d = std::vector<std::vector<std::vector<T>>>;				// 3d vector
-template<class T>
-using v_2d = std::vector<std::vector<T>>;							// 2d vector
-template<class T>
-using v_1d = std::vector<T>;										// 1d vector
-template<class T>
-using v_Mat = v_1d<arma::Mat<T>>;									// 1d vector of arma::mat
-template<class T>
-using t_3d = std::tuple<T, T, T>;									// 3d tuple
-template<class T>
-using t_2d = std::pair<T, T>;										// 2d tuple - pair
 
-#define EQP(value, equals, prec) valueEqualsPrecision(value, equals, prec)
-#define EQ(value, equals) valueEqualsPrecision(value, equals)
+template<class T>
+using v_Mat = v_1d<arma::Mat<T>>;																		// 1d vector of arma::mat
 
 // ########################################################				 STREAM OVERLOADED				 ########################################################
 
@@ -77,7 +77,7 @@ using t_2d = std::pair<T, T>;										// 2d tuple - pair
 *@param v 1D vector
 */
 template <typename T>
-std::ostream& operator<< (std::ostream& out, const v_1d<T>& v) {
+inline std::ostream& operator<< (std::ostream& out, const v_1d<T>& v) {
 	if (!v.empty()) {
 		for (int i = 0; i < v.size(); i++)
 			out << v[i] << ",";
@@ -92,32 +92,10 @@ std::ostream& operator<< (std::ostream& out, const v_1d<T>& v) {
 * @param v 2D vector
 */
 template <typename T>
-std::ostream& operator<< (std::ostream& out, const v_2d<T>& v) {
+inline std::ostream& operator<< (std::ostream& out, const v_2d<T>& v) {
 	if (!v.empty())
 		for (auto it : v)
 			out << "\t" << it << EL;
-	return out;
-}
-
-/*
-* @brief Overloads printing to standard stream for complex numbers
-*/
-std::ostream& operator<< (std::ostream& out, const cpx v)
-{
-	auto prec = 1e-4;
-	auto phase = std::arg(v) / PI;
-	while (phase < 0) phase += 2.0;
-	std::string absolute = "+" + STRP(std::abs(v),2);
-	std::string phase_str = "";
-	if (EQP(phase, 0.0, prec) || EQP(phase, 2.0, prec))
-		phase_str = "";
-	else if (EQP(phase, 1.0, prec)) {
-		absolute = "-" + STRP(std::abs(v),2);
-		phase_str = "";
-	}
-	else
-		phase_str = "*exp(" + STRP(phase,2) + "*pi*i)";
-	out << absolute + phase_str;
 	return out;
 }
 
@@ -133,6 +111,30 @@ inline auto valueEqualsPrecision(_T1 value, _T2 equals) RETURNS(value == equals)
 
 #define VEQ(name) valueEquals(#name,(name),2)
 #define VEQP(name,prec) valueEquals(#name,(name),prec)
+#define EQP(value, equals, prec) valueEqualsPrecision(value, equals, prec)
+#define EQ(value, equals) valueEqualsPrecision(value, equals)
+/*
+* @brief Overloads printing to standard stream for complex numbers
+*/
+inline std::ostream& operator<< (std::ostream& out, const cpx v)
+{
+	auto prec = 1e-4;
+	auto phase = std::arg(v) / PI;
+	while (phase < 0) phase += 2.0;
+	std::string absolute = "+" + STRP(std::abs(v), 2);
+	std::string phase_str = "";
+	if (EQP(phase, 0.0, prec) || EQP(phase, 2.0, prec))
+		phase_str = "";
+	else if (EQP(phase, 1.0, prec)) {
+		absolute = "-" + STRP(std::abs(v), 2);
+		phase_str = "";
+	}
+	else
+		phase_str = "*exp(" + STRP(phase, 2) + "*pi*i)";
+	out << absolute + phase_str;
+	return out;
+}
+
 /*
 * @brief Given the char* name it prints its value in a format "name=val"
 * @param name name of the variable
@@ -205,6 +207,42 @@ inline ull binarySearch(const v_1d<double>& arr, ull l_point, ull r_point, doubl
 	return -1;
 }
 
+// ########################################################				PROGRESS BAR				########################################################
+
+#ifndef PROGRESS_H
+#define PROGRESS_H
+class pBar {
+public:
+	void update(double newProgress);
+	void print();
+	void printWithTime(std::string message);
+	pBar() : timer(std::chrono::high_resolution_clock::now()) { };							// constructor
+	pBar(double percentage, int discreteSteps)
+		: percentage(percentage)
+		, timer(std::chrono::high_resolution_clock::now())
+		, percentageSteps(static_cast<int>(percentage* discreteSteps / 100.0))
+	{};
+protected:
+	// --------------------------- STRING ENDS
+	std::string firstPartOfpBar = "\t\t\t\t[";
+	std::string lastPartOfpBar = "]";
+	std::string pBarFiller = "|";
+	std::string pBarUpdater = "|\\/";
+	// --------------------------- PROGRESS
+	clk::time_point timer;														            // inner clock
+	int amountOfFiller = 0;															            // length of filled elements
+	int pBarLength = 50;														            // length of a progress bar
+	int currUpdateVal = 0;														            //
+	double currentProgress = 0;													            // current progress
+	double neededProgress = 100;												            // final progress
+public:
+	auto get_start_time()												const { return this->timer; };
+	double percentage = 34;																	// print percentage
+	int percentageSteps = 1;
+};
+#endif // !PROGRESS_H
+
+// ########################################################				OTHER				########################################################
 
 
 #endif // !COMMON_H

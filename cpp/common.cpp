@@ -1,46 +1,39 @@
+#include "../src/common.h"
 
-/**
- * @brief
- *
- * R diagonal has elements smaller than one -> D_m
- * D is already inversed and has elements bigg
- * @param Ql
- * @param Rl
- * @param Pl
- * @param Tl
- * @param Dl
- * @param Qr
- * @param Rr
- * @param Pr
- * @param Tr
- * @param Dr
- * @param Dtmp
- * @return arma::mat
- */
-arma::mat inv_left_plus_right_qr(arma::mat& Ql, arma::mat& Rl, arma::umat& Pl, arma::mat& Tl, arma::vec& Dl, arma::mat& Qr, arma::mat& Rr, arma::umat& Pr, arma::mat& Tr, arma::vec& Dr, arma::vec& Dtmp)
+// ########################################################				PROGRESS BAR				########################################################
+
+void pBar::update(double newProgress)
 {
-	const auto loh = true;
-	if (loh) {
-		// using loh
-
-		makeTwoScalesFromUDT(Rl, Dl);																								// remember D already inversed!
-		makeTwoScalesFromUDT(Rr, Dr);																								// remember D already inversed!
-		//! D_lm*D_rp^{-1} * X_l * X_r^{-1} + U_l^{-1} * U_r * D_rm * D_lp^{-1}
-		setUDTDecomp(
-			(DIAG(Rl) * DIAG(Dr)) * Tl * arma::inv(Tr) +
-			Ql.t() * Qr * (DIAG(Dl) * DIAG(Rr)),
-			Qr, Rl, Pl, Tl, Dtmp);
-		//! D_rp^{-1}
-		setUDTDecomp(DIAG(Dr) * arma::inv(Qr * DIAG(Rl) * Tl) * DIAG(Dl), Qr, Rl, Pl, Tl, Dtmp);
-		//? direct inversion
-		//setUDTDecomp(DIAG(Dr) * arma::inv(Qr * DIAG(Rl) * Tl) * DIAG(Dl), Qr, Rl, Pl, Tl);
-		return (arma::inv(Tr) * Qr) * DIAG(Rl) * (Tl * Ql.t());
-	}
-	else {
-		setUDTDecomp(
-			DIAG(Rl) * Tl * arma::inv(Tr) +
-			Ql.t() * Qr * DIAG(Rr),
-			Qr, Rl, Pl, Tl, Dtmp);
-		return arma::inv(Tl * Tr) * DIAG(Dtmp) * arma::inv(Ql * Qr);
-	}
+	currentProgress += newProgress;
+	amountOfFiller = (int)((currentProgress / neededProgress) * (double)pBarLength);
 }
+
+void pBar::print()
+{
+	currUpdateVal %= pBarUpdater.length();
+	std::cout << "\r";															            // Bring cursor to start of line
+	std::cout << firstPartOfpBar;												            // Print out first part of pBar
+	for (int a = 0; a < amountOfFiller; a++) {												// Print out current progress
+		std::cout << pBarFiller;                                                            // By filling the output
+	}
+	std::cout << pBarUpdater[currUpdateVal];
+	for (int b = 0; b < pBarLength - amountOfFiller; b++) {									// Print out spaces
+		std::cout << " ";
+	}
+	std::cout << lastPartOfpBar;												            // Print out last part of progress bar
+	std::cout << " (" << (int)(100 * (currentProgress / neededProgress)) << "%)";	        // This just prints out the percent
+	std::cout << std::flush;
+	currUpdateVal += 1;
+}
+
+void pBar::printWithTime(std::string message)
+{
+	{
+		std::cout << "\t\t\t\t-> time: " << t_s(timer) << message << " : \n";
+		this->print();
+		std::cout << std::endl;
+	}
+	this->update(percentage);
+}
+
+// ########################################################				PROGRESS BAR				########################################################

@@ -45,10 +45,12 @@ public:
 	T xavier(T in, T out, double xav = 6.0) {
 		return std::uniform_real_distribution<T>(-1., +1.)(engine) * std::sqrt(xav / (in + out));
 	}
+
 	template <typename T>
 	T kaiming(T in) {
 		return std::uniform_real_distribution<T>(-1., +1.)(engine) * std::sqrt(6.0 / in);
 	}
+
 	/*
 	* @brief random real uniform distribution : _min <= x < _max
 	* @param _min smallest value
@@ -58,10 +60,12 @@ public:
 	T random(T _min = 0, T _max = 1) {
 		return std::uniform_real_distribution<T>(_min, _max)(engine);
 	}
+
 	template <typename T>
 	T randomInt(T _min, T _max) {
-		return _min + static_cast<T>((_max - _min) * this->randomReal_uni());
+		return static_cast<long long>(_min + static_cast<T>((_max - _min) * this->random()));
 	}
+
 	/*
 	* @brief random normal distribution
 	*/
@@ -69,11 +73,23 @@ public:
 	T randomNormal(T _mean = 0, T _std = 1) {
 		return std::normal_distribution(_mean, _std)(engine);
 	}
+
 	template <typename T>
 	bool bernoulli(T p) {
 		return std::bernoulli_distribution(p)(engine);
 	}
 
+	// --------------------- OTHER ---------------------
+	
+	/*
+	* @brief creates random vector with a given strength
+	*/
+	arma::vec createRanVec(int _size, double _strength) {
+		arma::vec o = arma::ones(_size);
+		for (auto i = 0; i < _size; i++)
+			o(i) = (this->random<double>() * 2.0 - 1) * _strength;
+		return o;
+	}
 };
 
 #endif // !RANDOM_H
