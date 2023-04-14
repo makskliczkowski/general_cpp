@@ -7,10 +7,18 @@
 */
 UserInterface::cmdArg UserInterface::parseInputFile(std::string filename) {
 	std::ifstream inputFile;
-	if (!openFile(inputFile, filename)) this->setDefault();
+	if (!openFile(inputFile, filename)) 
+		this->setDefault();
 	else
-		if (std::string line = ""; std::getline(inputFile, line))
-			return splitStr(line, " ");
+	{
+		std::string tmp	=	"";
+		strVec output		=	{};
+		while (inputFile >> tmp)
+			output.push_back(tmp);
+		return output;
+	}
+		//if (std::string line = ""; std::getline(inputFile, line))
+		//	return splitStr(line, " ");
 	return {};
 }
 
@@ -23,18 +31,21 @@ UserInterface::cmdArg UserInterface::parseInputFile(std::string filename) {
 std::string UserInterface::setDefaultMsg(std::string value, std::string option, std::string message, const cmdMap& map) const
 {
 	std::string out = "";
-	// find the option
-	auto it = map.find(option);
+	
+	auto it = map.find(option);									// find the option
 	if (it != map.end())
 	{
-		auto& [val_str, fun] = it->second; // if in table - we take the enum
-		out = fun(value);
-		if (out != "") {
-			stout << message + out << "\n";																				// print warning
+		auto& [val_str, fun]	=	it->second;					// if in table - we take the default value
+		if (value.empty())
 			return val_str;
+
+		out	= fun(value);										// if value is ok (not empty)
+		if (out != "") {
+			stout << message << "\t->" << out << "\n";			// print warning
+			value = val_str;									// set the default value if necessary
 		}
 	}
-	return option;
+	return value;
 }
 
 /*

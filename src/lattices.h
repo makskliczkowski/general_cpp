@@ -6,20 +6,29 @@
 #ifndef LATTICE_H
 #define LATTICE_H
 
-// ########################################################				    GENERAL LATTICE				    ########################################################
+// ########################################################	GENERAL LATTICE ########################################################
 
-enum LatticeTypes 
-{
-	SQ, HEX
-};
-
-BEGIN_ENUM(LatticeTypes)
-{
-	DECL_ENUM_ELEMENT(SQ),
-	DECL_ENUM_ELEMENT(HEX)
-}
-END_ENUM(LatticeTypes);
-
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+enum LatticeTypes { SQ, HEX };							//%
+														//%
+BEGIN_ENUM(LatticeTypes)								//%
+{														//%
+	DECL_ENUM_ELEMENT(SQ),								//%
+	DECL_ENUM_ELEMENT(HEX)								//%
+}														//%
+END_ENUM(LatticeTypes);									//%
+														//%
+enum BoundaryConditions {	PBC = 0, OBC = 1,			//%
+							MBC = 2, SBC = 3 };			//%
+BEGIN_ENUM(BoundaryConditions)							//%
+{														//%
+	DECL_ENUM_ELEMENT(PBC),								//%
+	DECL_ENUM_ELEMENT(OBC),								//%
+	DECL_ENUM_ELEMENT(MBC),								//%
+	DECL_ENUM_ELEMENT(SBC)								//%
+}														//%
+END_ENUM(BoundaryConditions);							//%
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 /*
 * @brief Pure virtual lattice class, it will allow to distinguish between different geometries in the models
@@ -27,27 +36,28 @@ END_ENUM(LatticeTypes);
 class Lattice {
 protected:
 	// ----------------------- LATTICE PARAMETERS
-	int _BC = 0;													// boundary conditions 0 = PBC, 1 = OBC, 2 = MBC [PBC->x;OBC->y, OBC->z], 3 = SBC [OBC->x, PBC->y, OBC->z],
-	LatticeTypes type_;												// enum type of the lattice
-	std::string type;												// type of the lattice
-	unsigned int dim = 1;											// the dimensionality of the lattice 1,2,3
-	unsigned int Ns = 1;											// number of lattice sites
+	BoundaryConditions _BC	= BoundaryConditions::PBC;		// boundary conditions 0 = PBC, 1 = OBC, 2 = MBC [PBC->x;OBC->y, OBC->z], 3 = SBC [OBC->x, PBC->y, OBC->z],
+	LatticeTypes type_		= LatticeTypes::SQ;				// enum type of the lattice
+	std::string type		= "";							// type of the lattice
+	
+	unsigned int dim		= 1;							// the dimensionality of the lattice 1,2,3
+	unsigned int Ns			= 1;							// number of lattice sites
 	
 	// --- nn --- 
-	v_2d<int> nn;													// vector of the nearest neighbors
-	v_1d<uint> nnForward;											// number of nearest neighbors forward
+	v_2d<int> nn;											// vector of the nearest neighbors
+	v_1d<uint> nnForward;									// number of nearest neighbors forward
 	
 	// --- nnn --- 
-	v_2d<int> nnn;													// vector of the next nearest neighbors
-	v_1d<uint> nnnForward;											// number of nearest neighbors forward
+	v_2d<int> nnn;											// vector of the next nearest neighbors
+	v_1d<uint> nnnForward;									// number of nearest neighbors forward
 	
 	// --- coords ---
-	v_2d<int> coord;												// vector of real coordiates allowing to get the distance between lattice points
-	v_3d<int> spatialNorm;											// norm for averaging over all spatial sites
+	v_2d<int> coord;										// vector of real coordiates allowing to get the distance between lattice points
+	v_3d<int> spatialNorm;									// norm for averaging over all spatial sites
 
 	// reciprocal vectors
-	arma::vec a1, a2, a3;
-	arma::mat kVec;													// allowed values of k - to be used in the lattice
+	arma::vec a1, a2, a3;									// base vectors of the lattice
+	arma::mat kVec;											// allowed values of k - to be used in the lattice
 public:
 	enum direction {
 		X, Y, Z
@@ -66,12 +76,12 @@ public:
 	virtual int getNorm(int x, int y, int z)				const = 0;
 
 	// ----------------------- GETTERS NEI
-	auto get_nn_ForwardNum(int site)						const RETURNS(this->nnForward.size());									// with no placeholder returns number of nn
-	auto get_nnn_ForwardNum(int site)						const RETURNS(this->nnnForward.size());									// with no placeholder returns number of nnn
+	auto get_nn_ForwardNum(int site)						const -> uint { return (uint)this->nnForward.size(); };								// with no placeholder returns number of nn
+	auto get_nnn_ForwardNum(int site)						const -> uint { return (uint)this->nnnForward.size(); };								// with no placeholder returns number of nnn
 	virtual uint get_nn_ForwardNum(int site, int num)		const = 0;
 	virtual uint get_nnn_ForwardNum(int site, int num)		const = 0;
-	virtual v_1d<uint> get_nn_ForwardNum(int site, bool p)	const = 0;																// with placeholder returns vector of nn
-	virtual v_1d<uint> get_nnn_ForwardNum(int site, bool p)	const = 0;																// with placeholder returns vector of nnn
+	virtual v_1d<uint> get_nn_ForwardNum(int site, v_1d<uint> p)	const = 0;																// with placeholder returns vector of nn
+	virtual v_1d<uint> get_nnn_ForwardNum(int site, v_1d<uint> p)	const = 0;																// with placeholder returns vector of nnn
 	virtual int get_nn(int site, direction d)				const = 0;																// retruns nn in a given direction x 
 	auto get_nn(int site, int nei_num)						const RETURNS(this->nn[site][nei_num]);									// returns given nearest nei at given lat site
 	auto get_nnn(int site, int nei_num)						const RETURNS(this->nnn[site][nei_num]);								// returns given next nearest nei at given lat site
@@ -126,26 +136,23 @@ private:
 inline void Lattice::calculate_nn() {
 	switch (this->_BC)
 	{
-	case 0:
-		stout << "->nn -- using PBC" << EL;
+	case BoundaryConditions::PBC:
 		this->calculate_nn_pbc();
 		break;
-	case 1:
-		stout << "->nn -- using OBC" << EL;
+	case BoundaryConditions::OBC:
 		this->calculate_nn_obc();
 		break;
-	case 2:
-		stout << "->nn -- using MBC" << EL;
+	case BoundaryConditions::MBC:
 		this->calculate_nn_mbc();
 		break;
-	case 3:
-		stout << "->nn -- using SBC" << EL;
+	case BoundaryConditions::SBC:
 		this->calculate_nn_sbc();
 		break;
 	default:
 		this->calculate_nn_pbc();
 		break;
 	}
+	stout << "->nn -- using " << getSTR_BoundaryConditions(this->_BC) << EL;
 }
 
 /*
@@ -157,16 +164,15 @@ inline void Lattice::calculate_nnn()
 	{
 	case 0:
 		this->calculate_nnn_pbc();
-		stout << "->nnn -- using PBC" << EL;
 		break;
-	case 1:
+	case BoundaryConditions::OBC:
 		this->calculate_nnn_obc();
-		stout << "->nnn -- using OBC" << EL;
 		break;
 	default:
 		this->calculate_nnn_pbc();
 		break;
 	}
+	stout << "->nnn -- using " << getSTR_BoundaryConditions(this->_BC) << EL;
 }
 
 /*
@@ -178,8 +184,8 @@ inline void Lattice::calculate_spatial_norm()
 	auto [x_n, y_n, z_n] = this->getNumElems();
 	this->spatialNorm = SPACE_VEC(x_n, y_n, z_n, int);
 
-	for (int i = 0; i < this->Ns; i++) {
-		for (int j = 0; j < this->Ns; j++) {
+	for (uint i = 0; i < this->Ns; i++) {
+		for (uint j = 0; j < this->Ns; j++) {
 			const auto [xx, yy, zz] = this->getSiteDifference(i, j);
 			auto [a, b, c] = this->getSymPos(xx, yy, zz);
 			spatialNorm[a][b][c]++;
@@ -194,14 +200,14 @@ inline int Lattice::get_nei(int lat_site, int corr_len) const
 {
 	switch (this->_BC) 
 	{
-	case 0:
-		return modEUC((lat_site + corr_len), this->Ns);
+	case BoundaryConditions::PBC:
+		return (int)modEUC((long long)(lat_site + corr_len), (long long)this->Ns);
 		break;
-	case 1:
-		return (lat_site + corr_len) > this->Ns ? -1 : (lat_site + corr_len);
+	case BoundaryConditions::OBC:
+		return uint(lat_site + corr_len) > this->Ns ? -1 : (lat_site + corr_len);
 		break;
 	default:
-		return modEUC((lat_site + corr_len), this->Ns);
+		return (int)modEUC((long long)(lat_site + corr_len), (long long)this->Ns);
 	}
 }
 

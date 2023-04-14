@@ -1,9 +1,8 @@
 #pragma once
 #include <ios>
 #include <iostream>
-#include <algorithm> 
 #include <fstream>
-#include "str.h"
+#include "time.h"
 
 // ########################################################			    FILE AND STREAMS			########################################################
 
@@ -14,15 +13,11 @@
 */
 template <typename T>
 inline int openFile(T& file, std::string fileName, std::ios_base::openmode mode = std::ios::out) {
-    try{
+    BEGIN_CATCH_HANDLER
         file.open(fileName, mode);
         if (!file.is_open())
             throw ("Couldn't open a file: " + fileName + "\n");
-    }
-    catch(const std::ifstream::failure& e){
-        std::cerr << "Exception opening/reading/closing file\n";
-        return 0;
-    }
+    END_CATCH_HANDLER("Exception opening/reading/closing file")
     return 1;
 }
 

@@ -13,6 +13,7 @@
 		namespace fs = std::filesystem;
 #	elif __has_include(<experimental/filesystem>)
 #		include <experimental/filesystem>
+#include <iostream>
 #    	define have_filesystem 1
 #    	define experimental_filesystem
 		namespace fs = std::experimental::filesystem;
@@ -37,7 +38,7 @@ const std::string kPS				=				std::string(kPSep);
 * @brief Creates a single directory given a string path
 * @param dir the directory
 */
-inline void createDir(const std::string& dir)		{ fs::create_directories(dir); }
+void createDir(const std::string& dir);
 
 /*
 * @brief Creates a variadic directory set given a string paths

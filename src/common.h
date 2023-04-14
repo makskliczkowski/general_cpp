@@ -16,23 +16,12 @@
 
 #include "Include/random.h"
 #include "Include/math.h"
-#include "Include/files.h"
-#include "Include/directories.h"
+#include "flog.h"
+
 #include <omp.h>
 #include <thread>
 
-// ########################################################					ENUMS				########################################################
-
-#define DECL_ENUM_ELEMENT( element )	#element
-#define BEGIN_ENUM( ENUM_NAME )			static const char* eSTR##ENUM_NAME [] =
-#define END_ENUM( ENUM_NAME )			; inline const char* getSTR_##ENUM_NAME(enum \
-														  ENUM_NAME index)\
-										{ return eSTR##ENUM_NAME [index]; };
-
 // ########################################################				DEFINITIONS				########################################################
-
-#define RETURNS(...) -> decltype((__VA_ARGS__)) { return (__VA_ARGS__); }								// for quickly returning values
-#define DOES(...) { return (__VA_ARGS__); }																// for single line void functions
 
 // using types
 using cpx						=					std::complex<double>;
@@ -58,7 +47,7 @@ const auto global_seed			=					std::random_device{}();								// global seed for
     #define stoutd(str) do { stout << str << EL } while(0)
     #define PRT(time_point, cond) do { stoutc(cond) << #cond << " -> time : " << tim_mus(time_point) << "mus" << EL; } while (0);
 #else
-    #define stoutd(str) do { } while (0)
+    #define stoutd(str) do { break; } while (0)
     #define PRT(time_point, cond) do { } while (0)
 #endif
 
@@ -145,30 +134,6 @@ template <typename T>
 inline auto valueEquals(const char name[], T value, int prec = 2) RETURNS(std::string(name) + "=" + str_p(value, prec))
 inline auto valueEquals(const char name[], std::string value, int prec) RETURNS(std::string(name) + "=" + value);
 
-// ########################################################				TIME FUNCTIONS				########################################################
-using clk = std::chrono::steady_clock;
-#define NOW std::chrono::high_resolution_clock::now()	    
-#define stouts(text, start) stout << text << " -> time : " << tim_s(start) << "s" << EL					// standard out seconds
-#define stoutms(text, start) stout << text << " -> time : " << tim_ms(start) << "ms" << EL				// standard out miliseconds
-#define stoutmus(text, start) stout << text << " -> time : " << tim_mus(start) << "mus" << EL			// standard out microseconds
-#define DURATION(t1, t2) static_cast<long double>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::duration(t1 - t2)).count())
-/*
-* @brief The duration in seconds from a given time point
-* @param point in time from which we calculate the interval
-*/
-inline auto t_s(clk::time_point start) RETURNS(DURATION(NOW, start) / 1e6);
-
-/*
-* @brief The duration in seconds from a given time point
-* @param point in time from which we calculate the interval
-*/
-inline auto t_ms(clk::time_point start) RETURNS(DURATION(NOW, start) / 1e3);
-
-/*
-* @brief The duration in seconds from a given time point
-* @param point in time from which we calculate the interval
-*/
-inline auto t_mus(clk::time_point start) RETURNS(DURATION(NOW, start));
 
 // ########################################################				BINARY SEARCH				########################################################
 

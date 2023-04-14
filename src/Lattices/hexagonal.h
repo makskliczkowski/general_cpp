@@ -35,8 +35,8 @@ public:
 	arma::vec getRealVec(int x, int y, int z)					const override;
 
 	// ----------------------- GETTERS NEI
-	v_1d<uint> get_nn_ForwardNum(int site, bool p)				const override { if (this->dim == 1 || site % 2 == 0) return { 0 }; else return { 1, 2 }; };
-	v_1d<uint> get_nnn_ForwardNum(int site, bool p)				const override { if (this->dim == 1 || site % 2 == 0) return { 0 }; else return { 1, 2 }; };
+	v_1d<uint> get_nn_ForwardNum(int site, v_1d<uint>)			const override { if (this->dim == 1 || site % 2 == 0) return { 0 }; else return { 1, 2 }; };
+	v_1d<uint> get_nnn_ForwardNum(int site, v_1d<uint>)			const override { if (this->dim == 1 || site % 2 == 0) return { 0 }; else return { 1, 2 }; };
 	uint get_nn_ForwardNum(int site, int num)					const override { return nnForward[num]; };
 	uint get_nnn_ForwardNum(int site, int num)					const override { return nnnForward[num]; };
 

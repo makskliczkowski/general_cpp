@@ -34,8 +34,8 @@ public:
 	int get_nn(int lat_site, direction d)					const override;
 
 	// ----------------------- GETTERS NEI
-	v_1d<uint> get_nn_ForwardNum(int site, bool p)			const override { return this->nnForward; };
-	v_1d<uint> get_nnn_ForwardNum(int site, bool p)			const override { return this->nnnForward; };
+	v_1d<uint> get_nn_ForwardNum(int site, v_1d<uint> p)	const override { return this->nnForward; };
+	v_1d<uint> get_nnn_ForwardNum(int site, v_1d<uint> p)	const override { return this->nnnForward; };
 	uint get_nn_ForwardNum(int site, int num)				const override { return this->nnForward[site]; };
 	uint get_nnn_ForwardNum(int site, int num)				const override { return this->nnnForward[site]; };
 
@@ -59,9 +59,9 @@ public:
 
 		switch (this->_BC)
 		{
-			//case 0:
-			//	return std::make_tuple(this->Lx / 2, this->Ly / 2, this->Lz / 2);
-			//	break;
+		case 0:
+			return std::make_tuple(this->Lx / 2, this->Ly / 2, this->Lz / 2);
+			break;
 		default:
 			return std::make_tuple(this->Lx, this->Ly, this->Lz);
 			break;

@@ -2,15 +2,6 @@
 #include <string>
 #include <vector>
 #include <iostream> 
-#ifdef __has_include
-#  if __has_include(<format>)
-#    include <format>
-#    define HAS_FORMAT 1
-#	 define strf std::format
-#  else
-#    define HAS_FORMAT 0
-#  endif
-#endif
 
 template<class T>
 using v_3d = std::vector<std::vector<std::vector<T>>>;				// 3d vector

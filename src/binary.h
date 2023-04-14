@@ -78,16 +78,16 @@ DISABLE_WARNING_PUSH // include <armadillo> and suppress its warnings, cause dev
 const ull lookup[256] = { REVERSE_BITS };
 
 // Vector containing powers of 2 from 2^0 to 2^(L-1) - after 32 lattice sites we need to handle it with vectors
-const v_1d<ull> BinaryPowers = { ULLPOW(0), ULLPOW(1), ULLPOW(2), ULLPOW(3),
-								ULLPOW(4), ULLPOW(5), ULLPOW(6), ULLPOW(7),
-								ULLPOW(8), ULLPOW(9), ULLPOW(10), ULLPOW(11),
-								ULLPOW(12), ULLPOW(13), ULLPOW(14), ULLPOW(15),
-								ULLPOW(16), ULLPOW(17), ULLPOW(18), ULLPOW(19),
-								ULLPOW(20), ULLPOW(21), ULLPOW(22), ULLPOW(23),
-								ULLPOW(24), ULLPOW(25), ULLPOW(26), ULLPOW(27),
-								ULLPOW(28), ULLPOW(29), ULLPOW(30), ULLPOW(31),
-								ULLPOW(32), ULLPOW(33), ULLPOW(34), ULLPOW(35),
-								ULLPOW(36), ULLPOW(37), ULLPOW(38), ULLPOW(39) };
+const v_1d<ull> BinaryPowers = { ULLPOW(0) , ULLPOW(1) , ULLPOW(2) , ULLPOW(3),
+								 ULLPOW(4) , ULLPOW(5) , ULLPOW(6) , ULLPOW(7),
+								 ULLPOW(8) , ULLPOW(9) , ULLPOW(10), ULLPOW(11),
+								 ULLPOW(12), ULLPOW(13), ULLPOW(14), ULLPOW(15),
+								 ULLPOW(16), ULLPOW(17), ULLPOW(18), ULLPOW(19),
+								 ULLPOW(20), ULLPOW(21), ULLPOW(22), ULLPOW(23),
+								 ULLPOW(24), ULLPOW(25), ULLPOW(26), ULLPOW(27),
+								 ULLPOW(28), ULLPOW(29), ULLPOW(30), ULLPOW(31),
+								 ULLPOW(32), ULLPOW(33), ULLPOW(34), ULLPOW(35),
+								 ULLPOW(36), ULLPOW(37), ULLPOW(38), ULLPOW(39)};
 // ########################################################				 binary search				 ########################################################
 
 // ---------------------------------- check bit ----------------------------------
@@ -282,7 +282,7 @@ inline _T1 dotm(arma::Col<_T1> lv, arma::Col<_T2> rv) {
 */
 template <typename _T>
 inline _T rotateLeft(_T n, int32_t L) {
-	_T maxPower = BinaryPowers[L - int32_t(1)];
+	_T maxPower = BinaryPowers[(int32_t)L - int32_t(1)];
 	return (n >= maxPower) ? (((int64_t)n - (int64_t)maxPower) * 2 + 1) : n * 2;
 }
 

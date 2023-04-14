@@ -8,8 +8,8 @@ SquareLattice::SquareLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 	: Lx(Lx), Ly(Ly), Lz(Lz)
 {
 	this->dim = dim;
-	this->_BC = _BC;
-	this->type = "square";
+	this->_BC = static_cast<BoundaryConditions>(_BC);
+	this->type = getSTR_BoundaryConditions(this->_BC);
 	// fix sites depending on _BC
 	switch (this->dim)
 	{
@@ -86,36 +86,36 @@ void SquareLattice::calculate_nn_pbc()
 		// One dimension 
 		for (auto i = 0; i < Lx; i++) {
 			this->nn[i] = v_1d<int>(2, 0);
-			this->nn[i][0] = modEUC(i + 1, Lx);											// right
-			this->nn[i][1] = modEUC(i - 1, Lx);											// left
+			this->nn[i][0] = (int)modEUC(i + 1, Lx);											// right
+			this->nn[i][1] = (int)modEUC(i - 1, Lx);											// left
 		}
 		break;
 	case 2:
 		// Two dimensions 
 		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
-		for (auto i = 0; i < this->Ns; i++) {
+		for (uint i = 0; i < this->Ns; i++) {
 			this->nn[i] = v_1d<int>(4, 0);
-			this->nn[i][0] = int(1.0 * i / Lx) * Lx + modEUC(i + 1, Lx);		// right
-			this->nn[i][1] = modEUC(i + Lx, Ns);								// top
-			this->nn[i][2] = int(1.0 * i / Lx) * Lx + modEUC(i - 1, Lx);		// left
-			this->nn[i][3] = modEUC(i - Lx, Ns);								// bottom
+			this->nn[i][0] = int(1.0 * i / Lx) * Lx + (int)modEUC(i + 1, Lx);		// right
+			this->nn[i][1] = (int)modEUC(i + Lx, Ns);								// top
+			this->nn[i][2] = int(1.0 * i / Lx) * Lx + (int)modEUC(i - 1, Lx);		// left
+			this->nn[i][3] = (int)modEUC(i - Lx, Ns);								// bottom
 		}
 		break;
 	case 3:
 		// Three dimensions
 		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
-		for (auto i = 0; i < Ns; i++) {
+		for (uint i = 0; i < Ns; i++) {
 			this->nn[i] = v_1d<int>(6, 0);
 			int x = i % Lx;
 			int y = int(1.0 * i / Lx) % Ly;
 			int z = int(1.0 * i / Lx / Ly) % Lz;
-			this->nn[i][0] = z * Lx * Ly + y * Lx + modEUC(i + 1, Lx);					// right - x
-			this->nn[i][1] = z * Lx * Ly + modEUC(i + Lx, Lx * Ly);						// right - y
-			this->nn[i][2] = modEUC(i + Lx * Ly, Ns);									// right - z
+			this->nn[i][0] = z * Lx * Ly + y * Lx + (int)modEUC(i + 1, Lx);					// right - x
+			this->nn[i][1] = z * Lx * Ly + (int)modEUC(i + Lx, Lx * Ly);						// right - y
+			this->nn[i][2] = (int)modEUC(i + Lx * Ly, Ns);									// right - z
 
-			this->nn[i][3] = z * Lx * Ly + y * Lx + modEUC(i - 1, Lx);					// left - x
-			this->nn[i][4] = z * Lx * Ly + modEUC(i - Lx, Lx * Ly);						// left - y
-			this->nn[i][5] = modEUC(i - Lx * Ly, Ns);									// left - z
+			this->nn[i][3] = z * Lx * Ly + y * Lx + (int)modEUC(i - 1, Lx);					// left - x
+			this->nn[i][4] = z * Lx * Ly + (int)modEUC(i - Lx, Lx * Ly);						// left - y
+			this->nn[i][5] = (int)modEUC(i - Lx * Ly, Ns);									// left - z
 		}
 		break;
 	default:
@@ -142,12 +142,12 @@ void SquareLattice::calculate_nn_obc()
 	case 2:
 		// Two dimensions 
 		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
-		for (auto i = 0; i < Ns; i++) {
+		for (int i = 0; i < (int)this->Ns; i++) {
 			this->nn[i] = v_1d<int>(4, 0);
-			auto x = i % Lx;
-			auto y = int(1.0 * i / Lx) % Ly;
+			int x = i % Lx;
+			int y = int(1.0 * i / Lx) % Ly;
 			this->nn[i][0] = (i + 1) < (y + 1) * Lx ? i + 1 : -1;							// right
-			this->nn[i][1] = i + Lx < Ns ? i + Lx : -1;										// top
+			this->nn[i][1] = i + Lx < (int)this->Ns ? i + Lx : -1;										// top
 			this->nn[i][2] = (i - 1) >= y * Lx ? i - 1 : -1;								// left
 			this->nn[i][3] = i - Lx >= 0 ? i - Lx : -1;										// bottom
 		}
@@ -155,14 +155,14 @@ void SquareLattice::calculate_nn_obc()
 	case 3:
 		// Three dimensions
 		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
-		for (auto i = 0; i < Ns; i++) {
+		for (int i = 0; i < (int)Ns; i++) {
 			this->nn[i] = v_1d<int>(6, 0);
 			int x = i % Lx;
 			int y = int(1.0 * i / Lx) % Ly;
 			int z = int(1.0 * i / Lx / Ly) % Lz;
 			this->nn[i][0] = z * Lx * Ly + y * Lx + (i + 1 < (z * Lx * Ly + (y + 1) * Lx) ? i + 1 : -1);				// right - x
 			this->nn[i][1] = z * Lx * Ly + (i + Lx < ((z + 1)* Lx* Ly) ? i + Lx : -1);									// right - y
-			this->nn[i][2] = i + Lx * Ly < Ns ? i + Lx * Ly : -1;														// right - z
+			this->nn[i][2] = i + Lx * Ly < (int)this->Ns ? i + Lx * Ly : -1;														// right - z
 
 			this->nn[i][3] = z * Lx * Ly + y * Lx + (i - 1 >= (z * Lx * Ly + y * Lx) ? i - 1 : -1);						// left - x
 			this->nn[i][4] = z * Lx * Ly + (i - Lx >= (z * Lx * Ly) ? i - Lx : -1);										// left - y
@@ -184,7 +184,7 @@ void SquareLattice::calculate_nn_mbc()
 	{
 	case 1:
 		//* One dimension 
-		for (auto i = 0; i < this->Lx; i++) {
+		for (int i = 0; i < this->Lx; i++) {
 			this->nn[i] = v_1d<int>(2, 0);
 			this->nn[i][0] = (i + 1) >= Lx ? -1 : i + 1;							// right
 			this->nn[i][1] = (i - 1) == 0 ? -1 : i - 1;								// left
@@ -193,12 +193,12 @@ void SquareLattice::calculate_nn_mbc()
 	case 2:
 		// Two dimensions 
 		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
-		for (auto i = 0; i < this->Ns; i++) {
+		for (int i = 0; i < (int)this->Ns; i++) {
 			this->nn[i] = v_1d<int>(4, 0);
-			auto x = i % Lx;
-			auto y = int(1.0 * i / Lx) % Ly;
+			int x = i % Lx;
+			int y = int(1.0 * i / Lx) % Ly;
 			this->nn[i][0] = (i + 1) < (y + 1) * Lx ? y * Lx + x + 1 : -1;			// right
-			this->nn[i][1] = i + Lx < Ns ? i + Lx : -1;								// top
+			this->nn[i][1] = i + Lx < (int)this->Ns ? i + Lx : -1;								// top
 			this->nn[i][2] = (i - 1) >= y * Lx ? y * Lx + x - 1 : -1;				// left
 			this->nn[i][3] = i - Lx >= 0 ? i - Lx : -1;								// bottom
 		}
@@ -230,10 +230,10 @@ void SquareLattice::calculate_nn_sbc()
 	case 2:
 		// Two dimensions 
 		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
-		for (int i = 0; i < Ns; i++) {
+		for (uint i = 0; i < Ns; i++) {
 			this->nn[i] = v_1d<int>(2, 0);
-			auto x = i % Lx;
-			auto y = static_cast<int>(1.0 * i / Lx) % Ly;
+			int x = i % Lx;
+			int y = static_cast<int>(1.0 * i / Lx) % Ly;
 			//this->nn[i][0] = (i + 1) < (y + 1) * Lx ? y * Lx + x + 1 : -1;					// right
 			//this->nn[i][1] = i + Lx < Ns ? i + Lx : -1;										// top
 			//this->nn[i][2] = (i - 1) >= y * Lx ? y * Lx + x - 1 : -1;						// left
@@ -259,38 +259,39 @@ void SquareLattice::calculate_nnn_pbc()
 	{
 	case 1:
 		/* One dimension */
-		for (auto i = 0; i < this->Lx; i++) {
+		for (int i = 0; i < this->Lx; i++) {
 			this->nnn = v_2d<int>(this->Ns);
-			this->nnn[i][0] = modEUC(i + 2, Lx);									// right
-			this->nnn[i][1] = modEUC(i - 2, Lx);									// left
+			this->nnn[i] = v_1d<int>(2, 0);
+			this->nnn[i][0] = (int)modEUC(i + 2, Lx);									// right
+			this->nnn[i][1] = (int)modEUC(i - 2, Lx);									// left
 		}
 		break;
 	case 2:
 		// Two dimensions 
 		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
-		for (int i = 0; i < Ns; i++) {
+		for (uint i = 0; i < Ns; i++) {
 			this->nnn[i] = v_1d<int>(4, 0);
-			this->nnn[i][0] = int(1.0 * i / Lx) * Lx + modEUC(i + 2, Lx);		// right
-			this->nnn[i][1] = modEUC(i + 2 * Lx, Ns);							// top
-			this->nnn[i][2] = int(1.0 * i / Lx) * Lx + modEUC(i - 2, Lx);		// left
-			this->nnn[i][3] = modEUC(i - 2 * Lx, Ns);							// bottom
+			this->nnn[i][0] = int(1.0 * i / Lx) * Lx + (int)modEUC(i + 2, Lx);		// right
+			this->nnn[i][1] = (int)modEUC(i + 2 * Lx, Ns);							// top
+			this->nnn[i][2] = int(1.0 * i / Lx) * Lx + (int)modEUC(i - 2, Lx);		// left
+			this->nnn[i][3] = (int)modEUC(i - 2 * Lx, Ns);							// bottom
 		}
 		break;
 	case 3:
 		// Three dimensions
 		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
-		for (int i = 0; i < Ns; i++) {
+		for (uint i = 0; i < this->Ns; i++) {
 			this->nnn[0] = v_1d<int>(6, 0);
 			int x = i % Lx;
 			int y = static_cast<int>(1.0 * i / Lx) % Ly;
 			int z = static_cast<int>(1.0 * i / Lx / Ly) % Lz;
-			this->nnn[i][0] = z * Lx * Ly + y * Lx + modEUC(i + 2, Lx);		// right - x
-			this->nnn[i][1] = z * Lx * Ly + modEUC(i + 2 * Lx, Lx * Ly);		// right - y
-			this->nnn[i][2] = modEUC(i + 2 * Lx * Ly, Ns);						// right - z
+			this->nnn[i][0] = z * Lx * Ly + y * Lx + (int)modEUC(i + 2, Lx);		// right - x
+			this->nnn[i][1] = z * Lx * Ly + (int)modEUC(i + 2 * Lx, Lx * Ly);		// right - y
+			this->nnn[i][2] = (int)modEUC(i + 2 * Lx * Ly, Ns);						// right - z
 
-			this->nnn[i][3] = z * Lx * Ly + y * Lx + modEUC(i - 2, Lx);		// left - x
-			this->nnn[i][4] = z * Lx * Ly + modEUC(i - 2 * Lx, Lx * Ly);		// left - y
-			this->nnn[i][5] = modEUC(i - 2 * Lx * Ly, Ns);						// left - z
+			this->nnn[i][3] = z * Lx * Ly + y * Lx + (int)modEUC(i - 2, Lx);		// left - x
+			this->nnn[i][4] = z * Lx * Ly + (int)modEUC(i - 2 * Lx, Lx * Ly);		// left - y
+			this->nnn[i][5] = (int)modEUC(i - 2 * Lx * Ly, Ns);						// left - z
 		}
 		break;
 	default:
@@ -336,7 +337,7 @@ void SquareLattice::calculate_coordinates()
 {
 	const int LxLy = Lx * Ly;
 	this->coord = v_2d<int>(this->Ns, v_1d<int>(3, 0));
-	for (int i = 0; i < Ns; i++) {
+	for (int i = 0; i < (int)this->Ns; i++) {
 		this->coord[i][0] = i % Lx;												// x axis coordinate
 		this->coord[i][1] = (static_cast<int>(1.0 * i / Lx)) % Ly;				// y axis coordinate
 		this->coord[i][2] = (static_cast<int>(1.0 * i / LxLy)) % Lz;			// z axis coordinate			
