@@ -98,9 +98,13 @@ inline auto valueEqualsPrecision(_T1 value, _T2 equals, _T3 tolerance) RETURNS(s
 template <typename _T1, typename _T2>
 inline auto valueEqualsPrecision(_T1 value, _T2 equals) RETURNS(value == equals);
 
-#define VEQ(name) valueEquals(#name,(name),2)
-#define VEQP(name,prec) valueEquals(#name,(name),prec)
-#define EQP(value, equals, prec) valueEqualsPrecision(value, equals, prec)
+#define VEQ(name)					valueEquals(#name,(name)	, 2)
+#define VEQS(name)					valueEqualsS(#name,(name)	, 2)
+#define VEQV(name,val)				valueEquals(#name,(val)		, 2)
+#define VEQVS(name,val)				valueEqualsS(#name,(val)	, 2)
+#define VEQP(name,prec)				valueEquals(#name,(name)	, prec)
+#define VEQVP(name,val,prec)		valueEquals(#name,(val)		, prec)
+#define EQP(value, equals, prec)	valueEqualsPrecision(value, equals, prec)
 #define EQ(value, equals) valueEqualsPrecision(value, equals)
 /*
 * @brief Overloads printing to standard stream for complex numbers
@@ -131,8 +135,10 @@ inline std::ostream& operator<< (std::ostream& out, const cpx v)
 * @returns "name=val" string
 */
 template <typename T>
-inline auto valueEquals(const char name[], T value, int prec = 2) RETURNS(std::string(name) + "=" + str_p(value, prec))
-inline auto valueEquals(const char name[], std::string value, int prec) RETURNS(std::string(name) + "=" + value);
+inline auto valueEquals(const char name[], T value, int prec = 2)			RETURNS(std::string(name) + "=" + str_p(value, prec));
+template <typename T>
+inline auto valueEqualsS(const char name[], T value, int prec = 2)			RETURNS(std::string(name) + "=" + str_p(value, prec, true));
+inline auto valueEquals(const char name[], std::string value, int prec)		RETURNS(std::string(name) + "=" + value);
 
 
 // ########################################################				BINARY SEARCH				########################################################

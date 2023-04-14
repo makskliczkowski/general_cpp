@@ -7,9 +7,11 @@
 SquareLattice::SquareLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 	: Lx(Lx), Ly(Ly), Lz(Lz)
 {
-	this->dim = dim;
-	this->_BC = static_cast<BoundaryConditions>(_BC);
-	this->type = getSTR_BoundaryConditions(this->_BC);
+	this->dim		=		dim;
+	this->_BC		=		static_cast<BoundaryConditions>(_BC);
+	this->type_		=		LatticeTypes::SQ;
+	this->type		=		SSTR(getSTR_LatticeTypes(this->type_));
+
 	// fix sites depending on _BC
 	switch (this->dim)
 	{
@@ -47,6 +49,8 @@ SquareLattice::SquareLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 	// calculate k_space vectors
 	this->kVec = arma::mat(this->Ns, 3, arma::fill::zeros);
 	this->calculate_kVec();
+	LOGINFO("Created " + this->type + " lattice", LOG_TYPES::INFO, 1);
+	LOGINFO(this->get_info(), LOG_TYPES::TRACE, 2);
 }
 
 // ------------------------------------------------------------- Getters -------------------------------------------------------------

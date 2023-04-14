@@ -64,42 +64,53 @@ public:
 	};
 	virtual ~Lattice() = default;
 
-	// ----------------------- VIRTUAL GETTERS
+	// ----------------------- VIRTUAL GETTERS -----------------------
 	virtual int get_Lx()									const = 0;
 	virtual int get_Ly()									const = 0;
 	virtual int get_Lz()									const = 0;
 	t_3d<int> getSiteDifference(t_3d<int> i, uint j)		const;
 	t_3d<int> getSiteDifference(uint i, uint j)				const;
 
-	// ----------------------- GETTERS
+	// ----------------------- GETTERS -----------------------
 	virtual arma::vec getRealVec(int x, int y, int z)		const = 0;
 	virtual int getNorm(int x, int y, int z)				const = 0;
 
-	// ----------------------- GETTERS NEI
-	auto get_nn_ForwardNum(int site)						const -> uint { return (uint)this->nnForward.size(); };								// with no placeholder returns number of nn
-	auto get_nnn_ForwardNum(int site)						const -> uint { return (uint)this->nnnForward.size(); };								// with no placeholder returns number of nnn
+	// ----------------------- FORWARD
 	virtual uint get_nn_ForwardNum(int site, int num)		const = 0;
 	virtual uint get_nnn_ForwardNum(int site, int num)		const = 0;
-	virtual v_1d<uint> get_nn_ForwardNum(int site, v_1d<uint> p)	const = 0;																// with placeholder returns vector of nn
-	virtual v_1d<uint> get_nnn_ForwardNum(int site, v_1d<uint> p)	const = 0;																// with placeholder returns vector of nnn
+	virtual v_1d<uint> get_nn_ForwardNum(int site, v_1d<uint> p)	const = 0;														// with placeholder returns vector of nn
+	virtual v_1d<uint> get_nnn_ForwardNum(int site, v_1d<uint> p)	const = 0;														// with placeholder returns vector of nnn
 	virtual int get_nn(int site, direction d)				const = 0;																// retruns nn in a given direction x 
-	auto get_nn(int site, int nei_num)						const RETURNS(this->nn[site][nei_num]);									// returns given nearest nei at given lat site
-	auto get_nnn(int site, int nei_num)						const RETURNS(this->nnn[site][nei_num]);								// returns given next nearest nei at given lat site
+	
+	// ----------------------- GETTERS NEI -----------------------
+	auto get_nn_ForwardNum(int site)						const -> uint	{ return (uint)this->nnForward.size(); };				// with no placeholder returns number of nn
+	auto get_nnn_ForwardNum(int site)						const -> uint	{ return (uint)this->nnnForward.size(); };				// with no placeholder returns number of nnn
+	auto get_nn(int site, int nei_num)						const -> int	{ return this->nn[site][nei_num]; };					// returns given nearest nei at given lat site
+	auto get_nnn(int site, int nei_num)						const -> int	{ return this->nnn[site][nei_num]; };					// returns given next nearest nei at given lat site
 	auto get_nn(int site)									const RETURNS(this->nn[site].size());									// returns the number of nn
 	auto get_nnn(int site)									const RETURNS(this->nnn[site].size());									// returns the number of nnn
 	int get_nei(int lat_site, int corr_len)					const;
 
-	// ----------------------- GETTERS OTHER
+	// ----------------------- GETTERS OTHER -----------------------
 	auto get_BC()											const RETURNS(this->_BC);												// returns the boundary conditions
 	auto get_Ns()											const RETURNS(this->Ns);												// returns the number of sites
 	auto get_Dim()											const RETURNS(this->dim);												// returns dimension of the lattice
 	auto get_type()											const RETURNS(this->type);												// returns the type of the lattice as a string
-	auto get_info()											const RETURNS(this->type + "," + VEQ(_BC) + ",d=" + STR(this->dim) + "," + VEQ(Ns) + ",Lx=" + STR(get_Lx()) + ",Ly=" + STR(get_Ly()) + ",Lz=" + STR(get_Lz()));
 	auto get_kVec()											const RETURNS(this->kVec);												// returns all k vectors in the RBZ
 	auto get_kVec(uint row)									RETURNS(this->kVec.row(row));											// returns the given k vector row
 	auto get_spatial_norm()									const RETURNS(this->spatialNorm);										// returns the spatial norm
 	auto get_spatial_norm(int x, int y, int z)				const RETURNS(this->spatialNorm[x][y][z]);								// returns the spatial norm at x,y,z
 	auto get_coordinates(int site, direction axis)			const RETURNS(this->coord[site][axis]);									// returns the given coordinate
+	auto get_info()											const -> std::string 
+	{
+		std::string _inf;
+		strSeparatedP(_inf, ',', 3,
+			this->type, 
+			getSTR_BoundaryConditions(this->_BC), 
+			VEQV(d, this->dim), VEQ(Ns),
+			VEQV(Lx, this->get_Lx()), VEQV(Ly, this->get_Ly()), VEQV(Lz, this->get_Lz()));
+		return _inf;
+	};
 
 
 	// ----------------------- CALCULATORS
@@ -152,7 +163,7 @@ inline void Lattice::calculate_nn() {
 		this->calculate_nn_pbc();
 		break;
 	}
-	stout << "->nn -- using " << getSTR_BoundaryConditions(this->_BC) << EL;
+	LOGINFO("Created NN. Using: " + SSTR(getSTR_BoundaryConditions(this->_BC)), LOG_TYPES::INFO, 2);
 }
 
 /*
@@ -172,7 +183,7 @@ inline void Lattice::calculate_nnn()
 		this->calculate_nnn_pbc();
 		break;
 	}
-	stout << "->nnn -- using " << getSTR_BoundaryConditions(this->_BC) << EL;
+	LOGINFO("Created NNN. Using: " + SSTR(getSTR_BoundaryConditions(this->_BC)), LOG_TYPES::INFO, 2);
 }
 
 /*

@@ -17,7 +17,8 @@ class randomGen {
 private:
 	XoshiroCpp::Xoshiro256PlusPlus engine;
 public:
-	explicit randomGen(std::uint64_t seed = std::random_device{}()) {
+	explicit randomGen(std::uint64_t seed = std::random_device{}()) 
+	{
 		this->newSeed(seed);
 	}
 

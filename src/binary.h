@@ -63,7 +63,7 @@ DISABLE_WARNING_PUSH // include <armadillo> and suppress its warnings, cause dev
 
 // use binary representation 0/1 instead of -1/1
 #ifdef USE_BINARY
-#undef SPIN
+	#undef SPIN
 #endif
 
 #ifdef SPIN

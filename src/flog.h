@@ -15,10 +15,9 @@
 * @param _lvl tabulation level
 */
 inline void logLvl(unsigned int _lvl) {
-	if (_lvl > 0)
-		std::cout << "->";
 	while (_lvl--)
 		std::cout << "\t";
+	std::cout << "->";
 }
 
 enum LOG_TYPES 
@@ -34,20 +33,19 @@ enum LOG_TYPES
 
 BEGIN_ENUM(LOG_TYPES)
 {
-	DECL_ENUM_ELEMENT(WARNING),
-	DECL_ENUM_ELEMENT(TRACE),
-	DECL_ENUM_ELEMENT(ERROR),
-	DECL_ENUM_ELEMENT(TIME),
 	DECL_ENUM_ELEMENT(INFO),
+	DECL_ENUM_ELEMENT(TIME),
+	DECL_ENUM_ELEMENT(ERROR),
+	DECL_ENUM_ELEMENT(TRACE),
 	DECL_ENUM_ELEMENT(CHOICE),
-	DECL_ENUM_ELEMENT(FINISH)
+	DECL_ENUM_ELEMENT(FINISH),
+	DECL_ENUM_ELEMENT(WARNING)
 }
 END_ENUM(LOG_TYPES);
 
 #define LOG_INFO(TYP)								"[" + SSTR(getSTR_LOG_TYPES(TYP)) + "]"
 
 // --- create log file if necessary ---
-#define LOG_FILE
 #ifdef LOG_FILE
 	#define LOG_DIR									SSTR("LOG") + kPS
 	static inline std::string LOG_FILENAME			= "log";
@@ -55,11 +53,13 @@ END_ENUM(LOG_TYPES);
 #endif
 
 inline void SET_LOG_TIME() {
+#ifdef LOG_FILE
 	createDir(LOG_DIR);
 	LOG_TIME			=		clk::now();
 	LOG_FILENAME		=		"." + kPS + "LOG" + kPS + "log_" + prettyTime(LOG_TIME) + ".txt";
 	std::ofstream file(LOG_FILENAME);
-}
+#endif
+};
 
 /*
 * @brief prints log info based on a given input message and type
