@@ -21,6 +21,11 @@
 #include <omp.h>
 #include <thread>
 
+// ########################################################				CONCEPTS			########################################################
+
+template<class T> struct is_complex						: std::false_type	{};
+template<class T> struct is_complex<std::complex<T>>	: std::true_type	{};
+
 // ########################################################				DEFINITIONS				########################################################
 
 // using types
@@ -153,28 +158,30 @@ inline auto valueEquals(const char name[], std::string value, int prec)		RETURNS
 * @returns -1 if not found else index of @ref element
 */
 template <typename _T>
-inline ull binarySearch(const v_1d<_T>& arr, ull l_point, ull r_point, _T elem) {
+inline long long binarySearch(const v_1d<_T>& arr, ull l_point, ull r_point, _T elem) {
 	if (l_point < 0 || r_point >= arr.size())
 		return -1;
 
-	ull middle = l_point + (r_point - l_point) / 2;												// find the middle point
-
-	if (arr[middle] == elem) return middle;														// if found return
-	else if (arr[middle] < elem) return binarySearch(arr, middle + 1, r_point, elem);			// else check the other boundaries
-	else return binarySearch(arr, l_point, middle - 1, elem);
+	if (l_point <= r_point) {
+		ull middle = l_point + (r_point - l_point) / 2;												// find the middle point
+		if (arr[middle] == elem) return middle;														// if found return
+		else if (arr[middle] < elem) return binarySearch(arr, middle + 1, r_point, elem);			// else check the other boundaries
+		else return binarySearch(arr, l_point, middle - 1, elem);
+	}
+	return -1;
 }
 
 template <>
-inline ull binarySearch(const v_1d<double>& arr, ull l_point, ull r_point, double elem) {
+inline long long binarySearch(const v_1d<double>& arr, ull l_point, ull r_point, double elem) {
 	if (l_point < 0 || r_point >= arr.size())
 		return -1;
 
-	ull middle = l_point + (r_point - l_point) / 2;
-
-	if (EQP(arr[middle], elem, 1e-12)) return middle;
-	else if (arr[middle] < elem) return binarySearch(arr, middle + 1, r_point, elem);
-	else return binarySearch(arr, l_point, middle - 1, elem);
-
+	if (l_point <= r_point) {
+		ull middle = l_point + (r_point - l_point) / 2;
+		if (EQP(arr[middle], elem, 1e-12)) return middle;
+		else if (arr[middle] < elem) return binarySearch(arr, middle + 1, r_point, elem);
+		else return binarySearch(arr, l_point, middle - 1, elem);
+	}
 	return -1;
 }
 

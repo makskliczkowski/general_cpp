@@ -99,12 +99,12 @@ const v_1d<ull> BinaryPowers = { ULLPOW(0) , ULLPOW(1) , ULLPOW(2) , ULLPOW(3),
 * @returns Bool on if the bit is set or not
 */
 template <typename _T>
-inline _T checkBit(_T n, int k) {
+inline bool checkBit(_T n, int k) {
 	return _T(n & (_T(1) << k));
 }
 
 template <typename _T>
-inline _T checkBit(_T n, int k, int base) {
+inline bool checkBit(_T n, int k, int base) {
 	if (base == 2)
 		return checkBit(n, k);
 	// iterate more than 1 bit to get the real number at that position
@@ -118,19 +118,19 @@ inline _T checkBit(_T n, int k, int base) {
 }
 
 template<typename _T1, typename _T2=_T1>
-inline _T1 checkBit(const v_1d<_T2>& n, int L) {
+inline bool checkBit(const v_1d<_T2>& n, int L) {
 	return n[L];
 }
 
 template<typename _T1, typename _T2 = _T1>
-inline _T1 checkBit(const arma::Col<_T2>& n, int L) {
+inline bool checkBit(const arma::Col<_T2>& n, int L) {
 	return n(L);
 }
 
 // ########################################################  				  transformations   				 ########################################################
 
 template<typename _T1, typename _T2>
-inline void intToBase(_T1 idx, arma::Col<_T2>& vec) {
+inline void intToBase(_T1 idx, arma::Col<_T2>& vec, float _spin = 1.0) {
 	const auto size = vec.n_elem;
 	for (auto k = 0; k < size; k++)
 		vec(k) = checkBit(idx, (size - 1) - k);
@@ -138,7 +138,7 @@ inline void intToBase(_T1 idx, arma::Col<_T2>& vec) {
 }
 
 template<typename _T1, typename _T2>
-inline void intToBase(_T1 idx, v_1d<_T2>& vec) {
+inline void intToBase(_T1 idx, v_1d<_T2>& vec, float _spin = 1.0) {
 	const auto size = vec.size();
 	for (auto k = 0; k < size; k++)
 		vec[k] = checkBit(idx, (size - 1) - k);
@@ -146,17 +146,17 @@ inline void intToBase(_T1 idx, v_1d<_T2>& vec) {
 }
 
 template<typename _T1, typename _T2>
-inline void intToBaseSpin(_T1 idx, arma::Col<_T2>& vec) {
+inline void intToBaseSpin(_T1 idx, arma::Col<_T2>& vec, float _spin = 1.0) {
 	const auto size = vec.n_elem;
 	for (int k = 0; k < size; k++)
-		vec(k) = checkBit(idx, (size - 1) - k) ? 1.0 : -1.0;
+		vec(k) = checkBit(idx, (size - 1) - k) ? _spin : -_spin;
 }
 
 template<typename _T1, typename _T2>
-inline void intToBaseSpin(_T1 idx, v_1d<_T2>& vec) {
+inline void intToBaseSpin(_T1 idx, v_1d<_T2>& vec, float _spin = 1.0) {
 	const auto size = vec.n_elem;
 	for (int k = 0; k < size; k++)
-		vec[k] = checkBit(idx, (size - 1) - k) ? 1.0 : -1.0;
+		vec[k] = checkBit(idx, (size - 1) - k) ? _spin : -_spin;
 }
 
 /*
@@ -197,7 +197,7 @@ inline void intToBase(_T1 idx, v_1d<_T2>& vec, int base) {
 
 
 template <typename _T1, typename _T2>
-inline _T1 baseToInt(const v_1d<_T2>& vec) {
+inline _T1 baseToInt(const v_1d<_T2>& vec, float _spin = 1.0) {
 	const auto size = vec.size();
 	_T1 val = 0;
 	for (auto k = 0; k < size; k++)
@@ -206,7 +206,7 @@ inline _T1 baseToInt(const v_1d<_T2>& vec) {
 }
 
 template <typename _T1, typename _T2>
-inline _T1 baseToInt(const arma::Col<_T2>& vec) {
+inline _T1 baseToInt(const arma::Col<_T2>& vec, float _spin = 1.0) {
 	const auto size = vec.size();
 	_T1 val = 0;
 	for (auto k = 0; k < size; k++)
@@ -215,20 +215,20 @@ inline _T1 baseToInt(const arma::Col<_T2>& vec) {
 }
 
 template <typename _T1, typename _T2>
-inline _T1 baseToIntSpin(const v_1d<_T2>& vec) {
+inline _T1 baseToIntSpin(const v_1d<_T2>& vec, float _spin = 1.0) {
 	const auto size = vec.size();
 	_T1 val = 0;
 	for (auto k = 0; k < size; k++)
-		val += static_cast<_T1>((vec[size - 1 - k] + 1.0) / 2.0) * BinaryPowers[k];
+		val += static_cast<_T1>((vec[size - 1 - k] / _spin + 1.0) / 2.0) * BinaryPowers[k];
 	return val;
 }
 
 template <typename _T1, typename _T2>
-inline _T1 baseToIntSpin(const arma::Col<_T2>& vec) {
+inline _T1 baseToIntSpin(const arma::Col<_T2>& vec, float _spin = 1.0) {
 	const auto size = vec.size();
 	_T1 val = 0;
 	for (auto k = 0; k < size; k++)
-		val += static_cast<_T1>((vec(size - 1 - k) + 1.0) / 2.0) * BinaryPowers[k];
+		val += static_cast<_T1>((vec(size - 1 - k) / _spin + 1.0) / 2.0) * BinaryPowers[k];
 	return val;
 }
 
@@ -393,7 +393,7 @@ inline v_1d<_T> flip(const v_1d<_T>& n, int k) {
 }
 
 template<typename _T>
-inline arma::Col<_T> flipV(const arma::Col<_T>& n, int k) {
+inline arma::Col<_T> flip(const arma::Col<_T>& n, int k) {
 	auto tmp = n;
 #ifdef SPIN
 	tmp(k) *= -1;

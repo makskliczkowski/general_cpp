@@ -94,7 +94,7 @@ public:
 	// ----------------------- GETTERS OTHER -----------------------
 	auto get_BC()											const RETURNS(this->_BC);												// returns the boundary conditions
 	auto get_Ns()											const RETURNS(this->Ns);												// returns the number of sites
-	auto get_Dim()											const RETURNS(this->dim);												// returns dimension of the lattice
+	auto get_Dim()											const { return this->dim; };											// returns dimension of the lattice
 	auto get_type()											const RETURNS(this->type);												// returns the type of the lattice as a string
 	auto get_kVec()											const RETURNS(this->kVec);												// returns all k vectors in the RBZ
 	auto get_kVec(uint row)									RETURNS(this->kVec.row(row));											// returns the given k vector row
@@ -212,13 +212,13 @@ inline int Lattice::get_nei(int lat_site, int corr_len) const
 	switch (this->_BC) 
 	{
 	case BoundaryConditions::PBC:
-		return (int)modEUC((long long)(lat_site + corr_len), (long long)this->Ns);
+		return (int)modEUC(lat_site + corr_len, this->Ns);
 		break;
 	case BoundaryConditions::OBC:
 		return uint(lat_site + corr_len) > this->Ns ? -1 : (lat_site + corr_len);
 		break;
 	default:
-		return (int)modEUC((long long)(lat_site + corr_len), (long long)this->Ns);
+		return (int)modEUC(lat_site + corr_len, this->Ns);
 	}
 }
 

@@ -36,8 +36,8 @@ public:
 	// ----------------------- GETTERS NEI
 	v_1d<uint> get_nn_ForwardNum(int site, v_1d<uint> p)	const override { return this->nnForward; };
 	v_1d<uint> get_nnn_ForwardNum(int site, v_1d<uint> p)	const override { return this->nnnForward; };
-	uint get_nn_ForwardNum(int site, int num)				const override { return this->nnForward[site]; };
-	uint get_nnn_ForwardNum(int site, int num)				const override { return this->nnnForward[site]; };
+	uint get_nn_ForwardNum(int site, int num)				const override { return this->nnForward[num]; };
+	uint get_nnn_ForwardNum(int site, int num)				const override { return this->nnnForward[num]; };
 
 	// ----------------------- CALCULATORS
 	// --- nn ---
