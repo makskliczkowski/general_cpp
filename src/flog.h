@@ -2,6 +2,11 @@
 #include "Include/files.h"
 #include "Include/directories.h"
 
+/*******************************
+* Contains the possible methods
+* for logging the info etc.
+*******************************/
+
 // ######################################################## L O G   L E V E L S ########################################################
 
 #define LOG_LVL0		""
@@ -9,6 +14,7 @@
 #define LOG_LVL2		"\t\t->"
 #define LOG_LVL3		"\t\t\t->"
 #define LOG_LVL4		"\t\t\t\t->"
+static int LASTLVL		= 0;
 
 /*
 * @brief prints log level based on a given input
@@ -64,7 +70,7 @@ inline void SET_LOG_TIME() {
 /*
 * @brief prints log info based on a given input message and type
 * @param _msg message to be logged
-* @param _
+* @param _typ the type of message
 * @param _lvl tabulation level
 */
 inline void LOGINFO(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl) {
@@ -84,3 +90,25 @@ inline void LOGINFO(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl) 
 #endif
 }
 
+/*
+* @brief prints log info based on a given input message and type
+* @param _msg message to be logged
+* @param _
+*/
+inline void LOGINFOG(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl) {
+	logLvl(LASTLVL + _lvl);
+	std::cout << "[" << getSTR_LOG_TYPES(_typ) << "]" << _msg << std::endl;
+#ifdef LOG_FILE
+	std::ofstream _file;
+	openFile(_file, LOG_FILENAME, std::ios::app);
+	// check level of log
+	auto _lvl = LASTLVL + _lvl;
+	if (_lvl > 0)
+		_file << "->";
+	while (_lvl--)
+		_file << "\t";
+	// write to the file
+	_file << "[" << getSTR_LOG_TYPES(_typ) << "]" << _msg << std::endl;
+	_file.close();
+#endif
+}

@@ -4,6 +4,11 @@
 #include <fstream>
 #include "time.h"
 
+/*******************************
+* Contains the possible methods
+* for handling files and print.
+*******************************/
+
 // ########################################################			    FILE AND STREAMS			########################################################
 
 /*

@@ -83,7 +83,7 @@ arma::vec HexagonalLattice::getRealVec(int x, int y, int z) const
 
 	// go in y direction
 	arma::vec tmp = (yMove * (this->a1 + this->a2)) + (z * this->a3);
-	tmp += (double)modEUC(Y, 2) * this->a1;
+	tmp += (double)modEUC<int>(Y, 2) * this->a1;
 
 	// go in x is direction, working for negative
 	return tmp + x * (this->a1 - this->a2);
@@ -103,8 +103,8 @@ void HexagonalLattice::calculate_nn_pbc()
 		this->nn = v_2d<int>(this->Ns, v_1d<int>(2, 0));
 		for (uint i = 0; i < Ns; i++) {
 			// z bond only
-			this->nn[i][0] = (i + 1) % this->Ns;			// this is the neighbor top
-			this->nn[i][1] = (int)modEUC(i-1, this->Ns);			// this is the neighbor bottom
+			this->nn[i][0] = (i + 1) % this->Ns;										// this is the neighbor top
+			this->nn[i][1] = modEUC<int>(i-1, this->Ns);							// this is the neighbor bottom
 		}
 		break;
 	case 2:
@@ -120,10 +120,10 @@ void HexagonalLattice::calculate_nn_pbc()
 				auto current_elem_b = 2 * i + 2 * Lx * j + 1;							// upper
 
 				// check the elementary cells
-				auto up = (int)modEUC(j + 1, this->Ly);
-				auto down = (int)modEUC(j - 1, this->Ly);
-				auto right = (int)modEUC(i + 1, this->Lx);
-				auto left = (int)modEUC(i - 1, this->Lx);
+				auto up = modEUC<int>(j + 1, this->Ly);
+				auto down = modEUC<int>(j - 1, this->Ly);
+				auto right = modEUC<int>(i + 1, this->Lx);
+				auto left = modEUC<int>(i - 1, this->Lx);
 
 				// y and x bonding depends on current y level as the hopping between sites changes 
 				
@@ -193,7 +193,7 @@ void HexagonalLattice::calculate_nn_obc()
 		for (uint i = 0; i < this->Ns; i++) {
 			// z bond only
 			this->nn[i][0] = (i + 1) >= this->Ns ? i + 1 : -1;						// this is the neighbor top
-			this->nn[i][1] = (int)modEUC(i - 1, this->Ns);						// this is the neighbor bottom
+			this->nn[i][1] = modEUC<int>(i - 1, this->Ns);						// this is the neighbor bottom
 		}
 		break;
 	case 2:
@@ -277,7 +277,7 @@ void HexagonalLattice::calculate_nn_mbc()
 		for (uint i = 0; i < Ns; i++) {
 			// z bond only
 			this->nn[i][0] = (i + 1) % Ns;							// this is the neighbor top
-			this->nn[i][1] = (int)modEUC(i - 1, Ns);			// this is the neighbor bottom
+			this->nn[i][1] = modEUC<int>(i - 1, Ns);			// this is the neighbor bottom
 		}
 		break;
 	case 2:
@@ -295,8 +295,8 @@ void HexagonalLattice::calculate_nn_mbc()
 				// check the elementary cells
 				auto up = j + 1;
 				auto down = j - 1;
-				auto right = (int)modEUC(i + 1, Lx);
-				auto left = (int)modEUC(i - 1, Lx);
+				auto right = modEUC<int>(i + 1, Lx);
+				auto left = modEUC<int>(i - 1, Lx);
 
 				// y and x bonding depends on current y level as the hopping between sites changes 
 
@@ -367,8 +367,8 @@ void HexagonalLattice::calculate_nn_sbc()
 		for (uint i = 0; i < Ns; i++) {
 			this->nn[i] = v_1d<int>(2, 0);
 			// z bond only
-			this->nn[i][0] = (i + 1) % Ns;							// this is the neighbor top
-			this->nn[i][1] = (int)modEUC(i - 1, Ns);				// this is the neighbor bottom
+			this->nn[i][0] = (i + 1) % Ns;												// this is the neighbor top
+			this->nn[i][1] = modEUC<int>(i - 1, Ns);									// this is the neighbor bottom
 		}
 		break;
 	case 2:
@@ -385,7 +385,7 @@ void HexagonalLattice::calculate_nn_sbc()
 
 				// check the elementary cells
 				auto up = (int)(j + 1, Ly);
-				auto down = (int)modEUC(j - 1, Ly);
+				auto down = modEUC<int>(j - 1, Ly);
 				auto right = i + 1;
 				auto left = i - 1;
 

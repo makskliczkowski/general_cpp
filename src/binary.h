@@ -1,4 +1,11 @@
 #pragma once
+
+/************************************
+* Defines the most general methods 
+* for binary representation numbers
+* manipulation for the simulation use
+************************************/
+
 #ifndef BINARY_H
 #define BINARY_H
 
@@ -118,12 +125,12 @@ inline bool checkBit(_T n, int k, int base) {
 }
 
 template<typename _T1, typename _T2=_T1>
-inline bool checkBit(const v_1d<_T2>& n, int L) {
+inline bool checkBit(const v_1d<_T2>& n, uint L) {
 	return n[L];
 }
 
 template<typename _T1, typename _T2 = _T1>
-inline bool checkBit(const arma::Col<_T2>& n, int L) {
+inline bool checkBit(const arma::Col<_T2>& n, uint L) {
 	return n(L);
 }
 
@@ -131,16 +138,16 @@ inline bool checkBit(const arma::Col<_T2>& n, int L) {
 
 template<typename _T1, typename _T2>
 inline void intToBase(_T1 idx, arma::Col<_T2>& vec, float _spin = 1.0) {
-	const auto size = vec.n_elem;
-	for (auto k = 0; k < size; k++)
+	const uint size = (uint)vec.n_elem;
+	for (uint k = 0; k < size; k++)
 		vec(k) = checkBit(idx, (size - 1) - k);
 
 }
 
 template<typename _T1, typename _T2>
 inline void intToBase(_T1 idx, v_1d<_T2>& vec, float _spin = 1.0) {
-	const auto size = vec.size();
-	for (auto k = 0; k < size; k++)
+	const int size = vec.size();
+	for (int k = 0; k < size; k++)
 		vec[k] = checkBit(idx, (size - 1) - k);
 
 }
@@ -281,13 +288,13 @@ inline _T1 dotm(arma::Col<_T1> lv, arma::Col<_T2> rv) {
 *@returns rotated number
 */
 template <typename _T>
-inline _T rotateLeft(_T n, int32_t L) {
-	_T maxPower = BinaryPowers[(int32_t)L - int32_t(1)];
+inline _T rotateLeft(_T n, uint L) {
+	_T maxPower = BinaryPowers[uint(L - 1)];
 	return (n >= maxPower) ? (((int64_t)n - (int64_t)maxPower) * 2 + 1) : n * 2;
 }
 
 template <typename _T>
-inline _T rotateLeft(_T n, int L, int base) {
+inline _T rotateLeft(_T n, uint L, int base) {
 	_T val = rotateLeft(n, L);
 	for (int i = 0; i < base / 2 - 1; i++)
 		val = rotateLeft(val, L);
@@ -295,12 +302,12 @@ inline _T rotateLeft(_T n, int L, int base) {
 }
 
 template<typename _T>
-inline void rotateLeft(v_1d<_T>& n, int m) {
+inline void rotateLeft(v_1d<_T>& n, uint m) {
 	std::ranges::rotate(n.begin(), n.begin() + m, n.end());
 }
 
 template<typename _T>
-inline v_1d<_T> rotateLeft(const v_1d<_T>& n, int m, int placeholder) {
+inline v_1d<_T> rotateLeft(const v_1d<_T>& n, uint m, int placeholder) {
 	v_1d<_T> tmp = n;
 	std::ranges::rotate(tmp.begin(), tmp.begin() + m, tmp.end());
 	return tmp;

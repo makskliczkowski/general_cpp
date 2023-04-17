@@ -1,3 +1,9 @@
+#pragma once 
+
+/*******************************
+* Contains the possible methods
+* for general lattice class.
+*******************************/
 
 #ifndef COMMON_H
 	#include "common.h"
@@ -17,7 +23,7 @@ BEGIN_ENUM(LatticeTypes)								//%
 	DECL_ENUM_ELEMENT(HEX)								//%
 }														//%
 END_ENUM(LatticeTypes);									//%
-														//%
+//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 enum BoundaryConditions {	PBC = 0, OBC = 1,			//%
 							MBC = 2, SBC = 3 };			//%
 BEGIN_ENUM(BoundaryConditions)							//%
@@ -87,20 +93,21 @@ public:
 	auto get_nnn_ForwardNum(int site)						const -> uint	{ return (uint)this->nnnForward.size(); };				// with no placeholder returns number of nnn
 	auto get_nn(int site, int nei_num)						const -> int	{ return this->nn[site][nei_num]; };					// returns given nearest nei at given lat site
 	auto get_nnn(int site, int nei_num)						const -> int	{ return this->nnn[site][nei_num]; };					// returns given next nearest nei at given lat site
-	auto get_nn(int site)									const RETURNS(this->nn[site].size());									// returns the number of nn
-	auto get_nnn(int site)									const RETURNS(this->nnn[site].size());									// returns the number of nnn
-	int get_nei(int lat_site, int corr_len)					const;
+	auto get_nn(int site)									const -> uint	{ return (uint)this->nn[site].size(); };				// returns the number of nn
+	auto get_nnn(int site)									const -> uint   { return (uint)this->nnn[site].size(); };				// returns the number of nnn
+	auto get_nei(int lat_site, int corr_len)				const -> int;
 
 	// ----------------------- GETTERS OTHER -----------------------
-	auto get_BC()											const RETURNS(this->_BC);												// returns the boundary conditions
-	auto get_Ns()											const RETURNS(this->Ns);												// returns the number of sites
-	auto get_Dim()											const { return this->dim; };											// returns dimension of the lattice
-	auto get_type()											const RETURNS(this->type);												// returns the type of the lattice as a string
-	auto get_kVec()											const RETURNS(this->kVec);												// returns all k vectors in the RBZ
-	auto get_kVec(uint row)									RETURNS(this->kVec.row(row));											// returns the given k vector row
-	auto get_spatial_norm()									const RETURNS(this->spatialNorm);										// returns the spatial norm
-	auto get_spatial_norm(int x, int y, int z)				const RETURNS(this->spatialNorm[x][y][z]);								// returns the spatial norm at x,y,z
-	auto get_coordinates(int site, direction axis)			const RETURNS(this->coord[site][axis]);									// returns the given coordinate
+	BoundaryConditions get_BC()								const			{ return this->_BC; };									// returns the boundary conditions
+	LatticeTypes get_Type()									const			{ return this->type_; };								// returns the type of the lattice as a string
+	std::string get_type()									const			{ return this->type; };									// returns the type of the lattice as a string
+	arma::mat get_kVec()									const			{ return this->kVec; };									// returns all k vectors in the RBZ
+	arma::subview_row<double> get_kVec(uint row)							{ return this->kVec.row(row); };						// returns the given k vector row
+	v_3d<int> get_spatial_norm()							const			{ return this->spatialNorm; };							// returns the spatial norm
+	auto get_spatial_norm(int x, int y, int z)				const -> int    { return this->spatialNorm[x][y][z]; };					// returns the spatial norm at x,y,z
+	auto get_coordinates(int site, direction axis)			const -> int	{ return this->coord[site][axis]; };					// returns the given coordinate
+	auto get_Ns()											const -> uint	{ return this->Ns; };									// returns the number of sites
+	auto get_Dim()											const -> uint	{ return this->dim; };									// returns dimension of the lattice
 	auto get_info()											const -> std::string 
 	{
 		std::string _inf;
@@ -113,25 +120,25 @@ public:
 	};
 
 
-	// ----------------------- CALCULATORS
+	// ----------------------- CALCULATORS -----------------------
 	void calculate_nn();
 	void calculate_nnn();
 	void calculate_spatial_norm();
 	
-	// --- nn --- 
+	// ------ nn ------
 	virtual void calculate_nn_pbc() = 0;
 	virtual void calculate_nn_obc() = 0;
 	virtual void calculate_nn_mbc() = 0;
 	virtual void calculate_nn_sbc() = 0;
 	
-	// --- nnn --- 
+	// ------ nnn ------ 
 	virtual void calculate_nnn_pbc() = 0;
 	virtual void calculate_nnn_obc() = 0;
 	
-	// --- coords --- 
+	// ------ coords ------ 
 	virtual void calculate_coordinates() = 0;
 
-	// ----------------------- SYMMETRY
+	// ----------------------- SYMMETRY -----------------------
 	virtual t_3d<int> getNumElems() = 0;																							// returns the number of elements if the symmetry is possible
 	virtual t_3d<int> getSymPosInv(int x, int y, int z) = 0;																		// from symmetrised form return coordinates
 	virtual t_3d<int> getSymPos(int x, int y, int z) = 0;																			// from given coordinates return their symmetrised form
@@ -212,13 +219,13 @@ inline int Lattice::get_nei(int lat_site, int corr_len) const
 	switch (this->_BC) 
 	{
 	case BoundaryConditions::PBC:
-		return (int)modEUC(lat_site + corr_len, this->Ns);
+		return modEUC<int>(lat_site + corr_len, this->Ns);
 		break;
 	case BoundaryConditions::OBC:
 		return uint(lat_site + corr_len) > this->Ns ? -1 : (lat_site + corr_len);
 		break;
 	default:
-		return (int)modEUC(lat_site + corr_len, this->Ns);
+		return modEUC<int>(lat_site + corr_len, this->Ns);
 	}
 }
 

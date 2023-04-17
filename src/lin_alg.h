@@ -1,9 +1,16 @@
 #pragma once
+
+/*******************************
+* Contains the possible methods
+* for linear algebra usage.
+*******************************/
+
 #ifndef ALG_H
 	#define ALG_H
 using uint = unsigned int;
 // #############################################################				   INCLUDE FROM ARMADILLO				   #############################################################
 
+#define ARMA_WARN_LEVEL 3
 #define ARMA_USE_LAPACK             
 #define ARMA_PRINT_EXCEPTIONS
 //#define ARMA_BLAS_LONG_LONG                                                                 // using long long inside LAPACK call
@@ -13,11 +20,12 @@ using uint = unsigned int;
 //#define ARMA_USE_ARPACK 
 #define ARMA_USE_MKL_ALLOC
 #define ARMA_USE_MKL_TYPES
-#define ARMA_WARN_LEVEL 1
 #define ARMA_DONT_USE_OPENMP
 #define ARMA_USE_HDF5
 ////#define ARMA_USE_OPENMP
 #define ARMA_ALLOW_FAKE_GCC
+#define ARMA_DONT_PRINT_CXX11_WARNING
+#define ARMA_DONT_PRINT_CXX03_WARNING
 #include <armadillo>
 
 #define DH5_USE_110_API
@@ -55,6 +63,8 @@ namespace algebra {
 	inline void setKetBra(arma::Mat<_type>& setMat, const arma::Col<_type>& setVec) {
 		setMat = arma::cdot(setVec, setVec.as_row());
 	}
+	
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	/*
 	* @brief Allows to calculate the matrix consisting of COL vector times ROW vector
@@ -66,6 +76,8 @@ namespace algebra {
 	inline void setKetBra(arma::Mat<_type>& setMat, const arma::Col<_type>& setVec, bool plus) {
 		UPDATEV(setMat, arma::cdot(setVec, setVec.as_row()), plus);
 	}
+
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	/*
 	* Puts the given matrix mSet(smaller) to a specific place in the m2Set (bigger) matrix
@@ -84,6 +96,8 @@ namespace algebra {
 		else
 			SUBM(m2Set, row, col, row + nrow, col + ncol) = mSet;
 	}
+
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	/*
 	* @brief Uses the given matrix MSet (bigger) to set the M2Set (smaller) matrix
@@ -156,9 +170,9 @@ namespace algebra {
 			return *this;
 		};
 	
-		// ----------------------------------- OPERATIONS
+		// ----------------------------------- OPERATIONS -----------------------------------
 
-		// ------ INVERSE ------
+		// ----------------------------------- INVERSE
 
 		/*
 		* @brief Calculates the inverse of the UDT decomposition of a matrix. With return.
@@ -171,7 +185,7 @@ namespace algebra {
 		*/
 		void inv(arma::Mat<_T>& M) { M = arma::solve(T, Di) * U.t(); };
 
-		// ------ MULTIPLICATION ------
+		// ----------------------------------- MULTIPLICATION 
 
 		/*
 		* @brief Stabilized multiplication of two `UDT` decompositions.
@@ -182,6 +196,8 @@ namespace algebra {
 		//	ret.factMult(B);
 		//	return ret;
 		//}
+
+		// -----------------------------------
 
 		/*
 		* @brief Stabilized multiplication of two `UDT` decompositions.
@@ -195,6 +211,8 @@ namespace algebra {
 	
 		virtual void factMult(const arma::Mat<_T> Ml) = 0;
 
+		// -----------------------------------
+
 		// ------ (1+A)^(-1) ------
 		virtual arma::Mat<_T> inv1P() = 0;
 		virtual void inv1P(arma::Mat<_T>& setMat) = 0;
@@ -203,6 +221,8 @@ namespace algebra {
 		virtual arma::Mat<_T> invSum(UDT<_T>* right) = 0;
 		virtual arma::Mat<_T> invSum(UDT<_T>* right, arma::Mat<_T>& setMat) = 0;
 	};
+
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	/*
 	* @brief UDT decomposition using QR decomposition

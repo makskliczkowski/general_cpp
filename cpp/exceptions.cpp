@@ -5,9 +5,9 @@
 */
 void ExceptionHandler::printException(const std::string& _what, const std::string& _msg, EXCEPTIONS _ex)
 {
-	std::cerr << LOG_LVL0 << getSTR_EXCEPTIONS(_ex) << std::endl;
-	std::cerr << LOG_LVL1 << _what << std::endl;
-	std::cerr << LOG_LVL1 << _msg << std::endl;
+	std::cout << LOG_LVL0 << getSTR_EXCEPTIONS(_ex) << std::endl;
+	std::cout << LOG_LVL1 << _what << std::endl;
+	std::cout << LOG_LVL1 << _msg << std::endl;
 	exit(static_cast<int>(_ex));
 }
 

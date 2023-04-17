@@ -2,6 +2,11 @@
 #include <cmath>
 #include <complex>
 
+/*******************************
+* Contains the possible methods
+* for using math in simulation.
+*******************************/
+
 /*
 * @brief Check the sign of a value
 * @param val value to be checked
@@ -19,9 +24,10 @@ inline T1 sgn(T2 val) {
 * @return euclidean a%b
 * @link https://en.wikipedia.org/wiki/Modulo_operation
 */
-inline long long modEUC(long long a, long long b)
+template <typename _T>
+inline _T modEUC(_T a, _T b)
 {
-	long long m = a % b;
+	_T m = a % b;
 	if (m < 0) m = (b < 0) ? m - b : m + b;
 	return m;
 }

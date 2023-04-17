@@ -5,6 +5,11 @@
 #include <time.h>
 #include "exceptions.h"
 
+/*******************************
+* Contains the possible methods
+* for handling the sim time.
+*******************************/
+
 // ########################################################	T I M E   F U N C T I O N S ########################################################
 
 using clk						=				std::chrono::steady_clock;

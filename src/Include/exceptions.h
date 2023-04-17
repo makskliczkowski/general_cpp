@@ -4,7 +4,10 @@
 #include "signatures.h"
 #include "str.h"
 
-
+/*******************************
+* Contains the possible methods
+* for handling the exceptions.
+*******************************/
 
 // ######################################################## E X C E P T I O N S ########################################################
 
@@ -35,4 +38,4 @@ public:
 };
 
 #define BEGIN_CATCH_HANDLER				try{
-#define END_CATCH_HANDLER(message)		}catch(...){ ExceptionHandler::handleExceptions(std::current_exception(), message); };
+#define END_CATCH_HANDLER(message)		}catch(...){ ExceptionHandler::handleExceptions(std::current_exception(), message); }
