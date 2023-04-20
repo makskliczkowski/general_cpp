@@ -20,17 +20,17 @@
 // creates both default variable (_ at front) and used variable (_ at the end) for the UI model - nonstatic doubles etc.
 #define UI_PARAM_CREATE_DEFAULTD(PAR, TYP, VAL)	const			TYP _##PAR = VAL; TYP PAR##_ = VAL 
 // sets default value for single parameters 
-#define UI_PARAM_SET_DEFAULT(PAR)				this->##PAR##_	=	this->_##PAR
+#define UI_PARAM_SET_DEFAULT(PAR)				this->PAR##_	=	this->_##PAR
 // specifies parameters in the UI that distinguish between step in range, starting point, number of steps and disorder strength
 #define UI_PARAM_STEP(TYP, PAR, VAL)			UI_PARAM_CREATE_DEFAULTD(PAR, TYP, VAL);	\
 												UI_PARAM_CREATE_DEFAULTD(PAR##0,TYP,0.0);	\
 												UI_PARAM_CREATE_DEFAULTD(PAR##s,TYP,0.0);	\
 												UI_PARAM_CREATE_DEFAULTD(PAR##n,int,1)		
 // allows to set default values for parameters that precise range, disorder strength etc.
-#define UI_PARAM_SET_DEFAULT_STEP(PAR)			this->##PAR##_	=	this->_##PAR;			\
-												this->##PAR##0_	=	this->_##PAR##0;		\
-												this->##PAR##n_	=	this->_##PAR##n;		\
-												this->##PAR##s_	=	this->_##PAR##s
+#define UI_PARAM_SET_DEFAULT_STEP(PAR)			this->PAR##_	=	this->_##PAR;			\
+												this->PAR##0_	=	this->_##PAR##0;		\
+												this->PAR##n_	=	this->_##PAR##n;		\
+												this->PAR##s_	=	this->_##PAR##s
 // adds parameters to the map
 #define UI_PARAM_MAP(p, v, f)					{ #p					, std::make_tuple(#v , f)								},	\
 												{ SSTR(#p ) + SSTR("0")	, std::make_tuple("0.0", FHANDLE_PARAM_HIGHERV(-1e-15))	},	\

@@ -50,7 +50,7 @@
 #define BEGIN_ENUM_INLINE(ENUM_NAME)		static const inline char* eSTR##ENUM_NAME [] =
 #define END_ENUM_INLINE(ENUM_NAME, CLASS)	; static const char* getSTR_##ENUM_NAME(enum		\
 																		ENUM_NAME index)		\
-													{ return CLASS##::eSTR##ENUM_NAME [index]; };
+													{ return CLASS::eSTR##ENUM_NAME [index]; };
 
 // ######################################################## F U N C T I O N S ########################################################
 

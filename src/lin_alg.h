@@ -53,6 +53,21 @@ namespace algebra {
 	template <>
 	inline auto conjugate(int x)	-> int		{ return x; };
 
+
+	// #############################################################					REAL								#############################################################
+	
+	template <typename _T>
+	inline auto real(_T x)			-> double	{ return std::real(x); };
+	template <>
+	inline auto real(double x)		-> double	{ return x; };
+
+	// #############################################################					REAL								#############################################################
+
+	template <typename _T>
+	inline auto imag(_T x)			-> double	{ return std::imag(x); };
+	template <>
+	inline auto imag(double x)		-> double	{ return 0.0; };
+	
 	// #############################################################				   MATRIX MULTIPLICATION				   #############################################################
 	/*
 	* @brief Allows to calculate the matrix consisting of COL vector times ROW vector

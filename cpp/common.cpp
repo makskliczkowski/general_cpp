@@ -10,7 +10,7 @@ void pBar::update(double newProgress)
 
 void pBar::print()
 {
-	currUpdateVal %= pBarUpdater.length();
+	currUpdateVal %= pBarUpdater.size();
 	std::cout << "\r";															            // Bring cursor to start of line
 	std::cout << firstPartOfpBar;												            // Print out first part of pBar
 	for (int a = 0; a < amountOfFiller; a++) {												// Print out current progress
@@ -23,15 +23,15 @@ void pBar::print()
 	std::cout << lastPartOfpBar;												            // Print out last part of progress bar
 	std::cout << " (" << (int)(100 * (currentProgress / neededProgress)) << "%)";	        // This just prints out the percent
 	std::cout << std::flush;
+	std::cout << EL;
 	currUpdateVal += 1;
 }
 
 void pBar::printWithTime(std::string message)
 {
 	{
-		std::cout << "\t\t\t\t-> time: " << t_s(timer) << message << " : \n";
+		LOGINFO("TIME: " + TS(timer) + message, LOG_TYPES::TRACE, 4);
 		this->print();
-		std::cout << std::endl;
 	}
 	this->update(percentage);
 }

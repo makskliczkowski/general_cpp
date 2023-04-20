@@ -202,13 +202,14 @@ public:
 	{};
 protected:
 	// --------------------------- STRING ENDS
-	std::string firstPartOfpBar = "\t\t\t\t[";
-	std::string lastPartOfpBar = "]";
-	std::string pBarFiller = "|";
-	std::string pBarUpdater = "|\\/";
+	std::string startingTabs		=		"\t\t\t\t";
+	std::string firstPartOfpBar		=		startingTabs + "[";
+	std::string lastPartOfpBar		=		"]";
+	std::string pBarFiller			=		"|";
+	std::string pBarUpdater			=		"|\\/";
 	// --------------------------- PROGRESS
 	clk::time_point timer;														            // inner clock
-	int amountOfFiller = 0;															            // length of filled elements
+	int amountOfFiller = 0;															           // length of filled elements
 	int pBarLength = 50;														            // length of a progress bar
 	int currUpdateVal = 0;														            //
 	double currentProgress = 0;													            // current progress

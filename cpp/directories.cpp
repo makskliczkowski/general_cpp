@@ -5,7 +5,10 @@
 */
 void createDir(const std::string& dir)
 {
-	if (!dir.empty())
-		if(fs::create_directories(dir))
-			LOGINFO("CREATED: " + dir, LOG_TYPES::INFO, 1);	
+	if (!dir.empty()) {
+		if (fs::exists(dir))
+			return;
+		fs::create_directories(dir);
+		LOGINFO("CREATED: " + dir, LOG_TYPES::INFO, 1);
+	}
 }

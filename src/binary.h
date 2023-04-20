@@ -389,7 +389,7 @@ inline _T flip(_T n, int k) {
 }
 
 template<typename _T>
-inline v_1d<_T> flip(const v_1d<_T>& n, int k) {
+inline v_1d<_T> flip(const v_1d<_T>& n, int k, float _spin = 1.0) {
 	auto tmp = n;
 #ifdef SPIN
 	tmp[k] *= -1;
@@ -400,29 +400,29 @@ inline v_1d<_T> flip(const v_1d<_T>& n, int k) {
 }
 
 template<typename _T>
-inline arma::Col<_T> flip(const arma::Col<_T>& n, int k) {
+inline arma::Col<_T> flip(const arma::Col<_T>& n, int k, float _spin = 1.0) {
 	auto tmp = n;
 #ifdef SPIN
-	tmp(k) *= -1;
+	tmp(k) *= -1.0;
 #else 
-	tmp(k) = tmp(k) == 1 ? 0 : 1;
+	tmp(k) = (tmp(k) == _spin) ? 0 : _spin;
 #endif
 	return tmp;
 }
 
 template<typename _T>
-inline void flip(v_1d<_T>& n, int k, int placeholder) {
+inline void flip(v_1d<_T>& n, int k, int placeholer, float _spin = 1.0) {
 #ifdef SPIN
-	n[k] *= -1;
+	n[k] *= -1.0;
 #else 
-	n[k] = n[k] == 1 ? 0 : 1;
+	n[k] = (n[k] == _spin) ? 0 : _spin;
 #endif
 }
 
 template<typename _T>
-inline void flip(arma::Col<_T>& n, int k, int placeholder) {
+inline void flip(arma::Col<_T>& n, int k, int placeholer, float _spin = 1.0) {
 #ifdef SPIN
-	n(k) *= -1;
+	n(k) *= -1.0;
 #else 
 	n(k) = (n(k) > 0) ? 0.0 : 1.0;
 #endif

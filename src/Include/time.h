@@ -23,18 +23,21 @@ using clkS						=				std::chrono::system_clock;
 * @param point in time from which we calculate the interval
 */
 inline auto t_s(clk::time_point start)			RETURNS(DURATION(NOW, start) / 1e6);
+inline auto TS(clk::time_point start)			-> std::string { return STRP(t_s(start), 3) + "s"; };
 
 /*
 * @brief The duration in seconds from a given time point
 * @param point in time from which we calculate the interval
 */
 inline auto t_ms(clk::time_point start)			RETURNS(DURATION(NOW, start) / 1e3);
+inline auto TMS(clk::time_point start)			-> std::string { return STRP(t_ms(start), 3) + "ms"; };
 
 /*
 * @brief The duration in seconds from a given time point
 * @param point in time from which we calculate the interval
 */
 inline auto t_mus(clk::time_point start)		RETURNS(DURATION(NOW, start));
+inline auto TMUS(clk::time_point start)			-> std::string { return STRP(t_mus(start), 3) + "mus"; };
 
 #define stouts(text, start)		stout	<< text <<	" -> time : " << tim_s(start)	<< "s"		<< EL					// standard out seconds
 #define stoutms(text, start)	stout	<< text <<	" -> time : " << tim_ms(start)	<< "ms"		<< EL					// standard out miliseconds

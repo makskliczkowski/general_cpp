@@ -1,6 +1,7 @@
 #pragma once
 #include "Include/files.h"
 #include "Include/directories.h"
+#include "Include/exceptions.h"
 
 /*******************************
 * Contains the possible methods
@@ -9,11 +10,6 @@
 
 // ######################################################## L O G   L E V E L S ########################################################
 
-#define LOG_LVL0		""
-#define LOG_LVL1		"\t->"
-#define LOG_LVL2		"\t\t->"
-#define LOG_LVL3		"\t\t\t->"
-#define LOG_LVL4		"\t\t\t\t->"
 static int LASTLVL		= 0;
 
 /*

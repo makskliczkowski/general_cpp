@@ -18,6 +18,19 @@ inline T1 sgn(T2 val) {
 }
 
 /*
+* @brief Placeholder for non-complex values
+*/
+template <typename _T>
+inline _T toType(double _r, double _i) {
+	return _T(_r, _i);
+}
+template <>
+inline double toType(double _r, double _i) {
+	return _r;
+}
+
+
+/*
 * @brief Defines an euclidean modulo denoting also the negative sign
 * @param a left side of modulo
 * @param b right side of modulo

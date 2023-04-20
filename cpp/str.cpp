@@ -12,7 +12,7 @@ strVec splitStr(const std::string& s, std::string delimiter)
 {
 	unsigned long long pos_start = 0;
 	unsigned long long pos_end;
-	unsigned long long delim_len = delimiter.length();
+	unsigned long long delim_len = delimiter.size();
 	std::string token;
 	strVec res = {};
 
@@ -36,7 +36,7 @@ strVec splitStr(const std::string& s, std::string delimiter)
 strVec fromPtr(int argc, char** argv, unsigned int offset)
 {
 	v_1d<std::string> tmp(argc - offset, "");
-	for (auto i = 0; i < argc - offset; i++)
+	for (unsigned int i = 0; i < (unsigned int)argc - offset; i++)
 		tmp[i] = argv[i + offset];
 	return tmp;
 };
