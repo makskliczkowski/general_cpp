@@ -11,12 +11,16 @@
 #if !defined(LOCALTIME_S)
 	#if defined (__GNUG__)
 		#define LOCALTIME_S  localtime_s
+		#pragma message ("--> Using localtime_s")
 	#elif defined (_MSC_VER)
 		#define LOCALTIME_S  localtime_s 
+		#pragma message ("--> Using localtime_s")
 	#elif defined(__INTEL_COMPILER)
 		#define LOCALTIME_S  localtime_r
+		#pragma message ("--> Using localtime_r")
 	#else 
 		#define LOCALTIME_S  localtime_s
+		#pragma message ("--> Using localtime_s")
 	#endif
 #endif
 

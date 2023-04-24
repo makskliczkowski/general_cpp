@@ -60,12 +60,16 @@
 #if !defined(FUN_SIGNATURE)
 	#if defined (__GNUG__)
 		#define FUN_SIGNATURE  __PRETTY_FUNCTION__
+		#pragma message ("--> Using GNU compiler")
 	#elif defined (_MSC_VER)
 		#define FUN_SIGNATURE  __FUNCSIG__ 
+		#pragma message ("--> Using MSVS compiler")
 	#elif defined(__INTEL_COMPILER)
 		#define FUN_SIGNATURE  __FUNCTION__
+		#pragma message ("--> Using INTEL compiler")
 	#else 
 		#define FUN_SIGNATURE  __func__
+		#pragma message ("--> Using OTHER compiler")
 	#endif
 #endif
 
