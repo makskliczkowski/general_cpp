@@ -27,7 +27,7 @@
 
 // WHAT IF 2020?
 #ifdef HAS_CXX20
-	#pragma message ("--> Compiling with c++20 compiler. Metaprogramming fully unlocked.")
+	#pragma message ("--> Compiling with c++20 compiler")
 	#define callable_type std::invocable
 	#ifdef __has_include
 		#if __has_include(<format>)
@@ -36,7 +36,7 @@
 		#endif
 	#endif
 	#elif defined HAS_CXX17
-		#pragma message ("--> Compiling with c++17 compiler. Failed to use type_traits and concepts in metaprogramming")
+		#pragma message ("--> Compiling with c++17 compiler")
 		#define callable_type typename
 #endif
 
