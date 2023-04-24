@@ -5,14 +5,33 @@
 #include <time.h>
 #include "exceptions.h"
 
+/*
+* Define function signatures to use in debug scenarios
+*/
+#if !defined(LOCALTIME_S)
+	#if defined (__GNUG__)
+		#define LOCALTIME_S  localtime_s
+	#elif defined (_MSC_VER)
+		#define LOCALTIME_S  localtime_s 
+	#elif defined(__INTEL_COMPILER)
+		#define LOCALTIME_S  localtime_r
+	#else 
+		#define LOCALTIME_S  localtime_s
+	#endif
+#endif
+
 /*******************************
 * Contains the possible methods
 * for handling the sim time.
 *******************************/
 
 // ########################################################	T I M E   F U N C T I O N S ########################################################
+#if defined (_MSC_VER)
+	using clk						=				std::chrono::steady_clock;
+#else
+	using clk						=				std::chrono::system_clock;
+#endif
 
-using clk						=				std::chrono::steady_clock;
 using clkS						=				std::chrono::system_clock;
 #define DUR										std::chrono::duration
 #define DURCAST									std::chrono::duration_cast
@@ -66,12 +85,13 @@ static std::string prettyTime(clk::time_point _tp)
 #ifdef HAS_FORMAT
 	return std::format("{0:%F_%T}", _tp);
 #else
-	__time64_t curTime	=	\
+	auto curTime	=	\
 		clkS::to_time_t(clkS::now() + DURCAST<clkS::duration>(_tp - clk::now()));
 
 	// this function use static global pointer. so it is not thread safe solution
 	std::tm timeInfo;
-	_localtime64_s(&timeInfo, &curTime);
+	//_localtime64_s(&timeInfo, &curTime);
+	LOCALTIME_S(&timeInfo, &curTime);
 
 	// create a buffer
 	char buffer[128];
