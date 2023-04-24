@@ -9,18 +9,15 @@
 * Define function signatures to use in debug scenarios
 */
 #if !defined(LOCALTIME_S)
-	#if defined (__GNUG__)
-		#define LOCALTIME_S  localtime_s
-		#pragma message ("--> Using localtime_s")
-	#elif defined (_MSC_VER)
-		#define LOCALTIME_S  localtime_s 
-		#pragma message ("--> Using localtime_s")
-	#elif defined(__INTEL_COMPILER)
-		#define LOCALTIME_S  localtime_r
+	#if defined(__unix__)
+		#define LOCALTIME_S(TIMER_T, ST) localtime_r(&TIMER_T, &ST)
 		#pragma message ("--> Using localtime_r")
-	#else 
-		#define LOCALTIME_S  localtime_s
+	#elif defined (_MSC_VER)
+		#define LOCALTIME_S(TIMER_T, ST) localtime_s(&ST, &TIMER_T)
 		#pragma message ("--> Using localtime_s")
+	#else 
+		#define LOCALTIME_S     static std::mutex mtx; std::lock_guard<std::mutex> lock(mtx); bt = *std::localtime(&timer);
+		#pragma message ("--> Using weird mutex")
 	#endif
 #endif
 
@@ -94,8 +91,8 @@ static std::string prettyTime(clk::time_point _tp)
 
 	// this function use static global pointer. so it is not thread safe solution
 	std::tm timeInfo;
-	//_localtime64_s(&timeInfo, &curTime);
-	LOCALTIME_S(&timeInfo, &curTime);
+	LOCALTIME_S(curTime, timeInfo);
+	
 
 	// create a buffer
 	char buffer[128];
