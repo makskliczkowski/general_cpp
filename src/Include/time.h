@@ -81,7 +81,7 @@ static auto to_ms(const std::chrono::time_point<_T>& tp)
 /*
 * @brief pretty prints the time point
 */
-static std::string prettyTime(clk::time_point _tp)
+[[maybe_unused]] static std::string prettyTime(clk::time_point _tp)
 {
 #ifdef HAS_FORMAT
 	return std::format("{0:%F_%T}", _tp);

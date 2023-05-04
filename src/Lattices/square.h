@@ -21,7 +21,10 @@ private:
 
 public:
 	// CONSTRUCTORS
-	~SquareLattice() = default;
+	~SquareLattice()
+	{
+		LOGINFOG(this->get_info() + " is destroyed.", LOG_TYPES::INFO, 3);
+	}
 	SquareLattice() = default;
 	SquareLattice(int Lx, int Ly = 1, int Lz = 1, int dim = 1, int _BC = 0);											// general constructor
 

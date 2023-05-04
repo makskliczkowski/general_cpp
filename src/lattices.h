@@ -68,7 +68,10 @@ public:
 	enum direction {
 		X, Y, Z
 	};
-	virtual ~Lattice() = default;
+
+	virtual ~Lattice() {
+		LOGINFOG("General lattice is destroyed.", LOG_TYPES::INFO, 3);
+	};
 
 	// ----------------------- VIRTUAL GETTERS -----------------------
 	virtual int get_Lx()									const = 0;
@@ -170,7 +173,7 @@ inline void Lattice::calculate_nn() {
 		this->calculate_nn_pbc();
 		break;
 	}
-	LOGINFO("Created NN. Using: " + SSTR(getSTR_BoundaryConditions(this->_BC)), LOG_TYPES::INFO, 2);
+	LOGINFOG("Created NN. Using: " + SSTR(getSTR_BoundaryConditions(this->_BC)), LOG_TYPES::INFO, 2);
 }
 
 /*
@@ -190,7 +193,7 @@ inline void Lattice::calculate_nnn()
 		this->calculate_nnn_pbc();
 		break;
 	}
-	LOGINFO("Created NNN. Using: " + SSTR(getSTR_BoundaryConditions(this->_BC)), LOG_TYPES::INFO, 2);
+	LOGINFOG("Created NNN. Using: " + SSTR(getSTR_BoundaryConditions(this->_BC)), LOG_TYPES::INFO, 2);
 }
 
 /*

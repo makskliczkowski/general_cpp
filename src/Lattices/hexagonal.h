@@ -22,7 +22,9 @@ private:
 
 public:
 	// CONSTRUCTORS
-	~HexagonalLattice() = default;
+	~HexagonalLattice() {
+		LOGINFOG(this->get_info() + " is destroyed.", LOG_TYPES::INFO, 3);
+	}
 	HexagonalLattice() = default;
 	HexagonalLattice(int Lx, int Ly = 1, int Lz = 1, int dim = 1, int _BC = 0);											// general constructor
 

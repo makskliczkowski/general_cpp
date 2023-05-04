@@ -10,7 +10,7 @@
 
 // ######################################################## L O G   L E V E L S ########################################################
 
-static int LASTLVL		= 0;
+extern int LASTLVL;
 
 /*
 * @brief prints log level based on a given input
@@ -107,4 +107,12 @@ inline void LOGINFOG(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl)
 	_file << "[" << getSTR_LOG_TYPES(_typ) << "]" << _msg << std::endl;
 	_file.close();
 #endif
+}
+
+/*
+* @brief Changes the external level
+*/
+inline void LOGINFO_CH_LVL(unsigned int _lvl)
+{
+	LASTLVL = _lvl;
 }

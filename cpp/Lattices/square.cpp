@@ -50,8 +50,8 @@ SquareLattice::SquareLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 	// calculate k_space vectors
 	this->kVec = arma::mat(this->Ns, 3, arma::fill::zeros);
 	this->calculate_kVec();
-	LOGINFO("Created " + this->type + " lattice", LOG_TYPES::INFO, 1);
-	LOGINFO(this->get_info(), LOG_TYPES::TRACE, 2);
+	LOGINFOG("Created " + this->type + " lattice", LOG_TYPES::INFO, 1);
+	LOGINFOG(this->get_info(), LOG_TYPES::TRACE, 2);
 }
 
 // ------------------------------------------------------------- Getters -------------------------------------------------------------
@@ -111,9 +111,9 @@ void SquareLattice::calculate_nn_pbc()
 		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
 		for (uint i = 0; i < Ns; i++) {
 			this->nn[i] = v_1d<int>(6, 0);
-			int x = i % Lx;
-			int y = int(1.0 * i / Lx) % Ly;
-			int z = int(1.0 * i / Lx / Ly) % Lz;
+			int x [[maybe_unused]] = i % Lx;
+			int y [[maybe_unused]] = int(1.0 * i / Lx) % Ly;
+			int z [[maybe_unused]] = int(1.0 * i / Lx / Ly) % Lz;
 			this->nn[i][0] = z * Lx * Ly + y * Lx + modEUC<int>(i + 1, Lx);			// right - x
 			this->nn[i][1] = z * Lx * Ly + modEUC<int>(i + Lx, Lx * Ly);			// right - y
 			this->nn[i][2] = modEUC<int>(i + Lx * Ly, Ns);							// right - z
@@ -151,8 +151,8 @@ void SquareLattice::calculate_nn_obc()
 		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
 		for (int i = 0; i < (int)this->Ns; i++) {
 			this->nn[i] = v_1d<int>(4, 0);
-			int x = i % Lx;
-			int y = int(1.0 * i / Lx) % Ly;
+			int x [[maybe_unused]] = i % Lx;
+			int y [[maybe_unused]] = int(1.0 * i / Lx) % Ly;
 			this->nn[i][0] = (i + 1) < (y + 1) * Lx ? i + 1 : -1;						// right
 			this->nn[i][1] = i + Lx < (int)this->Ns ? i + Lx : -1;						// top
 			this->nn[i][2] = (i - 1) >= y * Lx ? i - 1 : -1;							// left
@@ -164,9 +164,9 @@ void SquareLattice::calculate_nn_obc()
 		// numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour
 		for (int i = 0; i < (int)Ns; i++) {
 			this->nn[i] = v_1d<int>(6, 0);
-			int x = i % Lx;
-			int y = int(1.0 * i / Lx) % Ly;
-			int z = int(1.0 * i / Lx / Ly) % Lz;
+			int x [[maybe_unused]] = i % Lx;
+			int y [[maybe_unused]] = int(1.0 * i / Lx) % Ly;
+			int z [[maybe_unused]] = int(1.0 * i / Lx / Ly) % Lz;
 			this->nn[i][0] = z * Lx * Ly + y * Lx + (i + 1 < (z * Lx * Ly + (y + 1) * Lx) ? i + 1 : -1);				// right - x
 			this->nn[i][1] = z * Lx * Ly + (i + Lx < ((z + 1)* Lx* Ly) ? i + Lx : -1);									// right - y
 			this->nn[i][2] = i + Lx * Ly < (int)this->Ns ? i + Lx * Ly : -1;											// right - z
@@ -243,8 +243,8 @@ void SquareLattice::calculate_nn_sbc()
 		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
 		for (uint i = 0; i < Ns; i++) {
 			this->nn[i] = v_1d<int>(2, 0);
-			int x = i % Lx;
-			int y = static_cast<int>(1.0 * i / Lx) % Ly;
+			int x [[maybe_unused]] = i % Lx;
+			int y [[maybe_unused]] = static_cast<int>(1.0 * i / Lx) % Ly;
 			//this->nn[i][0] = (i + 1) < (y + 1) * Lx ? y * Lx + x + 1 : -1;		// right
 			//this->nn[i][1] = i + Lx < Ns ? i + Lx : -1;							// top
 			//this->nn[i][2] = (i - 1) >= y * Lx ? y * Lx + x - 1 : -1;				// left
@@ -292,9 +292,9 @@ void SquareLattice::calculate_nnn_pbc()
 		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
 		for (uint i = 0; i < this->Ns; i++) {
 			this->nnn[0] = v_1d<int>(6, 0);
-			int x = i % Lx;
-			int y = static_cast<int>(1.0 * i / Lx) % Ly;
-			int z = static_cast<int>(1.0 * i / Lx / Ly) % Lz;
+			int x [[maybe_unused]] = i % Lx;
+			int y [[maybe_unused]] = static_cast<int>(1.0 * i / Lx) % Ly;
+			int z [[maybe_unused]] = static_cast<int>(1.0 * i / Lx / Ly) % Lz;
 			this->nnn[i][0] = z * Lx * Ly + y * Lx + modEUC<int>(i + 2, Lx);		// right - x
 			this->nnn[i][1] = z * Lx * Ly + modEUC<int>(i + 2 * Lx, Lx * Ly);		// right - y
 			this->nnn[i][2] = modEUC<int>(i + 2 * Lx * Ly, Ns);						// right - z
