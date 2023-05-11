@@ -95,9 +95,10 @@ protected:
 	*/
 	void init(int argc, char** argv) {
 		strVec input = fromPtr(argc, argv, 1);																// change standard input to vec of strings
-		//input = std::vector<string>(input.begin()++, input.end());										// skip the first element which is the name of file
 		if (std::string option = this->getCmdOption(input, "-f"); option != "")
 			input = this->parseInputFile(option);															// parse input from file
+		LOGINFO("Parsing input commands:", LOG_TYPES::TRACE, 1);
+		LOGINFO(STRP(input, 2), LOG_TYPES::TRACE, 2);
 		this->parseModel((int)input.size(), input);
 	};
 	virtual void setDefaultMap()						= 0;

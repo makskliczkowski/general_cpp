@@ -66,6 +66,14 @@ template <>
 inline std::string str_p(const char* v, const int n, bool scientific) {
 	return SSTR(v);
 }
+template <>
+inline std::string str_p(v_1d<std::string> v, const int n, bool scientific) {
+	std::string tmp = "";
+	for (auto& i : v)
+		tmp += i + " ";
+	tmp.pop_back();
+	return tmp;
+}
 
 // ############################################################### V E C T O R I Z E ###############################################################
 
