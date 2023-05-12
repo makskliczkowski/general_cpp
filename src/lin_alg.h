@@ -264,8 +264,10 @@ namespace algebra {
 			this->Db = ZEROV(q.col(0).n_rows);
 			this->Ds = ZEROV(q.col(0).n_rows);
 		};
-		UDT_QR(const UDT_QR<_T>& o): R(o.R), P(o.P), UDT<_T>(o) {};
-		UDT_QR(UDT_QR<_T>&& o) noexcept : R(std::move(o.R)), P(std::move(o.P)), UDT<_T>(std::move(o)) {};
+		UDT_QR(const UDT_QR<_T>& o)
+			: R(o.R), P(o.P), UDT<_T>(o) {};
+		UDT_QR(UDT_QR<_T>&& o) noexcept 
+			: R(std::move(o.R)), P(std::move(o.P)), UDT<_T>(std::move(o)) {};
 
 		/*
 		* @brief copy assignment operator
