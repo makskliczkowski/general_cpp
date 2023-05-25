@@ -63,14 +63,9 @@ inline void SET_LOG_TIME() {
 #endif
 };
 
-/*
-* @brief prints log info based on a given input message and type
-* @param _msg message to be logged
-* @param _typ the type of message
-* @param _lvl tabulation level
-*/
-inline void LOGINFO(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl) {
-	logLvl(_lvl); 
+template <typename _T>
+inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl) {
+	logLvl(_lvl);
 	std::cout << "[" << getSTR_LOG_TYPES(_typ) << "]" << _msg << std::endl;
 #ifdef LOG_FILE
 	std::ofstream _file;
@@ -89,16 +84,17 @@ inline void LOGINFO(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl) 
 /*
 * @brief prints log info based on a given input message and type
 * @param _msg message to be logged
-* @param _
+* @param _typ the type of message
+* @param _lvl tabulation level
 */
-inline void LOGINFOG(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl) {
-	logLvl(LASTLVL + _lvl);
+template<>
+inline void LOGINFO(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl) {
+	logLvl(_lvl);
 	std::cout << "[" << getSTR_LOG_TYPES(_typ) << "]" << _msg << std::endl;
 #ifdef LOG_FILE
 	std::ofstream _file;
 	openFile(_file, LOG_FILENAME, std::ios::app);
 	// check level of log
-	auto _lvl = LASTLVL + _lvl;
 	if (_lvl > 0)
 		_file << "->";
 	while (_lvl--)
@@ -107,6 +103,27 @@ inline void LOGINFOG(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl)
 	_file << "[" << getSTR_LOG_TYPES(_typ) << "]" << _msg << std::endl;
 	_file.close();
 #endif
+}
+
+/*
+* @brief prints log info based on a given input message and type
+* @param _msg message to be logged
+* @param _typ type of LOG
+* @param _lvl level of LOG
+*/
+template <typename _T>
+inline void LOGINFOG(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl) 
+{
+	LOGINFO(_msg, _typ, _lvl + LASTLVL);
+}
+
+/*
+* @brief Prints end of LOG BLOCK
+* @param _typ type of LOG
+* @param _lvl level of LOG
+*/
+inline void LOGINFO(LOG_TYPES _typ, unsigned int _lvl) {
+	LOGINFO("----------------------------------------------------------", _typ, _lvl);
 }
 
 /*

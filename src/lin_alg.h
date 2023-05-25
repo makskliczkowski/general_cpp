@@ -127,9 +127,9 @@ namespace algebra {
 	void setMFromSubM(arma::Mat<_type1>& m2Set, const arma::Mat<_type2>& mSet, uint row, uint col, uint nrow, uint ncol, bool update = true, bool minus = false)
 	{
 		if (update)
-			UPDATEV(mSet, SUBM(m2Set, row, col, row + nrow, col + ncol), !minus);
+			UPDATEV(m2Set, SUBM(mSet, row, col, row + nrow, col + ncol), !minus);
 		else
-			mSet = SUBM(m2Set, row, col, row + nrow, col + ncol);
+			m2Set = SUBM(mSet, row, col, row + nrow, col + ncol);
 	}
 
 	// #############################################################				   MATRIX DECOMPOSITIONS				   #############################################################
@@ -143,10 +143,15 @@ namespace algebra {
 		arma::Mat<_T> T;
 		arma::Col<_T> Db;			// Dmax
 		arma::Col<_T> Ds;			// Dmin 
-
-		~UDT() = default;
-		UDT() = default;
-		UDT(const UDT<_T>& o) : U(o.U), D(o.D), Di(o.Di), Db(o.Db), Ds(o.Ds), T(o.T) {};
+	public:
+		virtual ~UDT() {
+			LOGINFO("Deleting base UDT class", LOG_TYPES::INFO, 2);
+		}
+		UDT()			= default;
+		UDT(const UDT<_T>& o) : U(o.U), D(o.D), Di(o.Di), Db(o.Db), Ds(o.Ds), T(o.T) 
+		{
+			LOGINFO("Building base UDT class", LOG_TYPES::INFO, 2);
+		};
 		UDT(UDT<_T>&& o) : U(std::move(o.U)), D(std::move(o.D)), Di(std::move(o.Di)), Db(std::move(o.Db)), Ds(std::move(o.Ds)), T(std::move(o.T)) {};
 		UDT(const arma::Mat<_T>& u, const arma::Col<_T>& d, const arma::Mat<_T>& t) : U(u), D(d), Di(1.0/d), Db(d), Ds(d), T(t) {};
 		UDT(arma::Mat<_T>&& u, arma::Col<_T>&& d, arma::Mat<_T>&& t) : U(u), D(d), Di(1.0/d), Ds(d), Db(d), T(t) {};
@@ -248,10 +253,14 @@ namespace algebra {
 		// arma::Mat<_T> U = Q;		// in this case the U matrix serves as Q	
 		arma::Mat<_T> R;			// right triangular matrix
 		arma::umat P;				// permutation matrix 
-
-		~UDT_QR() = default;
+	public:
+		~UDT_QR()
+		{
+			LOGINFO("Deleting UDT QR class", LOG_TYPES::INFO, 2);
+		}
 		UDT_QR() = default;
-		UDT_QR(const arma::Mat<_T>& M) : UDT<_T>()
+		UDT_QR(const arma::Mat<_T>& M) 
+			: UDT<_T>()
 		{
 			decompose(M);
 			this->Db = ZEROV(M.col(0).n_rows);
@@ -317,7 +326,7 @@ namespace algebra {
 		/*
 		* @brief Loh's decomposition to two scales in UDT QR decomposition. One is lower than 0 and second higher.
 		*/
-		void loh(){	
+		void loh() override{	
 			for (auto i = 0; i < R.n_rows; i++)
 			{
 				if (abs(this->D(i)) > 1.0) {
@@ -335,7 +344,7 @@ namespace algebra {
 		* @brief Loh's decomposition to two scales in UDT QR decomposition. One is lower than 0 and second higher.
 		* @warning Saves the inverse to Db and Ds!
 		*/
-		void loh_inv(){
+		void loh_inv() override{
 			for (auto i = 0; i < R.n_rows; i++)
 			{
 				if (abs(this->D(i)) > 1.0) {
