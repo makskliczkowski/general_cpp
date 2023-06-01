@@ -147,7 +147,17 @@ namespace algebra {
 		virtual ~UDT() {
 			LOGINFO("Deleting base UDT class", LOG_TYPES::INFO, 2);
 		}
-		UDT()			= default;
+		UDT()
+		{
+			LOGINFO("Building base UDT class", LOG_TYPES::INFO, 2);
+		}
+		UDT(const arma::Mat<_T>& M) : UDT<_T>()
+		{
+			this->U.zeros(M.n_rows, M.n_cols);
+			this->T.zeros(M.n_rows, M.n_cols);
+			this->D		= ZEROV(M.n_rows);
+			this->Di	= ZEROV(M.n_rows);
+		}
 		UDT(const UDT<_T>& o) : U(o.U), D(o.D), Di(o.Di), Db(o.Db), Ds(o.Ds), T(o.T) 
 		{
 			LOGINFO("Building base UDT class", LOG_TYPES::INFO, 2);
@@ -229,7 +239,7 @@ namespace algebra {
 			decompose(mat);
 		} 
 	
-		virtual void factMult(const arma::Mat<_T> Ml) = 0;
+		virtual void factMult(const arma::Mat<_T>& Ml) = 0;
 
 		// -----------------------------------
 
@@ -249,7 +259,9 @@ namespace algebra {
 	* @cite doi:10.1016/j.laa.2010.06.023
 	*/
 	template<typename _T>
-	class UDT_QR : public UDT<_T>{
+	class UDT_QR : public UDT<_T>
+	{
+	protected:
 		// arma::Mat<_T> U = Q;		// in this case the U matrix serves as Q	
 		arma::Mat<_T> R;			// right triangular matrix
 		arma::umat P;				// permutation matrix 
@@ -258,13 +270,18 @@ namespace algebra {
 		{
 			LOGINFO("Deleting UDT QR class", LOG_TYPES::INFO, 2);
 		}
-		UDT_QR() = default;
-		UDT_QR(const arma::Mat<_T>& M) 
-			: UDT<_T>()
+		UDT_QR()
 		{
-			decompose(M);
-			this->Db = ZEROV(M.col(0).n_rows);
-			this->Ds = ZEROV(M.col(0).n_rows);
+			LOGINFO("Building QR UDT class", LOG_TYPES::INFO, 2);
+		}
+		UDT_QR(const arma::Mat<_T>& M)
+			: UDT<_T>(M)
+		{
+			LOGINFO("Building QR UDT class", LOG_TYPES::INFO, 3);
+			this->R.zeros(M.n_rows, M.n_cols);
+			this->P.zeros(M.n_rows, M.n_cols);
+			this->Db	= ZEROV(M.col(0).n_rows);
+			this->Ds	= ZEROV(M.col(0).n_rows);
 		};
 		UDT_QR(const arma::Mat<_T>& q, const arma::Mat<_T>& r, const arma::umat& p)
 			: R(r), P(p), UDT<_T>(q, arma::ones(q.n_rows), ZEROM(q.n_rows))
@@ -309,9 +326,9 @@ namespace algebra {
 		*/
 		void decompose() override {
 			// inverse the vector D during setting
-			this->D = R.diag();
-			this->Di = 1.0 / R.diag();
-			this->T = (DIAG(this->Di) * R) * P.t();
+			this->D		=	R.diag();
+			this->Di	=	1.0 / D;
+			this->T		=	((DIAG(this->Di)) * this->R) * this->P.t();
 		}
 	
 		/*
@@ -319,7 +336,8 @@ namespace algebra {
 		* @param M Matrix to decompose
 		*/
 		void decompose(const arma::Mat<_T>& M) override {
-			if (!arma::qr(this->U, R, P, M)) throw "Decomposition failed\n";
+			if (!arma::qr(this->U, this->R, this->P, M)) 
+				throw "Decomposition failed\n";
 			decompose();
 		}
 
@@ -327,32 +345,32 @@ namespace algebra {
 		* @brief Loh's decomposition to two scales in UDT QR decomposition. One is lower than 0 and second higher.
 		*/
 		void loh() override{	
-			for (auto i = 0; i < R.n_rows; i++)
+			for (auto i = 0; i < this->R.n_rows; i++)
 			{
-				if (abs(this->D(i)) > 1.0) {
-					this->Db(i) = this->D(i);	// max (R(i,i), 1)
-					this->Ds(i) = 1.0;			// min (R(i,i), 1)
+				if (abs(this->R(i, i)) > 1.0) {
+					this->Db(i) = this->R(i, i);	// max (R(i,i), 1)
+					this->Ds(i) = 1.0;				// min (R(i,i), 1)
 				}
 				else {
-					this->Ds(i) = this->D(i);
 					this->Db(i) = 1.0;
+					this->Ds(i) = this->R(i, i);
 				}
 			}
 		}
 	
 		/*
 		* @brief Loh's decomposition to two scales in UDT QR decomposition. One is lower than 0 and second higher.
-		* @warning Saves the inverse to Db and Ds!
+		* @warning Saves the inverse to Db = max[R(i,i),1]!
 		*/
 		void loh_inv() override{
 			for (auto i = 0; i < R.n_rows; i++)
 			{
 				if (abs(this->D(i)) > 1.0) {
-					this->Db(i) = this->Di(i);	// max (R(i,i), 1)
-					this->Ds(i) = 1.0;	// min (R(i,i), 1)
+					this->Db(i) = this->Di(i);		// max (R(i,i), 1) - but save the inverse
+					this->Ds(i) = 1.0;				// min (R(i,i), 1)
 				}
 				else {
-					this->Db(i) = 1.0;
+					this->Db(i) = 1.0;				// 
 					this->Ds(i) = this->D(i);
 				}
 			}
@@ -380,13 +398,14 @@ namespace algebra {
 		* @param Ml left matrix
 		* @link https://github.com/carstenbauer/StableDQMC.jl/blob/master/src/qr_udt.jl
 		*/
-		void factMult(const arma::Mat<_T> Ml) override {
-			if (!arma::qr(this->U, R, P, (Ml * this->U) * DIAG(this->D))) throw "decomposition failed\n";
+		void factMult(const arma::Mat<_T>& Ml) override {
+			if (!arma::qr(this->U, this->R, this->P, (Ml * this->U) * DIAG(this->R))) 
+				throw "decomposition failed\n";
 			// inverse during setting
-			this->D = R.diag();
-			this->Di = 1.0 / this->D;
+			this->D		=	R.diag();
+			this->Di	=	1.0 / this->D;
 			// premultiply old T by new T from left
-			this->T = ((DIAG(this->Di) * R) * P.t()) * this->T;
+			this->T		=	((DIAG(this->Di) * this->R) * this->P.t()) * this->T;
 		}
 	
 		/*
@@ -395,11 +414,11 @@ namespace algebra {
 		arma::Mat<_T> inv1P() override {
 			// decompose first
 			loh_inv();
-			return arma::solve(DIAG(this->Db) * this->U.t() + DIAG(this->Ds) * this->T, DIAG(this->Db) * this->U.t());
-			// loh();
-			// return arma::solve(arma::inv(DIAG(Db)) * U.t() + DIAG(Ds) * T, arma::inv(DIAG(Db)) * U.t());
+			return arma::solve(DIAG(this->Db) * this->U.st() + DIAG(this->Ds) * this->T, DIAG(this->Db) * this->U.st());
+			//this->loh();
+			//return arma::solve(arma::inv(DIAG(this->Db)) * this->U.st() + (DIAG(this->Ds) * this->T), arma::inv(DIAG(Db)) * this->U.st());
 			// without the decomposition
-			// return = arma::inv(DIAG(Di) * U.t() + D * T) * DIAG(D_up) * Q_up.t();
+			//return arma::inv(DIAG(this->Di) * this->U.st() + DIAG(this->D) * this->T) * (DIAG(this->Di) * this->U.st());
 		}
 	
 		void inv1P(arma::Mat<_T>& setMat) override { setMat = inv1P(); };

@@ -19,20 +19,20 @@
 namespace EXCEPTIONENUM {
 	enum EXCEPTIONS
 	{
-		UNDEFINED = 0,
-		RUNTIME = -1,
-		BAD_ALOC = -2,
-		EXCEPTION = -3,
-		FILE = -4
+		UNDEFINED	= 0,
+		RUNTIME		= 1,
+		BAD_ALOC	= 2,
+		EXCEPTION	= 3,
+		FILEE		= 4
 	};
 
 	BEGIN_ENUM(EXCEPTIONS)
 	{
 		DECL_ENUM_ELEMENT(UNDEFINED),
-			DECL_ENUM_ELEMENT(RUNTIME),
-			DECL_ENUM_ELEMENT(BAD_ALOC),
-			DECL_ENUM_ELEMENT(EXCEPTION),
-			DECL_ENUM_ELEMENT(FILE)
+		DECL_ENUM_ELEMENT(RUNTIME),
+		DECL_ENUM_ELEMENT(BAD_ALOC),
+		DECL_ENUM_ELEMENT(EXCEPTION),
+		DECL_ENUM_ELEMENT(FILEE)
 	}
 	END_ENUM(EXCEPTIONS);
 };
@@ -40,10 +40,10 @@ namespace EXCEPTIONENUM {
 class ExceptionHandler {
 public:
 	static void printException(const std::string& _what, const std::string& _msg, EXCEPTIONENUM::EXCEPTIONS _ex = EXCEPTIONENUM::EXCEPTIONS::UNDEFINED) {
-		auto exIDX = SSTR(EXCEPTIONENUM::getSTR_EXCEPTIONS(_ex));
-		std::cout << LOG_LVL0 << exIDX << std::endl;
+		auto exIDX = EXCEPTIONENUM::getSTR_EXCEPTIONS(_ex);
+		std::cout << LOG_LVL0 << "Exception: " << exIDX << std::endl;
 		std::cout << LOG_LVL1 << _what << std::endl;
-		std::cout << LOG_LVL1 << _msg << std::endl;
+		std::cout << LOG_LVL2 << _msg << std::endl;
 		exit(static_cast<int>(_ex));
 	};
 	static void handleExceptions(std::exception_ptr _ePtr, const std::string& _msg);

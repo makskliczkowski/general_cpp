@@ -17,9 +17,9 @@ void ExceptionHandler::handleExceptions(std::exception_ptr _ePtr, const std::str
 	catch (const std::exception& err) {
 		printException(err.what(), _msg, EXCEPTIONENUM::EXCEPTIONS::EXCEPTION);
 	}
-	//catch (const std::ifstream::failure& err) {
-		//printException(err.what(), _msg, EXCEPTIONS::FILE);
-	//}
+	catch (const std::ifstream::failure& err) {
+		printException(err.what(), _msg, EXCEPTIONENUM::EXCEPTIONS::FILEE);
+	}
 	catch (...) {
 		printException("UNKNOWN EXCEPTION", _msg, EXCEPTIONENUM::EXCEPTIONS::BAD_ALOC);
 	};
