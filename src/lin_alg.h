@@ -39,7 +39,7 @@ using uint = unsigned int;
 #define ZEROM(X)								arma::zeros(X,X)
 #define SUBV(X, fst, lst)						X.subvec(fst, lst)
 #define SUBM(X, fstr, fstc, lstr, lstc)			X.submat(fstr, fstc, lstr, lstc)
-#define UPDATEV(L, R, condition)				(condition) ? (L += R) : (L -= R)
+#define UPDATEV(L, R, condition)				if (condition) (L += R); else (L -= R);
 
 namespace algebra {
 	// #############################################################					CONJUGATE								#############################################################
@@ -107,9 +107,9 @@ namespace algebra {
 	void setSubMFromM(arma::Mat<_type1>& m2Set, const arma::Mat<_type2>& mSet, uint row, uint col, uint nrow, uint ncol, bool update = true, bool minus = false)
 	{
 		if (update)
-			UPDATEV(SUBM(m2Set, row, col, row + nrow, col + ncol), mSet, !minus);
+			UPDATEV(SUBM(m2Set, row, col, row + nrow - 1, col + ncol - 1), mSet, !minus)
 		else
-			SUBM(m2Set, row, col, row + nrow, col + ncol) = mSet;
+			SUBM(m2Set, row, col, row + nrow - 1, col + ncol - 1) = mSet;
 	}
 
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -127,9 +127,9 @@ namespace algebra {
 	void setMFromSubM(arma::Mat<_type1>& m2Set, const arma::Mat<_type2>& mSet, uint row, uint col, uint nrow, uint ncol, bool update = true, bool minus = false)
 	{
 		if (update)
-			UPDATEV(m2Set, SUBM(mSet, row, col, row + nrow, col + ncol), !minus);
+			UPDATEV(m2Set, SUBM(mSet, row, col, row + nrow - 1, col + ncol - 1), !minus)
 		else
-			m2Set = SUBM(mSet, row, col, row + nrow, col + ncol);
+			m2Set = SUBM(mSet, row, col, row + nrow - 1, col + ncol - 1);
 	}
 
 	// #############################################################				   MATRIX DECOMPOSITIONS				   #############################################################
@@ -145,11 +145,11 @@ namespace algebra {
 		arma::Col<_T> Ds;			// Dmin 
 	public:
 		virtual ~UDT() {
-			LOGINFO("Deleting base UDT class", LOG_TYPES::INFO, 2);
+			//LOGINFO("Deleting base UDT class", LOG_TYPES::INFO, 2);
 		}
 		UDT()
 		{
-			LOGINFO("Building base UDT class", LOG_TYPES::INFO, 2);
+			//LOGINFO("Building base UDT class", LOG_TYPES::INFO, 2);
 		}
 		UDT(const arma::Mat<_T>& M) : UDT<_T>()
 		{
@@ -160,7 +160,7 @@ namespace algebra {
 		}
 		UDT(const UDT<_T>& o) : U(o.U), D(o.D), Di(o.Di), Db(o.Db), Ds(o.Ds), T(o.T) 
 		{
-			LOGINFO("Building base UDT class", LOG_TYPES::INFO, 2);
+			//LOGINFO("Building base UDT class", LOG_TYPES::INFO, 2);
 		};
 		UDT(UDT<_T>&& o) : U(std::move(o.U)), D(std::move(o.D)), Di(std::move(o.Di)), Db(std::move(o.Db)), Ds(std::move(o.Ds)), T(std::move(o.T)) {};
 		UDT(const arma::Mat<_T>& u, const arma::Col<_T>& d, const arma::Mat<_T>& t) : U(u), D(d), Di(1.0/d), Db(d), Ds(d), T(t) {};
@@ -268,16 +268,16 @@ namespace algebra {
 	public:
 		~UDT_QR()
 		{
-			LOGINFO("Deleting UDT QR class", LOG_TYPES::INFO, 2);
+			//LOGINFO("Deleting UDT QR class", LOG_TYPES::INFO, 2);
 		}
 		UDT_QR()
 		{
-			LOGINFO("Building QR UDT class", LOG_TYPES::INFO, 2);
+			//LOGINFO("Building QR UDT class", LOG_TYPES::INFO, 2);
 		}
 		UDT_QR(const arma::Mat<_T>& M)
 			: UDT<_T>(M)
 		{
-			LOGINFO("Building QR UDT class", LOG_TYPES::INFO, 3);
+			//LOGINFO("Building QR UDT class", LOG_TYPES::INFO, 3);
 			this->R.zeros(M.n_rows, M.n_cols);
 			this->P.zeros(M.n_rows, M.n_cols);
 			this->Db	= ZEROV(M.col(0).n_rows);
@@ -327,7 +327,7 @@ namespace algebra {
 		void decompose() override {
 			// inverse the vector D during setting
 			this->D		=	R.diag();
-			this->Di	=	1.0 / D;
+			this->Di	=	1.0 / this->D;
 			this->T		=	((DIAG(this->Di)) * this->R) * this->P.t();
 		}
 	
