@@ -466,4 +466,5 @@ inline arma::Col<_T> reverseBitsV(const arma::Col<_T>& n, int L) {
 	return arma::reverse(n);
 }
 
+
 #endif

@@ -61,13 +61,20 @@ namespace algebra {
 	template <>
 	inline auto real(double x)		-> double	{ return x; };
 
-	// #############################################################					REAL								#############################################################
+	// #############################################################					IMAG								#############################################################
 
 	template <typename _T>
 	inline auto imag(_T x)			-> double	{ return std::imag(x); };
 	template <>
 	inline auto imag(double x)		-> double	{ return 0.0; };
 	
+	// #############################################################					CAST								#############################################################
+
+	template <typename _T>
+	inline auto cast(std::complex<double> x)			-> _T		{ return x; };
+	template <>
+	inline auto cast<double>(std::complex<double> x)	-> double	{ return std::real(x); };
+
 	// #############################################################				   MATRIX MULTIPLICATION				   #############################################################
 	/*
 	* @brief Allows to calculate the matrix consisting of COL vector times ROW vector

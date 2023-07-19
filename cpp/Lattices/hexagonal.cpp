@@ -384,7 +384,7 @@ void HexagonalLattice::calculate_nn_sbc()
 				auto current_elem_b = 2 * i + 2 * Lx * j + 1;							// upper
 
 				// check the elementary cells
-				auto up = (int)(j + 1, Ly);
+				auto up = modEUC<int>(j + 1, Ly);
 				auto down = modEUC<int>(j - 1, Ly);
 				auto right = i + 1;
 				auto left = i - 1;
