@@ -171,15 +171,20 @@ inline arma::Mat<double> randomGen::GOE(uint _x, uint _y) const
 /*
 * @brief Creates a CUE matrix...
 * A Random matrix distributed with Haar measure...
+* ... https://doi.org/10.48550/arXiv.math-ph/0609050 ...
 */
 inline arma::Mat<std::complex<double>> randomGen::CUE(uint _x, uint _y) const
 {
-	arma::Mat<std::complex<double>> A(_x, _y, arma::fill::randn);
+	arma::Mat<std::complex<double>> A(_x, _y, arma::fill::zeros);
+	A.set_real(arma::Mat<double>(_x, _y, arma::fill::randn));
+	A.set_imag(arma::Mat<double>(_x, _y, arma::fill::randn));
+
 	arma::Mat<std::complex<double>> Q, R;
 	arma::qr(Q, R, A);
-	auto _diag	= R.diag();
-	_diag		= _diag / arma::abs(_diag);
-	return Q * DIAG(_diag) * Q;
+	return Q;
+	//auto _diag	= R.diag();
+	//_diag		= _diag / arma::abs(_diag);
+	//return Q * DIAG(_diag) * Q;
 }
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
