@@ -249,7 +249,7 @@ namespace algebra {
 
 		// ------ (A+B)^(-1) ------
 		virtual arma::Mat<_T> invSum(UDT<_T>* right) = 0;
-		virtual arma::Mat<_T> invSum(UDT<_T>* right, arma::Mat<_T>& setMat) = 0;
+		virtual void invSum(UDT<_T>* right, arma::Mat<_T>& setMat) = 0;
 	};
 
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -382,7 +382,7 @@ namespace algebra {
 		* @attention ->max(1, R) -> we set that as an inverse onto D already
 		* @warning Changes D and R!
 		*/
-		void loh_inplace(){
+		void loh_inplace() override {
 			for (int i = 0; i < R.n_rows; i++){
 				if (abs(R(i, i)) > 1)
 					R(i, i) = 1;				// min(1,R(i,i))
@@ -467,7 +467,7 @@ namespace algebra {
 			// return evaluated one
 			return inner.eval();
 		}
-		arma::Mat<_T> invSum(UDT<_T>* right, arma::Mat<_T>& setMat) override
+		void invSum(UDT<_T>* right, arma::Mat<_T>& setMat) override
 		{
 			setMat = invSum(right);
 		}
