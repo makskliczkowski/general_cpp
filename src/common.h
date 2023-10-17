@@ -202,7 +202,14 @@ public:
 		: timer(std::chrono::high_resolution_clock::now())
 		, percentage(percentage)
 		, percentageSteps(static_cast<int>(percentage* discreteSteps / 100.0))
-	{};
+	{
+		// check if we can even make the progress bar
+		if (percentage * discreteSteps < 100 || percentageSteps == 0)
+		{
+			this->percentage	=	100 / discreteSteps;
+			percentageSteps		=	std::ceil(this->percentage * discreteSteps / 100.0);
+		}
+	};
 protected:
 	// --------------------------- STRING ENDS
 	std::string startingTabs		=		"\t\t\t\t";

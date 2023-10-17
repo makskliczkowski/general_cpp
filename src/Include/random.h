@@ -91,9 +91,42 @@ public:
 	* @brief creates random vector with a given strength
 	*/
 	arma::Col<double> createRanVec(int _size, double _strength);
+
+	arma::Col<std::complex<double>> createRanState(uint _gamma);
+
+	// ####################### M A T R I C E S #######################
+	arma::Mat<double>					GOE(uint _x, uint _y) const;
+	arma::Mat<std::complex<double>>		CUE(uint _x, uint _y) const;
+
+	// ####################### E L E M E N T S #######################
+	template<typename _T>
+	std::vector<_T> choice(const std::vector<_T>& _iterable, size_t _num);
+
 };
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+template<typename _T>
+inline std::vector<_T> randomGen::choice(const std::vector<_T>& _iterable, size_t _num)
+{
+	std::vector<_T> _out;
+	std::ranges::sample(_iterable, std::back_inserter(_out), _num, this->engine);
+	return _out;
+
+	//auto _begin		=	_iterable.begin();
+	//auto _end		=	_iterable.end();
+	//size_t left		=	std::distance(_begin, _end);
+	//while (_num--) 
+	//{
+	//	auto r		=	_begin;
+	//	std::advance(r, rand() % left);
+	//	std::swap(_begin, r);
+	//	++_begin;
+	//	--left;
+	//}
+	//return std::vector<_T>(_begin, _end);
+}
+
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 /*
@@ -109,5 +142,51 @@ inline arma::Col<double> randomGen::createRanVec(int _size, double _strength)
 		o(i) = (this->random<double>() * 2.0 - 1.0) * _strength;
 	return o;
 }
+
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+/*
+* @brief Generates random superposition of _gamma states (the states shall not repeat, I guess...)
+*/
+inline arma::Col<std::complex<double>> randomGen::createRanState(uint _gamma)
+{
+	if (_gamma <= 1)
+		return arma::Col<std::complex<double>>(1, arma::fill::eye);
+	return this->CUE(_gamma, _gamma) * (arma::Col<std::complex<double>>(_gamma, arma::fill::eye));
+}
+
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+/*
+* @brief Creates a GOE matrix...
+*/ 
+inline arma::Mat<double> randomGen::GOE(uint _x, uint _y) const
+{
+	arma::Mat<double> A(_x, _y, arma::fill::randn);
+	return 0.5 * (A + A.t());
+}
+
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+/*
+* @brief Creates a CUE matrix...
+* A Random matrix distributed with Haar measure...
+* ... https://doi.org/10.48550/arXiv.math-ph/0609050 ...
+*/
+inline arma::Mat<std::complex<double>> randomGen::CUE(uint _x, uint _y) const
+{
+	arma::Mat<std::complex<double>> A(_x, _y, arma::fill::zeros);
+	A.set_real(arma::Mat<double>(_x, _y, arma::fill::randn));
+	A.set_imag(arma::Mat<double>(_x, _y, arma::fill::randn));
+
+	arma::Mat<std::complex<double>> Q, R;
+	arma::qr(Q, R, A);
+	return Q;
+	//auto _diag	= R.diag();
+	//_diag		= _diag / arma::abs(_diag);
+	//return Q * DIAG(_diag) * Q;
+}
+
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 #endif // !RANDOM_H

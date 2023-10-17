@@ -50,4 +50,4 @@ public:
 };
 
 #define BEGIN_CATCH_HANDLER				try{
-#define END_CATCH_HANDLER(message)		}catch(...){ ExceptionHandler::handleExceptions(std::current_exception(), message); }
+#define END_CATCH_HANDLER(message, DO)	}catch(...){ ExceptionHandler::handleExceptions(std::current_exception(), message); DO;}

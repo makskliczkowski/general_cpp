@@ -24,7 +24,7 @@ inline int openFile(T& file, std::string fileName, std::ios_base::openmode mode 
             throw ("Couldn't open a file: " + fileName + "\n");
             return 0;
         }
-    END_CATCH_HANDLER("Exception opening/reading/closing file")
+        END_CATCH_HANDLER("Exception opening/reading/closing file", ;)
     return 1;
 }
 

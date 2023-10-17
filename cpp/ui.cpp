@@ -11,10 +11,20 @@ UserInterface::cmdArg UserInterface::parseInputFile(std::string filename) {
 		this->setDefault();
 	else
 	{
-		std::string tmp	=	"";
+		std::string tmp		=	"";
 		strVec output		=	{};
-		while (inputFile >> tmp)
-			output.push_back(tmp);
+
+
+		while (std::getline(inputFile, tmp))
+		{
+			if ((tmp.empty()) || (tmp[0] == '#'))
+				continue;
+			std::istringstream iss(tmp);
+			while (iss >> tmp)
+				output.push_back(tmp);
+
+
+		}
 		return output;
 	}
 		//if (std::string line = ""; std::getline(inputFile, line))

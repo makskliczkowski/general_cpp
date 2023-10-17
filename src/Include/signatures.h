@@ -40,6 +40,7 @@
 		#define callable_type typename
 #endif
 
+#include <utility>
 // ######################################################## E N U M S ########################################################
 
 #define DECL_ENUM_ELEMENT( element )		#element
@@ -47,10 +48,14 @@
 #define END_ENUM( ENUM_NAME )				; inline const char* getSTR_##ENUM_NAME(enum		\
 																		ENUM_NAME index)		\
 													{ return eSTR##ENUM_NAME [index]; };
+#define BEGIN_ENUMC( ENUM_NAME )			static const char* eSTR##ENUM_NAME [] =
+#define END_ENUMC( ENUM_NAME )				; inline const char* getSTR_##ENUM_NAME(uint		\
+																					index)		\
+													{ return eSTR##ENUM_NAME [index]; };
 #define BEGIN_ENUM_INLINE(ENUM_NAME)		static const inline char* eSTR##ENUM_NAME [] =
-#define END_ENUM_INLINE(ENUM_NAME, CLASS)	; static const char* getSTR_##ENUM_NAME(enum		\
-																		ENUM_NAME index)		\
-													{ return CLASS::eSTR##ENUM_NAME [index]; };
+#define END_ENUM_INLINE(ENUM_NAME, CLASS)	; static const char* getSTR_##ENUM_NAME(uint		\
+																					index)		\
+													{ return CLASS::eSTR##ENUM_NAME [index];	};
 
 // ######################################################## F U N C T I O N S ########################################################
 

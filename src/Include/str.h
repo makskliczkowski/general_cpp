@@ -3,6 +3,7 @@
 #include <vector>
 #include <iostream> 
 #include <complex>
+#include <utility>
 
 template<class T>
 using v_3d = std::vector<std::vector<std::vector<T>>>;				// 3d vector
@@ -19,6 +20,7 @@ using t_2d = std::pair<T, T>;										// 2d tuple - pair
 #define STR std::to_string
 #define STRP(str,prec) str_p(str, prec)
 typedef v_1d<std::string> strVec;
+
 
 // ############################################################### P R E C I S E   S T R I N G ###############################################################
 
@@ -39,6 +41,7 @@ inline std::string str_p(const _T v, const int n = 2, bool scientific = false) {
 	out << v;
 	return out.str();
 }
+
 template <>
 inline std::string str_p(const int v, const int n, bool scientific) {
 	std::ostringstream out;
@@ -47,6 +50,7 @@ inline std::string str_p(const int v, const int n, bool scientific) {
 	out << v;
 	return out.str();
 }
+
 template <>
 inline std::string str_p(const std::complex<double> v, const int n, bool scientific) {
 	std::ostringstream out;
