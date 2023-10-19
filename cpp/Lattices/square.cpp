@@ -281,27 +281,28 @@ void SquareLattice::calculate_nnn_pbc()
 		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
 		for (uint i = 0; i < Ns; i++) {
 			this->nnn[i] = v_1d<int>(4, 0);
-			this->nnn[i][0] = int(1.0 * i / Lx) * Lx + modEUC<int>(i + 2, Lx);		// right
-			this->nnn[i][1] = modEUC<int>(i + 2 * Lx, Ns);							// top
-			this->nnn[i][2] = int(1.0 * i / Lx) * Lx + modEUC<int>(i - 2, Lx);		// left
-			this->nnn[i][3] = modEUC<int>(i - 2 * Lx, Ns);							// bottom
+			this->nnn[i][0] = int(1.0 * i / Lx) * Lx + modEUC<int>(i + 2, Lx);			// right
+			this->nnn[i][1] = modEUC<int>(i + 2 * Lx, Ns);								// top
+			this->nnn[i][2] = int(1.0 * i / Lx) * Lx + modEUC<int>(i - 2, Lx);			// left
+			this->nnn[i][3] = modEUC<int>(i - 2 * Lx, Ns);								// bottom
 		}
 		break;
 	case 3:
 		// Three dimensions
 		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
 		for (uint i = 0; i < this->Ns; i++) {
-			this->nnn[0] = v_1d<int>(6, 0);
-			int x [[maybe_unused]] = i % Lx;
-			int y [[maybe_unused]] = static_cast<int>(1.0 * i / Lx) % Ly;
-			int z [[maybe_unused]] = static_cast<int>(1.0 * i / Lx / Ly) % Lz;
-			this->nnn[i][0] = z * Lx * Ly + y * Lx + modEUC<int>(i + 2, Lx);		// right - x
-			this->nnn[i][1] = z * Lx * Ly + modEUC<int>(i + 2 * Lx, Lx * Ly);		// right - y
-			this->nnn[i][2] = modEUC<int>(i + 2 * Lx * Ly, Ns);						// right - z
+			this->nnn[i] = v_1d<int>(6, 0);
 
-			this->nnn[i][3] = z * Lx * Ly + y * Lx + modEUC<int>(i - 2, Lx);		// left - x
-			this->nnn[i][4] = z * Lx * Ly + modEUC<int>(i - 2 * Lx, Lx * Ly);		// left - y
-			this->nnn[i][5] = modEUC<int>(i - 2 * Lx * Ly, Ns);						// left - z
+			int x [[maybe_unused]] = i % Lx;
+			int y [[maybe_unused]] = int(1.0 * i / Lx) % Ly;
+			int z [[maybe_unused]] = int(1.0 * i / Lx / Ly) % Lz;
+			this->nnn[i][0] = z * Lx * Ly + y * Lx + modEUC<int>(i + 2, Lx);			// right - x
+			this->nnn[i][1] = z * Lx * Ly + modEUC<int>(i + 2 * Lx, Lx * Ly);			// right - y
+			this->nnn[i][2] = modEUC<int>(i + 2 * Lx * Ly, Ns);							// right - z
+
+			this->nnn[i][3] = z * Lx * Ly + y * Lx + modEUC<int>(i - 2, Lx);			// left - x
+			this->nnn[i][4] = z * Lx * Ly + modEUC<int>(i - 2 * Lx, Lx * Ly);			// left - y
+			this->nnn[i][5] = modEUC<int>(i - 2 * Lx * Ly, Ns);							// left - z
 		}
 		break;
 	default:
