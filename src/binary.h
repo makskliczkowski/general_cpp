@@ -13,6 +13,20 @@
 #include "common.h"
 #endif
 
+// --- BIT ---
+#ifdef __has_include
+#	if __has_include(<bit>)
+#		include <bit>
+#   	define have_bit 1
+#	elif __has_include(<experimental/bit>)
+#		include <experimental/bit>
+#    	define have_bit 1
+#    	define experimental_bit
+#	else
+#		define have_bit 0
+#	endif
+#endif
+
 #include <bit>
 #include <bitset>
 #include <cstdint>
@@ -303,13 +317,13 @@ inline _T rotateLeft(_T n, uint L, int base) {
 
 template<typename _T>
 inline void rotateLeft(v_1d<_T>& n, uint m) {
-	std::ranges::rotate(n.begin(), n.begin() + m, n.end());
+	rng::rotate(n.begin(), n.begin() + m, n.end());
 }
 
 template<typename _T>
 inline v_1d<_T> rotateLeft(const v_1d<_T>& n, uint m, int placeholder) {
 	v_1d<_T> tmp = n;
-	std::ranges::rotate(tmp.begin(), tmp.begin() + m, tmp.end());
+	rng::rotate(tmp.begin(), tmp.begin() + m, tmp.end());
 	return tmp;
 }
 
@@ -452,13 +466,13 @@ inline _T revBits(_T n, int L, int base = 2) {
 template <typename _T>
 inline v_1d<_T> revBits(const v_1d<_T>& n, int placeholder) {
 	v_1d<_T> tmp = n;
-	std::ranges::reverse(tmp.begin(), tmp.end());
+	rng::reverse(tmp.begin(), tmp.end());
 	return tmp;
 }
 
 template <typename _T>
 inline void revBits(v_1d<_T>& n) {
-	std::ranges::reverse(n.begin(), n.end());
+	rng::reverse(n.begin(), n.end());
 }
 
 template <typename _T>

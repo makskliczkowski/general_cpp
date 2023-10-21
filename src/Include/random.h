@@ -7,6 +7,22 @@
 #include <ctime>
 #include <numeric>
 
+// --- RANGES ---
+#ifdef __has_include
+#	if __has_include(<ranges>)
+#		include <ranges>
+#   	define have_ranges 1
+namespace rng = std::ranges;
+#	elif __has_include(<experimental/ranges>)
+#		include <experimental/ranges>
+#    	define have_ranges 1
+#    	define experimental_ranges
+namespace rng = std::experimental::ranges;
+#	else
+#		define have_ranges 0
+#	endif
+#endif
+
 // -------------------------------------------------------- RANDOM NUMBER CLASS --------------------------------------------------------
 
 /*
@@ -110,7 +126,7 @@ template<typename _T>
 inline std::vector<_T> randomGen::choice(const std::vector<_T>& _iterable, size_t _num)
 {
 	std::vector<_T> _out;
-	std::ranges::sample(_iterable, std::back_inserter(_out), _num, this->engine);
+	rng::sample(_iterable, std::back_inserter(_out), _num, this->engine);
 	return _out;
 
 	//auto _begin		=	_iterable.begin();
