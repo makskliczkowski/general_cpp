@@ -3,6 +3,10 @@
 #include "Include/directories.h"
 #include "Include/exceptions.h"
 
+#ifndef FLOGTIME
+#define FLOGTIME
+#endif
+
 /*******************************
 * Contains the possible methods
 * for logging the info etc.
@@ -64,9 +68,20 @@ inline void SET_LOG_TIME() {
 };
 
 template <typename _T>
-inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl) {
+inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl) 
+{
+#ifdef FLOGTIME
+	// take the time
+	std::time_t now		= std::time(0);
+	std::tm* now_tm		= std::gmtime(&now);
+	char buf[42];
+	std::strftime(buf, 42, "%Y-%m-%d:%X", now_tm);
+	std::cout << "[" << buf << "]";
+#endif // FLOGTIME
+	
+	std::cout << "[" << getSTR_LOG_TYPES(_typ) << "]";
 	logLvl(_lvl);
-	std::cout << "[" << getSTR_LOG_TYPES(_typ) << "]" << _msg << std::endl;
+	std::cout << _msg << std::endl;
 #ifdef LOG_FILE
 	std::ofstream _file;
 	openFile(_file, LOG_FILENAME, std::ios::app);
@@ -88,9 +103,21 @@ inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl) {
 * @param _lvl tabulation level
 */
 template<>
-inline void LOGINFO(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl) {
+inline void LOGINFO(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl)
+{
+#ifdef FLOGTIME
+	// take the time
+	std::time_t now = std::time(0);
+	std::tm* now_tm = std::gmtime(&now);
+	char buf[42];
+	std::strftime(buf, 42, "%Y-%m-%d:%X", now_tm);
+	std::cout << "[" << buf << "]";
+#endif // FLOGTIME
+
+	std::cout << "[" << getSTR_LOG_TYPES(_typ) << "]";
 	logLvl(_lvl);
-	std::cout << "[" << getSTR_LOG_TYPES(_typ) << "]" << _msg << std::endl;
+	std::cout << _msg << std::endl;
+
 #ifdef LOG_FILE
 	std::ofstream _file;
 	openFile(_file, LOG_FILENAME, std::ios::app);
@@ -124,6 +151,62 @@ inline void LOGINFOG(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl)
 */
 inline void LOGINFO(LOG_TYPES _typ, unsigned int _lvl) {
 	LOGINFO("----------------------------------------------------------", _typ, _lvl);
+}
+
+/*
+* @brief Log the global title at a specific level
+* @param _typ			- type of the message
+* @param _msg			- message to be put inside
+* @param _desiredSize	-  
+*/
+inline void LOGINFO(LOG_TYPES _typ, 
+					const std::string& _msg,
+					unsigned int _desiredSize,
+					char fill			= '#',
+					unsigned int _lvl	= 0)
+{
+	auto _tailLen	= _msg.size();
+	auto _lvlLen	= 2 + _lvl * 3 * 2;
+
+	// check the length
+	if (_tailLen + _lvlLen >= _desiredSize)
+	{
+		LOGINFO(_msg, _typ, _lvl);
+		return;
+	}
+
+	// check the size of the fill
+	auto fillSize	= _desiredSize - _tailLen;
+	fillSize		= fillSize + (!(_tailLen == 0) ? 0 : 2);
+	fillSize		= fillSize - (!(_tailLen % 2 == 0) ? 1 : 0);
+
+	std::string out	= "";
+	
+	// append first
+	for (int i = 0; i < fillSize; ++i)
+		out			= out + fill;
+
+			// append text
+	if(!(_tailLen == 0))
+		out			= out + " " + _msg + " ";
+
+	// append last
+	for (int i = 0; i < fillSize; ++i)
+		out			= out + fill;
+
+	LOGINFO(out, _typ, _lvl);
+}
+
+/*
+* @brief Breakline loginfo
+* @param _n - n lines to break
+*/
+inline void LOGINFO(unsigned int _n)
+{
+	std::string _out	=	"";
+	for (auto i = 0; i < _n; ++i)
+		_out			+=	"\n";
+	LOGINFO(LOG_TYPES::TRACE, _out, 0);
 }
 
 /*

@@ -65,11 +65,13 @@ protected:
 	arma::vec a1, a2, a3;									// base vectors of the lattice
 	arma::mat kVec;											// allowed values of k - to be used in the lattice
 public:
-	enum direction {
+	enum direction 
+	{
 		X, Y, Z
 	};
 
-	virtual ~Lattice() {
+	virtual ~Lattice() 
+	{
 		LOGINFOG("General lattice is destroyed.", LOG_TYPES::INFO, 3);
 	};
 
@@ -87,8 +89,8 @@ public:
 	// ----------------------- FORWARD
 	virtual uint get_nn_ForwardNum(int site, int num)		const = 0;
 	virtual uint get_nnn_ForwardNum(int site, int num)		const = 0;
-	virtual v_1d<uint> get_nn_ForwardNum(int site, v_1d<uint> p)	const = 0;														// with placeholder returns vector of nn
-	virtual v_1d<uint> get_nnn_ForwardNum(int site, v_1d<uint> p)	const = 0;														// with placeholder returns vector of nnn
+	virtual v_1d<uint> get_nn_ForwardNum(int, v_1d<uint>)	const = 0;																// with placeholder returns vector of nn
+	virtual v_1d<uint> get_nnn_ForwardNum(int, v_1d<uint>)	const = 0;																// with placeholder returns vector of nnn
 	virtual int get_nn(int site, direction d)				const = 0;																// retruns nn in a given direction x 
 	
 	// ----------------------- GETTERS NEI -----------------------
@@ -114,11 +116,16 @@ public:
 	auto get_info()											const -> std::string 
 	{
 		std::string _inf;
-		strSeparatedP(_inf, ',', 3,
+		strSeparatedP(_inf, 
+			',', 
+			3,
 			this->type, 
 			getSTR_BoundaryConditions(this->_BC), 
-			VEQV(d, this->dim), VEQ(Ns),
-			VEQV(Lx, this->get_Lx()), VEQV(Ly, this->get_Ly()), VEQV(Lz, this->get_Lz()));
+			VEQV(d, this->dim), 
+			VEQ(Ns),
+			VEQV(Lx, this->get_Lx()), 
+			VEQV(Ly, this->get_Ly()), 
+			VEQV(Lz, this->get_Lz()));
 		return _inf;
 	};
 
@@ -202,13 +209,17 @@ inline void Lattice::calculate_nnn()
 inline void Lattice::calculate_spatial_norm()
 {
 	// spatial norm
-	auto [x_n, y_n, z_n] = this->getNumElems();
-	this->spatialNorm = SPACE_VEC(x_n, y_n, z_n, int);
+	auto [x_n, y_n, z_n]	= this->getNumElems();
+	this->spatialNorm		= SPACE_VEC(x_n, y_n, z_n, int);
 
-	for (uint i = 0; i < this->Ns; i++) {
-		for (uint j = 0; j < this->Ns; j++) {
-			const auto [xx, yy, zz] = this->getSiteDifference(i, j);
-			auto [a, b, c] = this->getSymPos(xx, yy, zz);
+	// go through the lattice sites
+	for (uint i = 0; i < this->Ns; i++) 
+	{
+		for (uint j = 0; j < this->Ns; j++) 
+		{
+			// calculate the coordinates of two site difference
+			const auto [xx, yy, zz]		= this->getSiteDifference(i, j);
+			auto [a, b, c]				= this->getSymPos(xx, yy, zz);
 			spatialNorm[a][b][c]++;
 		}
 	}

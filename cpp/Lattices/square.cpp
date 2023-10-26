@@ -18,17 +18,17 @@ SquareLattice::SquareLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 	{
 	case 1:
 		this->Ly = 1; this->Lz = 1;
-		this->nnForward = { 0 };
-		this->nnnForward = { 0 };
+		this->nnForward 	= { 0 };
+		this->nnnForward	= { 0 };
 		break;
 	case 2:
 		this->Lz = 1;
-		this->nnForward = { 0,1 };
-		this->nnnForward = { 0,1 };
+		this->nnForward		= { 0,1 };
+		this->nnnForward	= { 0,1 };
 		break;
 	case 3:
-		this->nnForward = { 0,1,2 };
-		this->nnnForward = { 0,1,2 };
+		this->nnForward		= { 0,1,2 };
+		this->nnnForward	= { 0,1,2 };
 		break;
 	default:
 		break;
@@ -61,7 +61,8 @@ SquareLattice::SquareLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 */
 int SquareLattice::get_nn(int site, Lattice::direction d) const
 {
-	switch (d) {
+	switch (d) 
+	{
 	case X:
 		return this->nn[site][0];
 		break;
@@ -346,9 +347,10 @@ void SquareLattice::calculate_nnn_obc()
 */
 void SquareLattice::calculate_coordinates()
 {
-	const int LxLy = Lx * Ly;
-	this->coord = v_2d<int>(this->Ns, v_1d<int>(3, 0));
-	for (int i = 0; i < (int)this->Ns; i++) {
+	const int LxLy	= Lx * Ly;
+	this->coord		= v_2d<int>(this->Ns, v_1d<int>(3, 0));
+	for (int i = 0; i < (int)this->Ns; i++) 
+	{
 		this->coord[i][0] = i % Lx;												// x axis coordinate
 		this->coord[i][1] = (static_cast<int>(1.0 * i / Lx)) % Ly;				// y axis coordinate
 		this->coord[i][2] = (static_cast<int>(1.0 * i / LxLy)) % Lz;			// z axis coordinate			

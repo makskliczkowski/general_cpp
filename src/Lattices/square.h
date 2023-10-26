@@ -7,16 +7,17 @@
 
 #ifndef SQUARE_H
 #define SQUARE_H
-class SquareLattice : public Lattice {
+class SquareLattice : public Lattice 
+{
 private:
-	bool symmetry = false;																								// if we shall include symmetry in saving greens
-	int Lx;																												// spatial x-length
-	int Ly;																												// spatial y-length
-	int Lz;																												// spatial z-length
+	bool symmetry	= false;																								// if we shall include symmetry in saving greens
+	int Lx			= 1;																												// spatial x-length
+	int Ly			= 1;																												// spatial y-length
+	int Lz			= 1;																												// spatial z-length
 
-	double a = 1;
-	double b = 1;
-	double c = 1;
+	double a		= 1;
+	double b		= 1;
+	double c		= 1;
 
 
 public:
@@ -56,6 +57,9 @@ public:
 
 	// ----------------------- SYMMETRIES
 
+	/*
+	* @brief Get the number of elements in the lattice for each dimension
+	*/
 	std::tuple<int, int, int> getNumElems() override {
 		if (!this->symmetry)
 			return std::make_tuple(2 * this->Lx - 1, 2 * this->Ly - 1, 2 * this->Lz - 1);
@@ -71,6 +75,9 @@ public:
 		}
 	}
 
+	/*
+	* @brief Out of a given coordinates, get the value of element in bigger than zero form
+	*/
 	t_3d<int> getSymPos(int x, int y, int z) override {
 		if (!this->symmetry)
 			return std::make_tuple(x + Lx - 1, y + Ly - 1, z + Lz - 1);
@@ -78,6 +85,10 @@ public:
 			return std::make_tuple(x, y, z);
 	}
 
+	/*
+	* @brief Out of a given bigger than zero coordinates, 
+	* get the value of element in bigger than zero form
+	*/
 	t_3d<int> getSymPosInv(int x, int y, int z) override {
 		if (!this->symmetry)
 			return std::make_tuple(x - (Lx - 1), y - (Ly - 1), z - (Lz - 1));
@@ -85,6 +96,12 @@ public:
 			return std::make_tuple(x, y, z);
 	}
 
+	/*
+	* @brief Check the lattice symmetry around zero for the square lattice
+	* @param xx - symmetrized form of x
+	* @param yy - symmetrized form of y
+	* @param zz - symmetrized form of z
+	*/
 	bool symmetry_checker(int xx, int yy, int zz) override {
 		return
 			(xx <= this->Lx / 2 && xx >= 0) &&

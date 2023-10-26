@@ -20,6 +20,9 @@
 
 #include <omp.h>
 #include <thread>
+#include <iomanip>
+#include <iostream>
+#include <limits>
 
 // ########################################################				 CONCEPTS				########################################################
 
