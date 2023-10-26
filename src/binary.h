@@ -9,9 +9,9 @@
 #ifndef BINARY_H
 #define BINARY_H
 
-#ifndef COMMON_H
+// #ifndef COMMON_H
 #include "common.h"
-#endif
+// #endif
 
 // --- BIT ---
 #ifdef __has_include
@@ -27,7 +27,7 @@
 #	endif
 #endif
 
-#include <bit>
+// #include <bit>
 #include <bitset>
 #include <cstdint>
 #include <iostream>
@@ -317,13 +317,13 @@ inline _T rotateLeft(_T n, uint L, int base) {
 
 template<typename _T>
 inline void rotateLeft(v_1d<_T>& n, uint m) {
-	rng::rotate(n.begin(), n.begin() + m, n.end());
+	// rng::rotate(n.begin(), n.begin() + m, n.end());
 }
 
 template<typename _T>
 inline v_1d<_T> rotateLeft(const v_1d<_T>& n, uint m, int placeholder) {
 	v_1d<_T> tmp = n;
-	rng::rotate(tmp.begin(), tmp.begin() + m, tmp.end());
+	// rng::rotate(tmp.begin(), tmp.begin() + m, tmp.end());
 	return tmp;
 }
 
@@ -466,13 +466,13 @@ inline _T revBits(_T n, int L, int base = 2) {
 template <typename _T>
 inline v_1d<_T> revBits(const v_1d<_T>& n, int placeholder) {
 	v_1d<_T> tmp = n;
-	rng::reverse(tmp.begin(), tmp.end());
+	// rng::reverse(tmp.begin(), tmp.end());
 	return tmp;
 }
 
 template <typename _T>
 inline void revBits(v_1d<_T>& n) {
-	rng::reverse(n.begin(), n.end());
+	// rng::reverse(n.begin(), n.end());
 }
 
 template <typename _T>
