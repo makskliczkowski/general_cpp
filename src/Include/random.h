@@ -32,10 +32,12 @@ namespace rng = std::experimental::ranges;
 class randomGen {
 private:
 	XoshiroCpp::Xoshiro256PlusPlus engine;
+	std::uint64_t seed_ = 0;
 public:
 	explicit randomGen(std::uint64_t seed = std::random_device{}()) 
 	{
 		this->newSeed(seed);
+		this->seed_ = seed;
 	}
 
 	// #################### S E E D   I N I T I A L I Z E R ##################
@@ -57,6 +59,8 @@ public:
 	* @brief initialize seed
 	*/
 	auto newSeed(std::uint64_t seed)		-> void				{ this->engine = XoshiroCpp::Xoshiro256PlusPlus(randomGen::seedInit(seed)); };
+	auto seed()								-> std::uint64_t	{ return this->seed_; }
+
 
 	// --------------------- WRAPPERS ON RANDOM FUNCTIONS ---------------------
 
