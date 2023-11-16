@@ -3,12 +3,18 @@
 /*******************************
 * Contains the possible methods
 * for linear algebra usage.
+* Using the methods from: 
+* Conrad Sanderson and Ryan Curtin.
+* Armadillo: a template-based 
+* C++ library for linear algebra.
+* Journal of Open Source Software,
+* Vol. 1, No. 2, pp. 26, 2016. 
 *******************************/
 
 #ifndef ALG_H
 	#define ALG_H
 using uint = unsigned int;
-// #############################################################				   INCLUDE FROM ARMADILLO				   #############################################################
+// ############################################################## INCLUDE FROM ARMADILLO #############################################################
 
 #define ARMA_WARN_LEVEL 3
 #define ARMA_USE_LAPACK             
@@ -31,7 +37,21 @@ using uint = unsigned int;
 #define DH5_USE_110_API
 #define D_HDF5USEDLL_ 
 
-// #############################################################				   DEFINITIONS FROM ARMADILLO				   #############################################################
+//template<typename _T>
+//concept HasDoubleType = std::is_base_of<double, _T>::value								|| 
+//						std::is_base_of<long double, _T>::value							||
+//						std::is_base_of<float, _T>::value;
+
+// cast complex matrix to double by simply taking the real part...
+
+
+//template <class _T, class _T2>
+//bool operator == (arma::Mat<_T>& _left, arma::Mat<_T2> _right)
+//{
+//	return arma::real(_left) == arma::real(_right) && arma::imag(_left) == arma::imag(_right);
+//}
+
+// ############################################################# DEFINITIONS FROM ARMADILLO #############################################################
 
 #define DIAG(X)									arma::diagmat(X)
 #define EYE(X)									arma::eye(X,X)
@@ -41,8 +61,15 @@ using uint = unsigned int;
 #define SUBM(X, fstr, fstc, lstr, lstc)			X.submat(fstr, fstc, lstr, lstc)
 #define UPDATEV(L, R, condition)				if (condition) (L += R); else (L -= R);
 
-namespace algebra {
-	// #############################################################					CONJUGATE								#############################################################
+namespace algebra 
+{
+	// ##################################################################################################################################################
+	// ##################################################################################################################################################
+	// ################################################################# G E N E R A L ##################################################################
+	// ##################################################################################################################################################
+	// ##################################################################################################################################################
+
+	// ################################################################## CONJUGATE #####################################################################
 
 	template <typename _T>
 	inline auto conjugate(_T x)		-> _T		{ return std::conj(x); };
@@ -54,28 +81,33 @@ namespace algebra {
 	inline auto conjugate(int x)	-> int		{ return x; };
 
 
-	// #############################################################					REAL								#############################################################
+	// ###################################################################### REAL ######################################################################
 	
 	template <typename _T>
 	inline auto real(_T x)			-> double	{ return std::real(x); };
 	template <>
 	inline auto real(double x)		-> double	{ return x; };
 
-	// #############################################################					IMAG								#############################################################
+	// ###################################################################### IMAG ######################################################################
 
 	template <typename _T>
 	inline auto imag(_T x)			-> double	{ return std::imag(x); };
 	template <>
 	inline auto imag(double x)		-> double	{ return 0.0; };
 	
-	// #############################################################					CAST								#############################################################
+	// ###################################################################### CAST #####################################################################
 
 	template <typename _T>
 	inline auto cast(std::complex<double> x)			-> _T		{ return x; };
 	template <>
 	inline auto cast<double>(std::complex<double> x)	-> double	{ return std::real(x); };
 
-	// #############################################################				   MATRIX MULTIPLICATION				   #############################################################
+	// ##################################################################################################################################################
+	// ##################################################################################################################################################
+	// ############################################################# MATRIX MULTIPLICATION ##############################################################
+	// ##################################################################################################################################################
+	// ##################################################################################################################################################
+
 	/*
 	* @brief Allows to calculate the matrix consisting of COL vector times ROW vector
 	* @param setMat matrix to set the elements onto
@@ -86,7 +118,7 @@ namespace algebra {
 		setMat = arma::cdot(setVec, setVec.as_row());
 	}
 	
-	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	/*
 	* @brief Allows to calculate the matrix consisting of COL vector times ROW vector
@@ -99,7 +131,7 @@ namespace algebra {
 		UPDATEV(setMat, arma::cdot(setVec, setVec.as_row()), plus);
 	}
 
-	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	/*
 	* Puts the given matrix mSet(smaller) to a specific place in the m2Set (bigger) matrix
@@ -119,7 +151,7 @@ namespace algebra {
 			SUBM(m2Set, row, col, row + nrow - 1, col + ncol - 1) = mSet;
 	}
 
-	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	/*
 	* @brief Uses the given matrix MSet (bigger) to set the M2Set (smaller) matrix
@@ -139,8 +171,11 @@ namespace algebra {
 			m2Set = SUBM(mSet, row, col, row + nrow - 1, col + ncol - 1);
 	}
 
-	// #############################################################				   MATRIX DECOMPOSITIONS				   #############################################################
-
+	// ##################################################################################################################################################
+	// ##################################################################################################################################################
+	// ############################################################# MATRIX DECOMPOSITIONS ##############################################################
+	// ##################################################################################################################################################
+	// ##################################################################################################################################################
 	template<typename _T>
 	class UDT{
 	public:
@@ -148,8 +183,8 @@ namespace algebra {
 		arma::Col<_T> D;			// here we will put D vector - diagonal part of R
 		arma::Col<_T> Di;			// here we will put D vector inverse
 		arma::Mat<_T> T;
-		arma::Col<_T> Db;			// Dmax
-		arma::Col<_T> Ds;			// Dmin 
+		arma::Col<_T> Db;			// Dmax - for spectral values scaling
+		arma::Col<_T> Ds;			// Dmin - for spectral values scaling
 	public:
 		virtual ~UDT() {
 			//LOGINFO("Deleting base UDT class", LOG_TYPES::INFO, 2);
@@ -173,24 +208,25 @@ namespace algebra {
 		UDT(const arma::Mat<_T>& u, const arma::Col<_T>& d, const arma::Mat<_T>& t) : U(u), D(d), Di(1.0/d), Db(d), Ds(d), T(t) {};
 		UDT(arma::Mat<_T>&& u, arma::Col<_T>&& d, arma::Mat<_T>&& t) : U(u), D(d), Di(1.0/d), Ds(d), Db(d), T(t) {};
 
-		virtual void decompose() = 0;
-		virtual void decompose(const arma::Mat<_T>& M) = 0;
-		virtual arma::Mat<_T> eval() { return U * DIAG(D) * T;  };
+		virtual void decompose()									= 0;
+		virtual void decompose(const arma::Mat<_T>& M)				= 0;
+		virtual arma::Mat<_T> eval()								{ return U * DIAG(D) * T;  };
 	
-		virtual void loh() = 0;
-		virtual void loh_inv() = 0;
-		virtual void loh_inplace() = 0;
+		// spectral decomposition using method by Loh et. al. 
+		virtual void loh()											= 0;
+		virtual void loh_inv()										= 0;
+		virtual void loh_inplace()									= 0;
 
 		/*
 		* @brief copy assignment
 		*/
 		UDT<_T>& operator=(const UDT<_T>& o) {
-			U = o.U;
-			D = o.D;
-			Di = o.Di;
-			Ds = o.Ds;
-			Db = o.Db;
-			T = o.T;
+			U	= o.U;
+			D	= o.D;
+			Di	= o.Di;
+			Ds	= o.Ds;
+			Db	= o.Db;
+			T	= o.T;
 			return *this;
 		};
 
@@ -198,31 +234,34 @@ namespace algebra {
 		* @brief move assignment
 		*/
 		UDT<_T>& operator=(UDT<_T>&& o) {
-			U = std::move(o.U);
-			D = std::move(o.D);
-			Di = std::move(o.Di);
-			Ds = std::move(o.Ds);
-			Db = std::move(o.Db);
-			T = std::move(o.T);
+			U	= std::move(o.U);
+			D	= std::move(o.D);
+			Di	= std::move(o.Di);
+			Ds	= std::move(o.Ds);
+			Db	= std::move(o.Db);
+			T	= std::move(o.T);
 			return *this;
 		};
 	
-		// ----------------------------------- OPERATIONS -----------------------------------
-
-		// ----------------------------------- INVERSE
+		// ###############################################################################################################
+		// ############################################## MATRIX OPERATIONS ##############################################
+		// ###############################################################################################################
+ 
+		// ----------------------------------- INVERSE -----------------------------------
 
 		/*
 		* @brief Calculates the inverse of the UDT decomposition of a matrix. With return.
+		* @returns the inverse of a matrix set by current UDT decomposition
 		*/
-		arma::Mat<_T> inv() { return arma::solve(T, Di) * U.t(); };
+		arma::Mat<_T> inv()											{ return arma::solve(T, Di) * U.t(); };
 
 		/*
 		* @brief Calculates the inverse of the UDT decomposition of a matrix. 
-		* @param M matrix to set the inverse onto
+		* @param M matrix to set the inverse onto.
 		*/
-		void inv(arma::Mat<_T>& M) { M = arma::solve(T, Di) * U.t(); };
+		void inv(arma::Mat<_T>& M)									{ M = arma::solve(T, Di) * U.t(); };
 
-		// ----------------------------------- MULTIPLICATION 
+		// ------------------------------- MULTIPLICATION --------------------------------
 
 		/*
 		* @brief Stabilized multiplication of two `UDT` decompositions.
@@ -234,35 +273,36 @@ namespace algebra {
 		//	return ret;
 		//}
 
-		// -----------------------------------
+		// -------------------------------------------------------------------------------
 
 		/*
 		* @brief Stabilized multiplication of two `UDT` decompositions.
+		* @param B second UDT decomposition
 		*/
 		void factMult(const UDT<_T>& B){
-			arma::Mat<_T> mat = T * B.U; 		// Tl * Ur
-			mat = D * mat;						// Rl * (*up)
-			mat = mat * B.D;
+			arma::Mat<_T> mat	= T * B.U; 		// Tl * Ur
+			mat					= D * mat;		// Rl * (*up)
+			mat					= mat * B.D;
 			decompose(mat);
 		} 
 	
-		virtual void factMult(const arma::Mat<_T>& Ml) = 0;
+		virtual void factMult(const arma::Mat<_T>& Ml)				= 0;
 
-		// -----------------------------------
+		// -------------------------------------------------------------------------------
 
-		// ------ (1+A)^(-1) ------
-		virtual arma::Mat<_T> inv1P() = 0;
-		virtual void inv1P(arma::Mat<_T>& setMat) = 0;
+		// --------------------------------- (1+A)^(-1) ----------------------------------
+		virtual arma::Mat<_T> inv1P()								= 0;
+		virtual void inv1P(arma::Mat<_T>& setMat)					= 0;
 
-		// ------ (A+B)^(-1) ------
-		virtual arma::Mat<_T> invSum(UDT<_T>* right) = 0;
-		virtual void invSum(UDT<_T>* right, arma::Mat<_T>& setMat) = 0;
+		// --------------------------------- (A+B)^(-1) ----------------------------------
+		virtual arma::Mat<_T> invSum(UDT<_T>* right)				= 0;
+		virtual void invSum(UDT<_T>* right, arma::Mat<_T>& setMat)	= 0;
 	};
 
-	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	/*
-	* @brief UDT decomposition using QR decomposition
+	* @brief UDT decomposition using the QR decomposition
 	* @cite doi:10.1016/j.laa.2010.06.023
 	*/
 	template<typename _T>
@@ -294,8 +334,8 @@ namespace algebra {
 			: R(r), P(p), UDT<_T>(q, arma::ones(q.n_rows), ZEROM(q.n_rows))
 		{
 			decompose();
-			this->Db = ZEROV(q.col(0).n_rows);
-			this->Ds = ZEROV(q.col(0).n_rows);
+			this->Db	= ZEROV(q.col(0).n_rows);
+			this->Ds	= ZEROV(q.col(0).n_rows);
 		};
 		UDT_QR(const UDT_QR<_T>& o)
 			: R(o.R), P(o.P), UDT<_T>(o) {};
@@ -307,10 +347,10 @@ namespace algebra {
 		*/
 		UDT_QR<_T>& operator=(const UDT_QR<_T>& o) { 
 			UDT<_T>::operator=(o);
-			R = o.R;
-			P = o.P;
-			this->Db = o.Db;
-			this->Ds = o.Ds;
+			R			= o.R;
+			P			= o.P;
+			this->Db	= o.Db;
+			this->Ds	= o.Ds;
 			return *this;
 		}
 
@@ -319,14 +359,16 @@ namespace algebra {
 		*/
 		UDT_QR<_T>& operator=(UDT_QR<_T>&& o) { 
 			UDT<_T>::operator=(std::move(o));
-			R = std::move(o.R);
-			P = std::move(o.P);
-			this->Db = std::move(o.Db);
-			this->Ds = std::move(o.Ds);
+			R			= std::move(o.R);
+			P			= std::move(o.P);
+			this->Db	= std::move(o.Db);
+			this->Ds	= std::move(o.Ds);
 			return *this;
 		}
 
-		// ----------------------------------- DECOMPOSITIONS
+		// ###############################################################################################################
+		// ############################################# MATRIX DECOMPOSING ##############################################
+		// ###############################################################################################################
 	
 		/*
 		* @brief Create a decomposition using preset matrices
@@ -347,6 +389,10 @@ namespace algebra {
 				throw "Decomposition failed\n";
 			decompose();
 		}
+
+		// ###############################################################################################################
+		// ############################################# MATRIX STABILIZING ##############################################
+		// ###############################################################################################################
 
 		/*
 		* @brief Loh's decomposition to two scales in UDT QR decomposition. One is lower than 0 and second higher.
@@ -398,8 +444,10 @@ namespace algebra {
 			}
 		}
 
-		// ########################################## MULTIPLICATION ##########################################
-	
+		// ###############################################################################################################
+		// ############################################ MATRIX MULTIPLICATION ############################################
+		// ###############################################################################################################	
+
 		/*
 		* @brief Multiply the UDT decomposition by a matrix from the left
 		* @param Ml left matrix
@@ -430,7 +478,7 @@ namespace algebra {
 	
 		void inv1P(arma::Mat<_T>& setMat) override { setMat = inv1P(); };
 
-		// ########################################## (A+B)^(-1) ##########################################
+		// ################################################## (A+B)^(-1) #################################################
 	
 		/*
 		* @brief Stabilized calculation of [UaDaTa + UbDbTb]^{-1}
@@ -481,4 +529,5 @@ namespace algebra {
 
 	};
 };
+
 #endif

@@ -73,10 +73,13 @@ inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl)
 #ifdef FLOGTIME
 	// take the time
 	std::time_t now		= std::time(0);
-	std::tm* now_tm		= _gmtime64(&now);
+	std::tm* now_tm		= new tm;
+	gmtime_s(now_tm, &now);
 	char buf[42];
 	std::strftime(buf, 42, "%Y-%m-%d:%X", now_tm);
 	std::cout << "[" << buf << "]";
+	// clear memory
+	delete now_tm;
 #endif // FLOGTIME
 	
 	std::cout << "[" << getSTR_LOG_TYPES(_typ) << "]";
@@ -108,10 +111,13 @@ inline void LOGINFO(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl)
 #ifdef FLOGTIME
 	// take the time
 	std::time_t now = std::time(0);
-	std::tm* now_tm = _gmtime64(&now);
+	std::tm* now_tm = new tm;
+	gmtime_s(now_tm, &now);
 	char buf[42];
 	std::strftime(buf, 42, "%Y-%m-%d:%X", now_tm);
 	std::cout << "[" << buf << "]";
+	// clear memory
+	delete now_tm;
 #endif // FLOGTIME
 
 	std::cout << "[" << getSTR_LOG_TYPES(_typ) << "]";

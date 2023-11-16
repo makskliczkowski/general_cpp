@@ -9,10 +9,11 @@
 #include "../../flog.h"
 #include "../random.h"
 #include <complex>
+
+// matrix base class concepts
 #include <concepts>
 #include <type_traits>
 
-// matrix base class concepts
 template<typename _T>
 concept HasMatrixType = std::is_base_of<arma::Mat<double>, _T>::value					|| 
 						std::is_base_of<arma::Mat<std::complex<double>>, _T>::value		||
@@ -42,7 +43,7 @@ protected:
 	static inline std::tuple<const char*, double> decideMethod(const _MatType<_T>& _mat)
 	{
 		auto memory				=	_mat.n_rows * _mat.n_cols * sizeof(_T);
-		auto method				=	(memory > 180) ? "std" : "dc";
+		const char* method		=	(memory > 120 * 1e9) ? "std" : "dc";
 		std::string memoryStr	=	"DIMENSION= " + STRP(memory * 1e-6, 5) + "mb";
 		LOGINFO(memoryStr, LOG_TYPES::TRACE, 3);
 		return std::make_tuple(method, memory);
@@ -82,53 +83,63 @@ inline void Diagonalizer<_T>::diagS(arma::vec& eigVal_, const _MatType<_T>& _mat
 
 // ################################################### G E N E R A L ###################################################
 
-
 // #####################################################################################################################
 // #####################################################################################################################
 // ################################################### L A N C Z O S ###################################################
 // #####################################################################################################################
 // #####################################################################################################################
 
+/*
+* @brief A class that introduces the Krylov basis {x, Ax, ..., A^{j-1}x}. The eigenvectors converge to the director of the
+* eigenvector with the greates eigenvalue. Therefore, to ensure orthonormalization, one uses the Gram-Schmidt 
+* orthogonalization.
+* Suppose that {q_1, ..., q_i} is the orthonormal basis for K^i(x), i <= j. We construct q_{j+1} by orthogonalizing A^j x
+* against q_1, ..., q_j -> making the Arnoldi basis (and in case of Hermitan - the Lanczos basis).
+* @link https://people.inf.ethz.ch/arbenz/ewp/Lnotes/chapter10.pdf
+*/
 template<typename _T>
 class LanczosMethod: public Diagonalizer<_T>
 {
 public:
-	// ________________ S Y M M E T R I C ________________
-	template <template <class _TM = _T> class _MatType, HasMatrixType _Concept = _MatType<_T>>
+	// ________________ W I T H   V E C T O R S ________________
+	template <template <class _TM = _T> class _MatType, class _TM, HasMatrixType _Concept = _MatType<_TM>>
 	static void diagS(	
 						arma::vec&				_eigVal,
 						arma::Mat<_T>&			_eigVec,
-						const _MatType<_T>&		_M,
+						const _MatType<_TM>&		_M,
 						size_t					N_Krylov,
 						arma::Col<_T>&			_psi0,
 						arma::Mat<_T>&			_psiMat,
 						arma::Mat<_T>&			_krylovVec
 					);
 
-	template <template <class _TM = _T> class _MatType, HasMatrixType _Concept = _MatType<_T>>
+	// ______________ W I T H O U T  V E C T O R S ______________
+	template <template <class _TM = _T> class _MatType, class _TM, HasMatrixType _Concept = _MatType<_TM>>
 	static void diagS(	
 						arma::vec&				_eigVal,
 						arma::Mat<_T>&			_eigVec,
-						const _MatType<_T>&		_M,
+						const _MatType<_TM>&		_M,
 						size_t					N_Krylov,
 						arma::Col<_T>&			_psi0,
 						arma::Mat<_T>&			_psiMat
 					);
 
-	template <template <class _TM = _T> class _MatType, HasMatrixType _Concept = _MatType<_T>>
+	// _________________ R A N D O M   S T A R T ________________
+	template <template <class _TM = _T> class _MatType, class _TM, HasMatrixType _Concept = _MatType<_TM>>
 	static void diagS(	
 						arma::vec&				_eigVal,
 						arma::Mat<_T>&			_eigVec,
-						const _MatType<_T>&		_M,
+						const _MatType<_TM>&		_M,
 						size_t					N_Krylov,
 						randomGen*				_r
 					);
 
-	template <template <class _TM = _T> class _MatType, HasMatrixType _Concept = _MatType<_T>>
+	// ______ R A N D O M   S T A R T   W   V E C T O R S _______
+	template <template <class _TM = _T> class _MatType, class _TM, HasMatrixType _Concept = _MatType<_TM>>
 	static void diagS(	
 						arma::vec&				_eigVal,
 						arma::Mat<_T>&			_eigVec,
-						const _MatType<_T>&		_M,
+						const _MatType<_TM>&	_M,
 						size_t					N_Krylov,
 						randomGen*				_r,
 						arma::Mat<_T>			_krylovMat
@@ -142,17 +153,17 @@ public:
 * @param _eigVal - eigenvalues to be saved
 * @param _eigVec - eigenvectors to be saved
 * @param _M	- matrix to be diagonalized with a Lanczos' method
-* @param N_Krylov - number of the Krylov vectors
+* @param N_Krylov - number of the Krylov vectors (or vectors in the Lanczos' basis)
 * @param _psi0 - starting vector 
 * @param _psiMat - matrix of coefficients constructed from the Krylov space
 * @param _krylovVec - save the Krylov vectors here
 */
 template<class _T>
-template <template <class _TM = _T> class _MatType, HasMatrixType _Concept>
+template <template <class> class _MatType, class _TM, HasMatrixType _Concept>
 inline void LanczosMethod<_T>::diagS(
 										arma::vec&				_eigVal, 
 										arma::Mat<_T>&			_eigVec, 
-										const _MatType<_T>&		_M,
+										const _MatType<_TM>&	_M,
 										size_t					N_Krylov, 
 										arma::Col<_T>&			_psi0,
 										arma::Mat<_T>&			_psiMat,
@@ -165,33 +176,34 @@ inline void LanczosMethod<_T>::diagS(
 	if (_M.n_cols != _M.n_rows)
 		throw std::runtime_error("The matrix is not square...");
 
-	// set Krylov
-	_krylovVec					= arma::zeros(_M.n_rows, N_Krylov);
-	_psiMat						= arma::zeros(N_Krylov, N_Krylov);
+	// set Krylov subspace - Q vectors constructing Lanczos basis.
+	_krylovVec.zeros(_M.n_rows, N_Krylov);
+	_psiMat.zeros(N_Krylov, N_Krylov);
 
 	// normalize state
-	_psi0						/= std::sqrt(arma::cdot(_psi0, _psi0));
-	//add vector to matrix zeroth
+	_psi0						= _psi0 / (_T)arma::norm(_psi0);
+
+	// add vector to matrix at zeroth position
 	_krylovVec.col(0)			= _psi0;
 
 	// start with first step of Hamiltonian multiplication
 	arma::Col<_T> carryVec0		= _M * _psi0;
-	auto ai						= arma::cdot(_psi0, carryVec0);
-	auto bi						= 0.0;
+	_T ai						= arma::cdot(_psi0, carryVec0);
+	_T bi						= 0.0;
 
-	// take away the parallel part
+	// take away the parallel part and update the basis vector
 	arma::Col<_T> carryVec1		= carryVec0 - ai * _psi0;
-	auto bip1					= arma::cdot(carryVec1, carryVec1);
+	_T bip1						= (_T)arma::norm(carryVec1);
 	_psiMat(0, 0)				= ai;
 	_psiMat(0, 1)				= bip1;
 
 	// loop other states
 	for (auto i = 1; i < (N_Krylov - 1); ++i)
 	{
-		// create new i'th vector
+		// create new i'th vector (q := r/beta_{i-1})
 		carryVec0			= carryVec1 / bip1;
 		
-		// add krylov
+		// add vector to matrix at i'th position
 		_krylovVec.col(i)	= carryVec0;
 
 		// put on the matrix again
@@ -201,7 +213,7 @@ inline void LanczosMethod<_T>::diagS(
 		bi					= bip1;
 		// new carry
 		carryVec1			= carryVec1 - (ai * carryVec0) - (bi * _psi0);
-		bip1				= std::sqrt(arma::cdot(carryVec1, carryVec1));
+		bip1				= (_T)arma::norm(carryVec1);
 		// set matrix
 		_psiMat(i, i - 1)	= bi;
 		_psiMat(i, i)		= ai;
@@ -233,11 +245,11 @@ inline void LanczosMethod<_T>::diagS(
 * @param _psiMat - matrix of coefficients constructed from the Krylov space
 */
 template<class _T>
-template <template <class _TM = _T> class _MatType, HasMatrixType _Concept>
+template <template <class> class _MatType, class _TM, HasMatrixType _Concept>
 inline void LanczosMethod<_T>::diagS(
 										arma::vec&				_eigVal, 
 										arma::Mat<_T>&			_eigVec, 
-										const _MatType<_T>&		_M,
+										const _MatType<_TM>&	_M,
 										size_t					N_Krylov, 
 										arma::Col<_T>&			_psi0,
 										arma::Mat<_T>&			_psiMat
@@ -247,19 +259,19 @@ inline void LanczosMethod<_T>::diagS(
 	if (N_Krylov < 2)
 		throw std::runtime_error("Cannot create such small Krylov space, it does not make sense...");
 
-	_psiMat						= arma::zeros(N_Krylov, N_Krylov);
+	_psiMat.zeros(N_Krylov, N_Krylov);
 
 	// normalize state
-	_psi0						/= std::sqrt(arma::cdot(_psi0, _psi0));
+	_psi0						= _psi0 / (_T)arma::norm(_psi0);
 
 	// start with first step of Hamiltonian multiplication
 	arma::Col<_T> carryVec0		= _M * _psi0;
-	auto ai						= arma::cdot(_psi0, carryVec0);
-	auto bi						= 0.0;
+	_T ai						= arma::cdot(_psi0, carryVec0);
+	_T bi						= 0.0;
 
 	// take away the parallel part
 	arma::Col<_T> carryVec1		= carryVec0 - ai * _psi0;
-	auto bip1					= arma::cdot(carryVec1, carryVec1);
+	_T bip1						= (_T)arma::norm(carryVec1);
 	_psiMat(0, 0)				= ai;
 	_psiMat(0, 1)				= bip1;
 
@@ -276,7 +288,7 @@ inline void LanczosMethod<_T>::diagS(
 		bi					= bip1;
 		// new carry
 		carryVec1			= carryVec1 - (ai * carryVec0) - (bi * _psi0);
-		bip1				= std::sqrt(arma::cdot(carryVec1, carryVec1));
+		bip1				= (_T)arma::norm(carryVec1);
 		// set matrix
 		_psiMat(i, i - 1)	= bi;
 		_psiMat(i, i)		= ai;
@@ -306,27 +318,21 @@ inline void LanczosMethod<_T>::diagS(
 * @param _r random number generator for creating the first vector
 */
 template<typename _T>
-template <template <class _TM = _T> class _MatType, HasMatrixType _Concept>
+template <template <class> class _MatType, class _TM, HasMatrixType _Concept>
 inline void LanczosMethod<_T>::diagS(
 									arma::vec&				_eigVal,
 									arma::Mat<_T>&			_eigVec,
-									const _MatType<_T>&		_M,
+									const _MatType<_TM>&	_M,
 									size_t					N_Krylov,
 									randomGen*				_r
 								)
 {
-	// check the random generator
-	randomGen _ran;
-	if (!_r)
-		_ran = randomGen();
-	else
-		_ran = *_r;
 	// set the seed to a random value
-	arma::arma_rng::set_seed(_ran.seed());  
+	arma::arma_rng::set_seed(_r->seed());  
 	// define random vectors
 	arma::Mat<_T> _psiMat(N_Krylov, N_Krylov, arma::fill::zeros);
-	arma::Col<_T> _psi0 = arma::Col<_T>(N_Krylov, arma::fill::randu) - 0.5;
-	LanczosMethod::diagS(_eigVal, _eigVec, _M, N_Krylov, _psi0, _psiMat);
+	arma::Col<_T> _psi0 = arma::Col<_T>(_M.n_rows, arma::fill::randu) - 0.5;
+	LanczosMethod<_T>::diagS(_eigVal, _eigVec, _M, N_Krylov, _psi0, _psiMat);
 }
 
 // ###########################################################
@@ -341,11 +347,11 @@ inline void LanczosMethod<_T>::diagS(
 * @param _krylovVec - save the Krylov vectors here
 */
 template<typename _T>
-template <template <class _TM = _T> class _MatType, HasMatrixType _Concept>
+template <template <class> class _MatType, class _TM, HasMatrixType _Concept>
 inline void LanczosMethod<_T>::diagS(
 									arma::vec&				_eigVal,
 									arma::Mat<_T>&			_eigVec,
-									const _MatType<_T>&		_M,
+									const _MatType<_TM>&	_M,
 									size_t					N_Krylov,
 									randomGen*				_r,
 									arma::Mat<_T>			_krylovVec
@@ -362,7 +368,7 @@ inline void LanczosMethod<_T>::diagS(
 	// define random vectors
 	arma::Mat<_T> _psiMat(N_Krylov, N_Krylov, arma::fill::zeros);
 	arma::Col<_T> _psi0 = arma::Col<_T>(N_Krylov, arma::fill::randu) - 0.5;
-	LanczosMethod::diagS(_eigVal, _eigVec, _M, N_Krylov, _psi0, _psiMat, _krylovVec);
+	LanczosMethod<_T>::diagS(_eigVal, _eigVec, _M, N_Krylov, _psi0, _psiMat, _krylovVec);
 }
 
 // ###########################################################
