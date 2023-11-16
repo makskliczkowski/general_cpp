@@ -79,7 +79,7 @@ inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl)
 #ifdef _WIN32
 	std::tm* now_tm		= new tm;
 	gmtime_s(now_tm, &now);
-#elif __linux__ 
+#elif defined __linux__ 
 	std::tm* now_tm 	= std::localtime(&now);
 #endif
 	std::strftime(buf, 42, "%Y-%m-%d:%X", now_tm);
@@ -121,7 +121,7 @@ inline void LOGINFO(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl)
 #ifdef _WIN32
 	std::tm* now_tm		= new tm;
 	gmtime_s(now_tm, &now);
-#elif __linux__ 
+#elif defined __linux__ 
 	std::tm* now_tm 	= std::localtime(&now);
 #endif
 	std::strftime(buf, 42, "%Y-%m-%d:%X", now_tm);
