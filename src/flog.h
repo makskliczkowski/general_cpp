@@ -69,6 +69,8 @@ inline void SET_LOG_TIME() {
 #endif
 };
 
+// ##########################################################################################################################################
+
 template <typename _T>
 inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl) 
 {
@@ -85,7 +87,10 @@ inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl)
 	std::strftime(buf, 42, "%Y-%m-%d:%X", now_tm);
 	std::cout << "[" << buf << "]";
 	// clear memory
+#ifdef _WIN32
 	delete now_tm;
+#endif
+
 #endif // FLOGTIME
 	
 	std::cout << "[" << getSTR_LOG_TYPES(_typ) << "]";
@@ -104,6 +109,8 @@ inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl)
 	_file.close();
 #endif
 }
+
+// ##########################################################################################################################################
 
 /*
 * @brief prints log info based on a given input message and type
@@ -127,7 +134,9 @@ inline void LOGINFO(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl)
 	std::strftime(buf, 42, "%Y-%m-%d:%X", now_tm);
 	std::cout << "[" << buf << "]";
 	// clear memory
+#ifdef _WIN32
 	delete now_tm;
+#endif
 #endif // FLOGTIME
 
 	std::cout << "[" << getSTR_LOG_TYPES(_typ) << "]";
@@ -148,6 +157,8 @@ inline void LOGINFO(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl)
 #endif
 }
 
+// ##########################################################################################################################################
+
 /*
 * @brief prints log info based on a given input message and type
 * @param _msg message to be logged
@@ -160,6 +171,8 @@ inline void LOGINFOG(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl)
 	LOGINFO(_msg, _typ, _lvl + LASTLVL);
 }
 
+// ##########################################################################################################################################
+
 /*
 * @brief Prints end of LOG BLOCK
 * @param _typ type of LOG
@@ -168,6 +181,8 @@ inline void LOGINFOG(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl)
 inline void LOGINFO(LOG_TYPES _typ, unsigned int _lvl) {
 	LOGINFO("----------------------------------------------------------", _typ, _lvl);
 }
+
+// ##########################################################################################################################################
 
 /*
 * @brief Log the global title at a specific level
@@ -213,6 +228,8 @@ inline void LOGINFO(LOG_TYPES _typ,
 	LOGINFO(out, _typ, _lvl);
 }
 
+// ##########################################################################################################################################
+
 /*
 * @brief Breakline loginfo
 * @param _n - n lines to break
@@ -225,6 +242,25 @@ inline void LOGINFO(unsigned int _n)
 	LOGINFO(LOG_TYPES::TRACE, _out, 0);
 }
 
+// ##########################################################################################################################################
+
+/*
+* @brief Log timestamp difference from now (in miliseconds and seconds) - for timestamping
+* @param _t timestamp to be used for timedifference
+* @param funName name of the function or method to be timestamped
+* @param _lvl loglevel
+*/
+inline void LOGINFO(const clk::time_point& _t, const std::string& funName, unsigned int _lvl = 0)
+{
+	LOGINFO(1);
+	LOGINFO("Function: " + funName + " took:",	LOG_TYPES::TIME, _lvl);
+	LOGINFO(STR(t_ms(_t)) + " ms",				LOG_TYPES::TIME, _lvl + 1);
+	LOGINFO(STR(t_s(_t)) +	" s",				LOG_TYPES::TIME, _lvl + 1);
+	LOGINFO(1);
+}
+
+// ##########################################################################################################################################
+
 /*
 * @brief Changes the external level
 */
@@ -232,3 +268,5 @@ inline void LOGINFO_CH_LVL(unsigned int _lvl)
 {
 	LASTLVL = _lvl;
 }
+
+// ##########################################################################################################################################
