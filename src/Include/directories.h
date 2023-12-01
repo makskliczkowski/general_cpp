@@ -88,4 +88,18 @@ inline void createDirs(const std::string& dir, const _Ty&... dirs) {
 	createDirs(dirs...);
 }
 
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+/*
+* @brief Make a path out of given folders and create it 
+* @param folder - folder to be appended
+* @param all the folders
+* @returns path
+*/
+template <typename... _Ty>
+std::string makeDirsC(const _Ty&... folders)
+{
+	std::string _folder = makeDir(folders...);
+	createDir(_folder);
+	return _folder;
+}

@@ -3,22 +3,13 @@
 * Definitions for the linalg and
 * and the diagonalizers.
 * Lanczos's method etc.
+* Maksymilian Kliczkowski, 2023
 *******************************/
 
 #include "../../lin_alg.h"
 #include "../../flog.h"
 #include "../random.h"
 #include <complex>
-
-// matrix base class concepts
-#include <concepts>
-#include <type_traits>
-
-template<typename _T>
-concept HasMatrixType = std::is_base_of<arma::Mat<double>, _T>::value					|| 
-						std::is_base_of<arma::Mat<std::complex<double>>, _T>::value		||
-						std::is_base_of<arma::SpMat<double>, _T>::value					||
-						std::is_base_of<arma::SpMat<std::complex<double>>, _T>::value;
 
 // #####################################################################################################################
 // #####################################################################################################################
@@ -32,8 +23,12 @@ class Diagonalizer
 public:
 	template <template <class _TM = _T> class _MatType, HasMatrixType _Concept = _MatType<_T>>
 	static void diagS(arma::vec& eigVal_, arma::Mat<_T>& eigVec_, const _MatType<_T>& _mat);
+	
 	template <template <class _TM = _T> class _MatType, HasMatrixType _Concept = _MatType<_T>>
 	static void diagS(arma::vec& eigVal_, const _MatType<_T>& _mat);
+
+	template <template <class _TM = _T> class _MatType, HasMatrixType _Concept = _MatType<_T>, class _T2>
+	arma::Mat<_T> changeBase(const arma::Mat<_T>& U, const _MatType<_T2>& A);
 
 protected:
 	/*
@@ -59,13 +54,15 @@ template <typename _T>
 template <template <class _TM = _T> class _MatType, HasMatrixType _Concept>
 inline void Diagonalizer<_T>::diagS(arma::vec& eigVal_, arma::Mat<_T>& eigVec_, const _MatType<_T>& _mat)
 {	
+	LOGINFO("Using Standard Diagonalization", LOG_TYPES::TRACE, 2);
 	auto [method, memory] = Diagonalizer<_T>::decideMethod(_mat);
 	BEGIN_CATCH_HANDLER
 		arma::eig_sym(eigVal_, eigVec_, arma::Mat<_T>(_mat), method);
 	END_CATCH_HANDLER("Memory exceeded. " + STRP(memory * 1e-6, 6), ;);
+	LOGINFO("Finished Standard Diagonalization", LOG_TYPES::TRACE, 2);
 }
 
-// ###########################################################
+// ######################################################################################################################
 
 /*
 * @brief General procedure to diagonalize the matrix using eig_sym from the Armadillo library. 
@@ -75,13 +72,27 @@ template <typename _T>
 template <template <class _TM = _T> class _MatType, HasMatrixType _Concept>
 inline void Diagonalizer<_T>::diagS(arma::vec& eigVal_, const _MatType<_T>& _mat)
 {	
+	LOGINFO("Using Standard Diagonalization", LOG_TYPES::TRACE, 2);
 	auto [method, memory] = Diagonalizer<_T>::decideMethod(_mat);
 	BEGIN_CATCH_HANDLER
 		arma::eig_sym(eigVal_, arma::Mat<_T>(_mat));
 	END_CATCH_HANDLER("Memory exceeded. " + STRP(memory * 1e-6, 6), ;);
+	LOGINFO("Finished Standard Diagonalization", LOG_TYPES::TRACE, 2);
 }
 
 // ################################################### G E N E R A L ###################################################
+
+/*
+* @brief Transform a given matrix by rotating it to a specific basis. [U^{-1} * A * U]
+* @param U matrix of the transformation basis vectors - to be used as eigenvectors probably
+* @param A matrix to be transformed - to be used as an operator potentially
+*/
+template<typename _T>
+template <template <class> class _MatType, HasMatrixType _Concept, class _T2>
+inline arma::Mat<_T> Diagonalizer<_T>::changeBase(const arma::Mat<_T>& U, const _MatType<_T2>& A)
+{
+	return U.t() * A * U;
+}
 
 // #####################################################################################################################
 // #####################################################################################################################
@@ -100,10 +111,11 @@ inline void Diagonalizer<_T>::diagS(arma::vec& eigVal_, const _MatType<_T>& _mat
 template<typename _T>
 class LanczosMethod: public Diagonalizer<_T>
 {
+
 public:
 	// ________________ W I T H   V E C T O R S ________________
 	template <template <class _TM = _T> class _MatType, class _TM, HasMatrixType _Concept = _MatType<_TM>>
-	static void diagS(	
+	static void diagS(
 						arma::vec&				_eigVal,
 						arma::Mat<_T>&			_eigVec,
 						const _MatType<_TM>&		_M,
@@ -142,8 +154,14 @@ public:
 						const _MatType<_TM>&	_M,
 						size_t					N_Krylov,
 						randomGen*				_r,
-						arma::Mat<_T>			_krylovMat
+						arma::Mat<_T>&			_krylovMat
 					);
+
+	// ______ R A N D O M   S T A R T   W   V E C T O R S _______
+	static arma::Col<_T> trueState(	const arma::Mat<_T>& _eigenVectors, 
+									const arma::Mat<_T>& _krylovVectors,
+									uint _state	= 0);
+
 };
 
 // ################################################# S Y M M E T R I C #################################################
@@ -170,6 +188,7 @@ inline void LanczosMethod<_T>::diagS(
 										arma::Mat<_T>&			_krylovVec
 									)
 {
+	LOGINFO("Starting Lanczos' Diagonalization", LOG_TYPES::TRACE, 1);
 	// check the number of states constraint
 	if (N_Krylov < 2 || N_Krylov > _M.n_rows)
 		throw std::runtime_error("Cannot create such small Krylov space, it does not make sense...");
@@ -231,9 +250,10 @@ inline void LanczosMethod<_T>::diagS(
 
 	// diagonalize
 	Diagonalizer<_T>::diagS(_eigVal, _eigVec, _psiMat);
+	LOGINFO("Starting Lanczos' Diagonalization", LOG_TYPES::TRACE, 1);
 }
 
-// ###########################################################
+// ######################################################################################################################
 
 /*
 * @brief Construct the Krylov space and use Lanczos' method to diagonalize the Hamiltonian
@@ -255,6 +275,7 @@ inline void LanczosMethod<_T>::diagS(
 										arma::Mat<_T>&			_psiMat
 									)
 {
+	LOGINFO("Starting Lanczos' Diagonalization", LOG_TYPES::TRACE, 1);
 	// check the number of states constraint
 	if (N_Krylov < 2)
 		throw std::runtime_error("Cannot create such small Krylov space, it does not make sense...");
@@ -305,9 +326,10 @@ inline void LanczosMethod<_T>::diagS(
 
 	// diagonalize
 	Diagonalizer<_T>::diagS(_eigVal, _eigVec, _psiMat);
+	LOGINFO("Finished Lanczos' Diagonalization", LOG_TYPES::TRACE, 1);
 }
 
-// ###########################################################
+// ######################################################################################################################
 
 /*
 * @brief Construct the Krylov space and use Lanczos' method to diagonalize the Hamiltonian
@@ -327,15 +349,13 @@ inline void LanczosMethod<_T>::diagS(
 									randomGen*				_r
 								)
 {
-	// set the seed to a random value
-	arma::arma_rng::set_seed(_r->seed());  
 	// define random vectors
 	arma::Mat<_T> _psiMat(N_Krylov, N_Krylov, arma::fill::zeros);
 	arma::Col<_T> _psi0 = arma::Col<_T>(_M.n_rows, arma::fill::randu) - 0.5;
 	LanczosMethod<_T>::diagS(_eigVal, _eigVec, _M, N_Krylov, _psi0, _psiMat);
 }
 
-// ###########################################################
+// ######################################################################################################################
 
 /*
 * @brief Construct the Krylov space and use Lanczos' method to diagonalize the Hamiltonian
@@ -354,21 +374,32 @@ inline void LanczosMethod<_T>::diagS(
 									const _MatType<_TM>&	_M,
 									size_t					N_Krylov,
 									randomGen*				_r,
-									arma::Mat<_T>			_krylovVec
+									arma::Mat<_T>&			_krylovVec
 								)
 {
-	// check the random generator
-	randomGen _ran;
-	if (!_r)
-		_ran = randomGen();
-	else
-		_ran = *_r;
-	// set the seed to a random value
-	arma::arma_rng::set_seed(_ran.seed());  
 	// define random vectors
 	arma::Mat<_T> _psiMat(N_Krylov, N_Krylov, arma::fill::zeros);
-	arma::Col<_T> _psi0 = arma::Col<_T>(N_Krylov, arma::fill::randu) - 0.5;
+	arma::Col<_T> _psi0 = arma::Col<_T>(_M.n_rows, arma::fill::randu) - 0.5;
 	LanczosMethod<_T>::diagS(_eigVal, _eigVec, _M, N_Krylov, _psi0, _psiMat, _krylovVec);
 }
 
-// ###########################################################
+// ######################################################################################################################
+
+/*
+* @brief Transforms a given state in Lanczos' basis (Krylov state basis) back to the original basis
+* @param _eigenVectors comme from diagonalizing the Lanczos' matrix
+* @param _krylovVectors constructed to span the system
+* @param _state state to be constructed - 0 corresponds to the ground state
+*/
+template<typename _T>
+inline arma::Col<_T> LanczosMethod<_T>::trueState(const arma::Mat<_T>& _eigenVectors, const arma::Mat<_T>& _krylovVectors, uint _state)
+{
+	if (_state < 0.0 || _state >= _eigenVectors.n_cols || _krylovVectors.n_cols != _eigenVectors.n_cols)
+		throw std::runtime_error("Bounds for the number of Lanczos states are not satisfied: " + VEQ(_state) +
+			" is out of bounds for " + VEQ(_eigenVectors.n_cols));
+
+	auto& stateFromLanczos			= _eigenVectors.col(_state);
+	return _krylovVectors * stateFromLanczos;
+}
+
+// ######################################################################################################################

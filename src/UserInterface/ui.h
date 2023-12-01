@@ -69,23 +69,26 @@ inline	HANDLE_FUN_TYPE	FHANDLE_PARAM_BETWEEN	(double _low = -1.0, double _high =
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-class UserInterface {
+class UserInterface 
+{
 protected:
+	Timer _timer;
 	typedef v_1d<std::string> cmdArg;
 	typedef std::unordered_map<std::string, std::tuple<std::string, std::function<std::string(std::string)>>> cmdMap;
 
-	std::string mainDir									= "." + kPS;																		// main directory - to be saved onto
+	std::string mainDir									= "." + kPS;										// main directory - to be saved onto
 	uint threadNum										= 1;	
 	int chosenFun										= -1;												// chosen function to be used later
 	bool quiet											= false;
 	
-	// ----------------------- CHOICES and OPTIONS and DEFAULTS -----------------------
+	// ------------ CHOICES and OPTIONS and DEFAULTS -----------
 	cmdMap defaultParams;																					// default parameters
 
 	// ----------------------- FUNCTIONS -----------------------
 
 	std::string getCmdOption(cmdArg& vec, std::string option) const;				 						// get the option from cmd input
-	std::string setDefaultMsg(std::string v, std::string opt, std::string message, const cmdMap& map) const;// setting value to default and sending a message
+	std::string setDefaultMsg(	std::string v, std::string opt, 
+								std::string message, const cmdMap& map) const;								// setting value to default and sending a message
 	
 	template <typename _T>
 	bool setOption(_T& value, cmdArg& argv, std::string choice);											// set an option
@@ -93,8 +96,11 @@ protected:
 	/*
 	* @brief initialize the UI
 	*/
-	void init(int argc, char** argv) {
-		strVec input = fromPtr(argc, argv, 1);																// change standard input to vec of strings
+	void init(int argc, char** argv) 
+	{
+		// initialize the timer
+		_timer			=	Timer();
+		strVec input	=	fromPtr(argc, argv, 1);															// change standard input to vec of strings
 		if (std::string option = this->getCmdOption(input, "-f"); option != "")
 			input = this->parseInputFile(option);															// parse input from file
 		LOGINFO("Parsing input commands:", LOG_TYPES::TRACE, 1);
@@ -113,11 +119,13 @@ public:
 	virtual void parseModel(int argc, cmdArg& argv)		= 0;												// the function to parse the command line
 	virtual cmdArg parseInputFile(std::string filename);													// if the input is taken from file we need to make it look the same way as the command line does
 	
-	// ----------------------- HELPING FUNCIONS -----------------------
+	// --------------------- HELPING FUNCIONS ---------------------
 	virtual void setDefault()							= 0;										 		// set default parameters
 	
 	// ----------------------- NON-VIRTUALS -----------------------
 };
+
+// ######################################################################################################################
 
 /*
 * @brief sets option from a given cmd options
@@ -136,6 +144,8 @@ inline bool UserInterface::setOption(_T& value, cmdArg& argv, std::string choice
 	return setVal;
 }
 
+// ######################################################################################################################
+
 template<>
 inline bool UserInterface::setOption<std::string>(std::string& value, cmdArg& argv, std::string choice) {
 	std::string option	=	this->getCmdOption(argv, "-" + choice);
@@ -146,6 +156,8 @@ inline bool UserInterface::setOption<std::string>(std::string& value, cmdArg& ar
 		value			=	option;
 	return !setVal;
 }
+
+// ######################################################################################################################
 
 #endif // !UI_H
 

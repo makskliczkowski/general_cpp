@@ -30,8 +30,9 @@ void pBar::print()
 
 void pBar::printWithTime(std::string message)
 {
+	std::lock_guard<std::mutex> _guard(_mutex);
 	{
-		LOGINFO("TIME: " + TS(timer) + message, LOG_TYPES::TRACE, 4);
+		LOGINFO("TIME: " + TMS(timer) + message, LOG_TYPES::TRACE, 4);
 		this->print();
 	}
 	this->update(percentage);

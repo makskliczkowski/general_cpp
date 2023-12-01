@@ -7,16 +7,18 @@
 /*******************************
 * Contains the possible methods
 * for handling the exceptions.
+* REV : 01/12/23 - Maks Kliczkowski
 *******************************/
 
-#define LOG_LVL0		""
-#define LOG_LVL1		"\t->"
-#define LOG_LVL2		"\t\t->"
-#define LOG_LVL3		"\t\t\t->"
-#define LOG_LVL4		"\t\t\t\t->"
+constexpr auto LOG_LVL0 = "";
+constexpr auto LOG_LVL1 = "\t->";
+constexpr auto LOG_LVL2 = "\t\t->";
+constexpr auto LOG_LVL3 = "\t\t\t->";
+constexpr auto LOG_LVL4 = "\t\t\t\t->";
 
 // ######################################################## E X C E P T I O N S ########################################################
-namespace EXCEPTIONENUM {
+namespace EXCEPTIONENUM 
+{
 	enum EXCEPTIONS
 	{
 		UNDEFINED	= 0,
@@ -37,7 +39,11 @@ namespace EXCEPTIONENUM {
 	END_ENUM(EXCEPTIONS);
 };
 
-class ExceptionHandler {
+/*
+* @brief Class that handles the exceptions sent by the software
+*/
+class ExceptionHandler 
+{
 public:
 	static void printException(const std::string& _what, const std::string& _msg, EXCEPTIONENUM::EXCEPTIONS _ex = EXCEPTIONENUM::EXCEPTIONS::UNDEFINED) {
 		auto exIDX = EXCEPTIONENUM::getSTR_EXCEPTIONS(_ex);
@@ -51,3 +57,6 @@ public:
 
 #define BEGIN_CATCH_HANDLER				try{
 #define END_CATCH_HANDLER(message, DO)	}catch(...){ ExceptionHandler::handleExceptions(std::current_exception(), message); DO;}
+
+#define IFELSE_EXCEPTION(IF, IFDO, THROW) if(IF) IFDO; else throw std::exception(THROW);
+#define IF_EXCEPTION(IF, THROW) if(IF) throw std::exception(THROW);

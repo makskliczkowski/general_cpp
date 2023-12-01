@@ -38,6 +38,7 @@ public:
 	{
 		this->newSeed(seed);
 		this->seed_ = seed;
+		srand((unsigned int)seed);
 	}
 
 	// #################### S E E D   I N I T I A L I Z E R ##################
@@ -107,16 +108,13 @@ public:
 
 	// #################### O T H E R   T Y P E S ####################
 
-	/*
-	* @brief creates random vector with a given strength
-	*/
-	arma::Col<double> createRanVec(int _size, double _strength);
-
-	arma::Col<std::complex<double>> createRanState(uint _gamma);
+	DCOL createRanVec(int _size, double _strength);
+	CCOL createRanState(uint _gamma);
+	std::vector<CCOL> createRanState(uint _gamma, uint _realizations);
 
 	// ####################### M A T R I C E S #######################
-	arma::Mat<double>					GOE(uint _x, uint _y) const;
-	arma::Mat<std::complex<double>>		CUE(uint _x, uint _y) const;
+	DMAT GOE(uint _x, uint _y) const;
+	CMAT CUE(uint _x, uint _y) const;
 
 	// ####################### E L E M E N T S #######################
 	template<typename _T>
@@ -126,25 +124,17 @@ public:
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+/*
+* @brief Choose _num of elements out of some iterable
+* @param _iterable iterable to choose from
+* @param _num number of elemets
+*/
 template<typename _T>
 inline std::vector<_T> randomGen::choice(const std::vector<_T>& _iterable, size_t _num)
 {
 	std::vector<_T> _out;
 	rng::sample(_iterable, std::back_inserter(_out), _num, this->engine);
 	return _out;
-
-	//auto _begin		=	_iterable.begin();
-	//auto _end		=	_iterable.end();
-	//size_t left		=	std::distance(_begin, _end);
-	//while (_num--) 
-	//{
-	//	auto r		=	_begin;
-	//	std::advance(r, rand() % left);
-	//	std::swap(_begin, r);
-	//	++_begin;
-	//	--left;
-	//}
-	//return std::vector<_T>(_begin, _end);
 }
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -155,15 +145,34 @@ inline std::vector<_T> randomGen::choice(const std::vector<_T>& _iterable, size_
 * @param _strength strength of the disorder used
 * @returns a random vector from -_strength to _strength
 */
-inline arma::Col<double> randomGen::createRanVec(int _size, double _strength)
+inline DCOL randomGen::createRanVec(int _size, double _strength)
 {
-	arma::Col<double> o(_size);
+	DCOL o(_size);
 	for (auto i = 0; i < _size; i++)
 		o(i) = (this->random<double>() * 2.0 - 1.0) * _strength;
 	return o;
 }
 
+
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+/*
+* @brief Create multiple realizations of random states of _gamma coefficients
+* @param _gamm number of combinations
+* @param _realizations number of realizations of the random state
+*/
+inline std::vector<CCOL> randomGen::createRanState(uint _gamma, uint _realizations)
+{
+	std::vector<CCOL> _HM = {};
+
+	// go through gammas
+	for (int j = 0; j < _realizations; ++j)
+		if (_gamma > 1)
+			_HM.push_back(createRanState(_gamma));
+		else
+			_HM.push_back({ 1.0 });
+	return _HM;
+}
 
 /*
 * @brief Generates random superposition of _gamma states (the states shall not repeat, I guess...)

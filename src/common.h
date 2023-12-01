@@ -1,8 +1,8 @@
 #pragma once
-
 /*******************************
 * Stores all the common functions
 * used throughtly in the codes
+* REV : 01/12/2023 - Maks Kliczkowski
 *******************************/
 
 #ifndef COMMON_H
@@ -28,9 +28,6 @@
 
 template<class T> struct is_complex						: std::false_type	{};
 template<class T> struct is_complex<std::complex<T>>	: std::true_type	{};
-
-// ########################################################			  VARIABLE TYPES			############################################# 
-
 
 // ########################################################			    DEFINITIONS				########################################################
 
@@ -62,14 +59,23 @@ const auto global_seed			=					std::random_device{}();								// global seed for
     #define PRT(time_point, cond) do { } while (0)
 #endif
 
-// ########################################################				COMMON UTILITIES				 ########################################################
+
+// ##########################################################################################################################################
+// ##########################################################################################################################################
+// ############################################################# U T I L I T Y ##############################################################
+// ##########################################################################################################################################
+// ##########################################################################################################################################
 
 #define SPACE_VEC(Lx, Ly, Lz, T) v_3d<T>(Lx, v_2d<T>(Ly, v_1d<T>(Lz)))
 
 template<class T>
-using v_Mat = v_1d<arma::Mat<T>>;																		// 1d vector of arma::mat
+using v_Mat						=					v_1d<arma::Mat<T>>;									// 1d vector of arma::mat
 
-// ########################################################				 STREAM OVERLOADED				 ########################################################
+// ##########################################################################################################################################
+// ##########################################################################################################################################
+// ############################################################# V E C T O R S ##############################################################
+// ##########################################################################################################################################
+// ##########################################################################################################################################
 
 /*
 *@brief Overwritten standard stream redirection operator for 2D vectors separated by commas
@@ -78,10 +84,12 @@ using v_Mat = v_1d<arma::Mat<T>>;																		// 1d vector of arma::mat
 */
 template <typename T>
 inline std::ostream& operator<< (std::ostream& out, const v_1d<T>& v) {
-	if (!v.empty()) {
+	if (!v.empty()) 
+	{
 		for (int i = 0; i < v.size(); i++)
-			out << v[i] << ",";
-		out << "\b"; // use two ANSI backspace characters '\b' to overwrite final ", "
+			out << STRP(v[i], 10) << ",";
+		out << "\b\n"; 
+		// use two ANSI backspace characters '\b' to overwrite final ", "
 	}
 	return out;
 }
@@ -99,7 +107,7 @@ inline std::ostream& operator<< (std::ostream& out, const v_2d<T>& v) {
 	return out;
 }
 
-// ########################################################				   VALUE EQUALS				########################################################
+// ############################################################ VALUE EQUALS ################################################################
 
 /*
 * @brief Checks if value is equal to some param up to given tolerance
@@ -117,6 +125,13 @@ inline auto valueEqualsPrecision(_T1 value, _T2 equals) RETURNS(value == equals)
 #define VEQVP(name,val,prec)		valueEquals(#name,(val)		, prec)
 #define EQP(value, equals, prec)	valueEqualsPrecision(value, equals, prec)
 #define EQ(value, equals) valueEqualsPrecision(value, equals)
+
+// ##########################################################################################################################################
+// ##########################################################################################################################################
+// ############################################################# C O M P L E X ##############################################################
+// ##########################################################################################################################################
+// ##########################################################################################################################################
+
 /*
 * @brief Overloads printing to standard stream for complex numbers
 */
@@ -139,6 +154,13 @@ inline std::ostream& operator<< (std::ostream& out, const cpx v)
 	return out;
 }
 
+
+// ##########################################################################################################################################
+// ##########################################################################################################################################
+// ############################################################# V A L U E S ! ##############################################################
+// ##########################################################################################################################################
+// ##########################################################################################################################################
+
 /*
 * @brief Given the char* name it prints its value in a format "name=val"
 * @param name name of the variable
@@ -151,8 +173,11 @@ template <typename T>
 inline auto valueEqualsS(const char name[], T value, int prec = 2)			RETURNS(std::string(name) + "=" + str_p(value, prec, true));
 inline auto valueEquals(const char name[], std::string value, int prec)		RETURNS(std::string(name) + "=" + value);
 
-
-// ########################################################				BINARY SEARCH				########################################################
+// ##########################################################################################################################################
+// ##########################################################################################################################################
+// ########################################################## B I N   S E A R C H ###########################################################
+// ##########################################################################################################################################
+// ##########################################################################################################################################
 
 /*
 * @brief Finding index of base vector in mapping to reduced basis
@@ -191,18 +216,34 @@ inline long long binarySearch(const v_1d<double>& arr, ull l_point, ull r_point,
 	return -1;
 }
 
-// ########################################################				PROGRESS BAR				########################################################
+
+// ##########################################################################################################################################
+// ##########################################################################################################################################
+// ############################################################ P R O G R E S S #############################################################
+// ##########################################################################################################################################
+// ##########################################################################################################################################
+
 
 #ifndef PROGRESS_H
 #define PROGRESS_H
-class pBar {
+#include <mutex>
+
+class pBar 
+{
 public:
+	std::mutex _mutex;
 	void update(double newProgress);
 	void print();
 	void printWithTime(std::string message);
-	pBar() : timer(std::chrono::high_resolution_clock::now()) { };							// constructor
-	pBar(double percentage, int discreteSteps)
-		: timer(std::chrono::high_resolution_clock::now())
+	~pBar()							=		default;
+	pBar() : timer(NOW) 
+	{ };
+	pBar(const pBar& other)
+		: timer(other.timer), percentage(other.percentage), percentageSteps(other.percentageSteps)
+
+	{ };
+	pBar(double percentage, int discreteSteps, clk::time_point _time = NOW)
+		: timer(_time)
 		, percentage(percentage)
 		, percentageSteps(static_cast<int>(percentage* discreteSteps / 100.0))
 	{
@@ -213,6 +254,14 @@ public:
 			percentageSteps		=	std::ceil(this->percentage * discreteSteps / 100.0);
 		}
 	};
+
+	pBar& operator=(const pBar& other)
+	{
+		this->timer				= other.timer;
+		this->percentage		= other.percentage;
+		this->percentageSteps	= other.percentageSteps;
+		return *this;
+	}
 protected:
 	// --------------------------- STRING ENDS
 	std::string startingTabs		=		"\t\t\t\t";
@@ -222,19 +271,31 @@ protected:
 	std::string pBarUpdater			=		"|\\/";
 	// --------------------------- PROGRESS
 	clk::time_point timer;														            // inner clock
-	int amountOfFiller = 0;															           // length of filled elements
+	int amountOfFiller = 0;															        // length of filled elements
 	int pBarLength = 50;														            // length of a progress bar
-	int currUpdateVal = 0;														            //
+	int currUpdateVal = 0;														            // current value of the updated progress
 	double currentProgress = 0;													            // current progress
 	double neededProgress = 100;												            // final progress
 public:
-	auto get_start_time()												const { return this->timer; };
+	auto get_start_time()			const { return this->timer; };
 	double percentage = 34;																	// print percentage
 	int percentageSteps = 1;
 };
+
+#define PROGRESS_UPD(X, PBAR, TEXT)	BEGIN_CATCH_HANDLER										\
+										if (X % PBAR.percentageSteps == 0)					\
+											PBAR.printWithTime(LOG_LVL3 + SSTR(TEXT));		\
+									END_CATCH_HANDLER("Couldn't print progress: ", ;)										
+
+
+
 #endif // !PROGRESS_H
 
-// ########################################################				OTHER				########################################################
+// ##########################################################################################################################################
+// ##########################################################################################################################################
+// ############################################################# O T H E R S ! ##############################################################
+// ##########################################################################################################################################
+// ##########################################################################################################################################
 
 
 #endif // !COMMON_H

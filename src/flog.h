@@ -28,6 +28,9 @@ inline void logLvl(unsigned int _lvl) {
 	std::cout << "->";
 }
 
+/*
+* @brief Stores the types of the logger for the program
+*/
 enum LOG_TYPES 
 {
 	INFO,
@@ -50,7 +53,6 @@ BEGIN_ENUM(LOG_TYPES)
 	DECL_ENUM_ELEMENT(WARNING)
 }
 END_ENUM(LOG_TYPES);
-
 #define LOG_INFO(TYP)								"[" + SSTR(getSTR_LOG_TYPES(TYP)) + "]"
 
 // --- create log file if necessary ---
@@ -71,6 +73,12 @@ inline void SET_LOG_TIME() {
 
 // ##########################################################################################################################################
 
+/*
+* @brief Prints the log for the message using a specific log type
+* @param _msg message to be printed
+* @param _typ type of the message (one of INFO,	TIME, ERROR, TRACE, CHOICE, FINISH, WARNING)
+* @param _lvl tabulation level
+*/
 template <typename _T>
 inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl) 
 {
@@ -114,8 +122,8 @@ inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl)
 
 /*
 * @brief prints log info based on a given input message and type
-* @param _msg message to be logged
-* @param _typ the type of message
+* @param _msg message to be printed
+* @param _typ type of the message (one of INFO,	TIME, ERROR, TRACE, CHOICE, FINISH, WARNING)
 * @param _lvl tabulation level
 */
 template<>
@@ -160,10 +168,10 @@ inline void LOGINFO(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl)
 // ##########################################################################################################################################
 
 /*
-* @brief prints log info based on a given input message and type
-* @param _msg message to be logged
-* @param _typ type of LOG
-* @param _lvl level of LOG
+* @brief prints log info based on a given input message and type - GLOBAL
+* @param _msg message to be printed
+* @param _typ type of the message (one of INFO,	TIME, ERROR, TRACE, CHOICE, FINISH, WARNING)
+* @param _lvl tabulation level
 */
 template <typename _T>
 inline void LOGINFOG(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl) 
@@ -174,21 +182,12 @@ inline void LOGINFOG(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl)
 // ##########################################################################################################################################
 
 /*
-* @brief Prints end of LOG BLOCK
-* @param _typ type of LOG
-* @param _lvl level of LOG
-*/
-inline void LOGINFO(LOG_TYPES _typ, unsigned int _lvl) {
-	LOGINFO("----------------------------------------------------------", _typ, _lvl);
-}
-
-// ##########################################################################################################################################
-
-/*
 * @brief Log the global title at a specific level
-* @param _typ			- type of the message
-* @param _msg			- message to be put inside
-* @param _desiredSize	-  
+* @param _msg message to be printed
+* @param _typ type of the message (one of INFO,	TIME, ERROR, TRACE, CHOICE, FINISH, WARNING)
+* @param _lvl tabulation level
+* @param _desiredSize width of the log columns
+* @param fill filling the empty space with that character
 */
 inline void LOGINFO(LOG_TYPES _typ, 
 					const std::string& _msg,
@@ -232,7 +231,7 @@ inline void LOGINFO(LOG_TYPES _typ,
 
 /*
 * @brief Breakline loginfo
-* @param _n - n lines to break
+* @param _n n lines to break
 */
 inline void LOGINFO(unsigned int _n)
 {
@@ -253,9 +252,11 @@ inline void LOGINFO(unsigned int _n)
 inline void LOGINFO(const clk::time_point& _t, const std::string& funName, unsigned int _lvl = 0)
 {
 	LOGINFO(1);
+	LOGINFO(LOG_TYPES::TRACE, "", 30, '%', std::max(_lvl - 2, (unsigned)0));
 	LOGINFO("Function: " + funName + " took:",	LOG_TYPES::TIME, _lvl);
 	LOGINFO(STR(t_ms(_t)) + " ms",				LOG_TYPES::TIME, _lvl + 1);
 	LOGINFO(STR(t_s(_t)) +	" s",				LOG_TYPES::TIME, _lvl + 1);
+	LOGINFO(LOG_TYPES::TRACE, "", 30, '%', std::max(_lvl - 2, (unsigned)0));
 	LOGINFO(1);
 }
 

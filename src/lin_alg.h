@@ -37,19 +37,15 @@ using uint = unsigned int;
 #define DH5_USE_110_API
 #define D_HDF5USEDLL_ 
 
-//template<typename _T>
-//concept HasDoubleType = std::is_base_of<double, _T>::value								|| 
-//						std::is_base_of<long double, _T>::value							||
-//						std::is_base_of<float, _T>::value;
+// matrix base class concepts
+#include <concepts>
+#include <type_traits>
 
-// cast complex matrix to double by simply taking the real part...
-
-
-//template <class _T, class _T2>
-//bool operator == (arma::Mat<_T>& _left, arma::Mat<_T2> _right)
-//{
-//	return arma::real(_left) == arma::real(_right) && arma::imag(_left) == arma::imag(_right);
-//}
+template<typename _T>
+concept HasMatrixType = std::is_base_of<arma::Mat<double>, _T>::value					|| 
+						std::is_base_of<arma::Mat<std::complex<double>>, _T>::value		||
+						std::is_base_of<arma::SpMat<double>, _T>::value					||
+						std::is_base_of<arma::SpMat<std::complex<double>>, _T>::value;
 
 // ############################################################# DEFINITIONS FROM ARMADILLO #############################################################
 
@@ -60,6 +56,15 @@ using uint = unsigned int;
 #define SUBV(X, fst, lst)						X.subvec(fst, lst)
 #define SUBM(X, fstr, fstc, lstr, lstc)			X.submat(fstr, fstc, lstr, lstc)
 #define UPDATEV(L, R, condition)				if (condition) (L += R); else (L -= R);
+using CCOL										= arma::Col<std::complex<double>>;
+using CMAT										= arma::Mat<std::complex<double>>;
+using DCOL										= arma::Col<double>;
+using DMAT										= arma::Mat<double>;
+template <typename _T>
+using COL										= arma::Col<_T>;
+template <typename _T>
+using MAT										= arma::Mat<_T>;
+
 
 namespace algebra 
 {
@@ -528,6 +533,74 @@ namespace algebra
 		}
 
 	};
+};
+
+// dynamic bitset
+#include "Dynamic/dynamic_bitset.hpp"
+
+namespace VEC
+{
+	// #######################################################
+
+	/*
+	* @brief Transform vector of indices to full state in Fock real space basis.
+	* @param _Ns number of lattice sites
+	* @param _state single particle orbital indices
+	* @returns an Armadillo vector in the Fock basis
+	*/
+	template<typename _T>
+	inline arma::Col<double> transformIdxToState(uint _Ns, const _T& _state)
+	{
+		arma::Col<double> _out(_Ns, arma::fill::zeros);
+		for (auto& i : _state)
+			_out(i) = 1;
+		return _out;
+	}
+
+	/*
+	* @brief Transform vector of indices to full state in Fock real space basis.
+	* @param _Ns number of lattice sites
+	* @param _state single particle orbital indices
+	* @returns an Armadillo vector in the Fock basis
+	*/
+	template<typename _T>
+	inline sul::dynamic_bitset<> transformIdxToBitset(uint _Ns, const _T& _state)
+	{
+		sul::dynamic_bitset<> _out(_Ns);
+		for (auto& i : _state)
+			_out[i] = true;
+		return _out;
+	}
+
+	// #######################################################
+
+	/*
+	* @brief Transform container type to std::vector of the same subtype
+	* @param _in container with a given type
+	* @returns std::vector of a given type
+	*/
+	template<template <class _Tin> class _T, class _Tin>
+	inline std::vector<_Tin> colToVec(const _T<_Tin>& _in)
+	{
+		std::vector<_Tin> t_(_in.size());
+		
+		for (auto it = 0; it < _in.size(); ++it)
+			t_[it] = _in[it];
+		return t_;
+	}
+
+	/*
+	* @brief Creates a vector from a to (a + N - 1)
+	* @param N size of the vector
+	* @param a starting point
+	*/
+	template<typename _T1, typename = typename std::enable_if<std::is_arithmetic<_T1>::value, _T1>::type>
+	std::vector<_T1> vecAtoB(_T1 N, _T1 a = 0)
+	{
+		std::vector<_T1> idxs(N);
+		std::iota(idxs.begin(), idxs.end(), a);
+		return idxs;
+	}
 };
 
 #endif

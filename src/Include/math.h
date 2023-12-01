@@ -1,7 +1,26 @@
 #pragma once
 #include <cmath>
 #include <complex>
+// matrix base class concepts
+#include <concepts>
+#include <type_traits>
 
+template<typename _T>
+concept HasDoubleType = std::is_base_of<double, _T>::value								|| 
+						std::is_base_of<long double, _T>::value							||
+						std::is_base_of<float, _T>::value;
+
+template<typename _T>
+concept HasIntType	  = std::is_base_of<short, _T>::value								||
+						std::is_base_of<unsigned short, _T>::value						||
+						std::is_base_of<int, _T>::value									|| 
+						std::is_base_of<unsigned int, _T>::value						||
+						std::is_base_of<long, _T>::value								||
+						std::is_base_of<unsigned long, _T>::value						||
+						std::is_base_of<long long, _T>::value							||
+						std::is_base_of<unsigned long long, _T>::value					||
+						std::is_base_of<uint_fast16_t, _T>::value						||
+						std::is_base_of<uint_fast32_t, _T>::value;
 /*******************************
 * Contains the possible methods
 * for using math in simulation.
@@ -23,9 +42,10 @@ inline T1 sgn(T2 val) {
 
 /*
 * @brief Placeholder for non-complex values
+* @param _r casting the complex value to the correct type
 */
 template <typename _T>
-inline _T toType(double _r, double _i) {
+inline _T toType(double _r, double _i = 0) {
 	return _T(_r, _i);
 }
 template <>
@@ -50,7 +70,7 @@ inline _T modEUC(_T a, _T b)
 	return m;
 }
 
-// #################################################################
+// ###############################################################################
 
 /*
 * @brief Given a sum of squares measurement and sum of the measurements
@@ -64,4 +84,32 @@ template<typename _T>
 inline _T variance(_T _av2, _T _av, int _norm)
 {
 	return std::sqrt((_av2 / _norm - _av * _av) / _norm);
+}
+
+// ###############################################################################
+
+namespace MATH
+{
+
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	/*
+	* @brief Calculates the complex exponential of a number exp(i * x)
+	* @param _val value in the exponential
+	* @returns exponential of the number
+	*/
+	template <typename _T, typename _T2>
+	inline _T2 expI(_T _val)
+	{
+		return std::exp(std::complex<double>(0, 1) * _val);
+	}
+
+	template <>
+	inline double expI<double, double>(double _val)
+	{
+		return std::real(std::exp(std::complex<double>(0, 1) * _val));
+	}
+
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 }
