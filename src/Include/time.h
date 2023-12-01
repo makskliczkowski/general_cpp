@@ -147,7 +147,7 @@ public:
 	clk::time_point point(_T1 _idx)
 	{
 		if (_idx >= this->_timestamps.size())
-			throw std::exception("Not enough timestamps in the vector.");
+			throw std::runtime_error("Not enough timestamps in the vector.");
 		return this->_timestamps[_idx];
 	}
 
