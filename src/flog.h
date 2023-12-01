@@ -252,11 +252,11 @@ inline void LOGINFO(unsigned int _n)
 inline void LOGINFO(const clk::time_point& _t, const std::string& funName, unsigned int _lvl = 0)
 {
 	LOGINFO(1);
-	LOGINFO(LOG_TYPES::TRACE, "", 30, '%', std::max(_lvl - 2, (unsigned)0));
+	LOGINFO(LOG_TYPES::TRACE, "", 30, '%', std::max(int(_lvl) - 2, 0));
 	LOGINFO("Function: " + funName + " took:",	LOG_TYPES::TIME, _lvl);
 	LOGINFO(STR(t_ms(_t)) + " ms",				LOG_TYPES::TIME, _lvl + 1);
 	LOGINFO(STR(t_s(_t)) +	" s",				LOG_TYPES::TIME, _lvl + 1);
-	LOGINFO(LOG_TYPES::TRACE, "", 30, '%', std::max(_lvl - 2, (unsigned)0));
+	LOGINFO(LOG_TYPES::TRACE, "", 30, '%', std::max(int(_lvl) - 2, 0));
 	LOGINFO(1);
 }
 
