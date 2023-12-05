@@ -36,7 +36,7 @@
 												{ SSTR(#p ) + SSTR("0")	, std::make_tuple("0.0", FHANDLE_PARAM_HIGHERV(-1e-15))	},	\
 												{ SSTR(#p ) + SSTR("s")	, std::make_tuple("0.0", FHANDLE_PARAM_DEFAULT)			},	\
 												{ SSTR(#p ) + SSTR("n")	, std::make_tuple("1.0", FHANDLE_PARAM_HIGHER0)			}
-// adds other varables to the map
+// adds other variables to the map
 #define UI_OTHER_MAP(p, v, f)					{ #p					, std::make_tuple(STRP(v, 2), f)						}
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -84,38 +84,32 @@ protected:
 	// ------------ CHOICES and OPTIONS and DEFAULTS -----------
 	cmdMap defaultParams;																					// default parameters
 
-	// ----------------------- FUNCTIONS -----------------------
+	// ------------------------ GETTERS ------------------------
 
 	std::string getCmdOption(cmdArg& vec, std::string option) const;				 						// get the option from cmd input
-	std::string setDefaultMsg(	std::string v, std::string opt, 
-								std::string message, const cmdMap& map) const;								// setting value to default and sending a message
-	
+
+	// ------------------------ SETTERS ------------------------
+	virtual void setDefaultMap()						= 0;
+	std::string setDefaultMsg(std::string v, 
+							  std::string opt, 
+							  std::string message, 
+							  const cmdMap& map) const;														// setting value to default and sending a message
 	template <typename _T>
 	bool setOption(_T& value, cmdArg& argv, std::string choice);											// set an option
+	
+	// -------------------------- INIT -------------------------
+	void init(int argc, char** argv);
 
-	/*
-	* @brief initialize the UI
-	*/
-	void init(int argc, char** argv) 
-	{
-		// initialize the timer
-		_timer			=	Timer();
-		strVec input	=	fromPtr(argc, argv, 1);															// change standard input to vec of strings
-		if (std::string option = this->getCmdOption(input, "-f"); option != "")
-			input = this->parseInputFile(option);															// parse input from file
-		LOGINFO("Parsing input commands:", LOG_TYPES::TRACE, 1);
-		LOGINFO(STRP(input, 2), LOG_TYPES::TRACE, 2);
-		this->parseModel((int)input.size(), input);
-	};
-	virtual void setDefaultMap()						= 0;
 public:
-	virtual ~UserInterface() = default;
+	virtual ~UserInterface()							= default;
 
 	// general functions to override
-	virtual void exitWithHelp()							= 0;
+	virtual void exitWithHelp();
+
+	// -------------------------- CHOICE --------------------------
+	virtual void funChoice()							= 0;												// allows to choose the method without recompilation of the whole code
 
 	// ----------------------- REAL PARSING -----------------------
-	virtual void funChoice()							= 0;												// allows to choose the method without recompilation of the whole code
 	virtual void parseModel(int argc, cmdArg& argv)		= 0;												// the function to parse the command line
 	virtual cmdArg parseInputFile(std::string filename);													// if the input is taken from file we need to make it look the same way as the command line does
 	
@@ -123,6 +117,57 @@ public:
 	virtual void setDefault()							= 0;										 		// set default parameters
 	
 	// ----------------------- NON-VIRTUALS -----------------------
+};
+
+// ######################################################################################################################
+
+/*
+* @brief Shows default exit with help :)
+*/
+inline void UserInterface::exitWithHelp()
+{
+	printf(
+		" ------------------------------------------------- General UI parser for C++ ------------------------------------------------ \n"
+		"\nThe usage of this CMD parser is straightforward:\n"
+		"One uses the syntax -[option] value in order to setup values parameters available in the model.\n"
+		"The parser shall skip the whitelines in the commands.\n"
+		"To setup the input parameters from a file, one uses:\n"
+		"options:\n"
+		"-f [string]	: -> input file for all of the options : (default none) \n"
+		"-dir [string]	: -> saving directory : (default 'current directory') \n"
+		"Otherwise, the cmd line values are used. The parser allowes for more general features as well. Those include:\n"
+		"\n"
+		"-q	[0 or 1]	: -> quiet mode (no outputs) (default false)\n"
+		"\n"
+		"-fun [int]		: -> function to be used in the calculations. There are predefined functions in the model that allow that:\n"
+		"   The options divide each other on different categories according to the first number _ \n"
+		"   -1 (default option) : -> shows help \n"
+		"	Otherwise, the values shall be specified by a more general class\n"
+		"\n"
+		"-h				: -> help\n"
+		"The input for specific values also may allow parsing vectors that are separated by ';'. If the lenght of the vector mismatches\n"
+		"the first value of the ';'-separated string is taken\n"
+		" ------------------------------------------ Copyright : Maksymilian Kliczkowski, 2023 ------------------------------------------ "
+	);
+}
+
+// ######################################################################################################################
+
+/*
+* @brief initialize the UI
+* @param argc number of the arguments from the console or the initialize file
+* @param argv console arguments or arguments 
+*/
+inline void UserInterface::init(int argc, char** argv)
+{
+	// initialize the timer
+	_timer			= Timer();
+	strVec input	= fromPtr(argc, argv, 1);																// change standard input to vec of strings
+	if (std::string option = this->getCmdOption(input, "-f"); option != "")
+		input		= this->parseInputFile(option);															// parse input from file
+	LOGINFO("Parsing input commands:", LOG_TYPES::TRACE, 1);
+	LOGINFO(STRP(input, 2), LOG_TYPES::TRACE, 2);
+	this->parseModel((int)input.size(), input);
 };
 
 // ######################################################################################################################

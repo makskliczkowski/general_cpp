@@ -10,22 +10,22 @@
 */
 strVec splitStr(const std::string& s, std::string delimiter)
 {
-	unsigned long long pos_start = 0;
-	unsigned long long pos_end;
-	unsigned long long delim_len = delimiter.size();
-	std::string token;
-	strVec res = {};
+	unsigned long long pos_start	= 0;
+	unsigned long long pos_end		= 0;
+	unsigned long long delim_len	= delimiter.size();
+	std::string token				= "";
+	strVec res						= {};
 
 	while ((pos_end = s.find(delimiter, pos_start)) != std::string::npos) {
-		token = s.substr(pos_start, pos_end - pos_start);
-		pos_start = pos_end + delim_len;
+		token		= s.substr(pos_start, pos_end - pos_start);
+		pos_start	= pos_end + delim_len;
 		res.push_back(token);
 	}
 	res.push_back(s.substr(pos_start));
 	return res;
 }
 
-// ######################################################## String vector ########################################################
+// ############################################################# STRING FROM CMD ############################################################
 
 /*
 * We want to handle files so let's make the c-way input a string. This way we will parse the command line arguments
