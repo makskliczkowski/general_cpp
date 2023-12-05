@@ -9,6 +9,7 @@
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // sets the specific option that is self-explanatory
 #define SETOPTION(n, S)							this->setOption(this->n.S##_, argv, SSTR(#S))
+#define SETOPTIONDIRECT(n, S)					this->setOption(n, S)
 #define SETOPTIONV(n, S, v)						this->setOption(this->n.S##_, argv, SSTR(v)	)
 // sets the option with steps etc.
 #define SETOPTION_STEP(x, S)					SETOPTION(x, S);							\
@@ -38,6 +39,9 @@
 												{ SSTR(#p ) + SSTR("n")	, std::make_tuple("1.0", FHANDLE_PARAM_HIGHER0)			}
 // adds other variables to the map
 #define UI_OTHER_MAP(p, v, f)					{ #p					, std::make_tuple(STRP(v, 2), f)						}
+#define UI_VECTOR_SEPARATOR						';'
+#define UI_VECTOR_RANDOM						'r'
+#define UI_RANDOM_SEED							420	// if set to zero, completely random is created, otherwise integer seed is used
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 // -------------------------------------------------------- Make a User interface class --------------------------------------------------------
@@ -72,6 +76,7 @@ inline	HANDLE_FUN_TYPE	FHANDLE_PARAM_BETWEEN	(double _low = -1.0, double _high =
 class UserInterface 
 {
 protected:
+	randomGen ran_;																							// random generator
 	Timer _timer;
 	typedef v_1d<std::string> cmdArg;
 	typedef std::unordered_map<std::string, std::tuple<std::string, std::function<std::string(std::string)>>> cmdMap;
@@ -95,8 +100,12 @@ protected:
 							  std::string message, 
 							  const cmdMap& map) const;														// setting value to default and sending a message
 	template <typename _T>
-	bool setOption(_T& value, cmdArg& argv, std::string choice);											// set an option
-	
+	bool setOption(_T& value, cmdArg& argv, std::string choice);											
+	template <typename _T, typename _Y>
+	bool setOption(_T& valueToSet, const _Y& valueSet);
+	template <class _Tin>
+	bool setOption(std::vector<_Tin>& value, cmdArg& argv, std::string choice);
+
 	// -------------------------- INIT -------------------------
 	void init(int argc, char** argv);
 
@@ -146,7 +155,10 @@ inline void UserInterface::exitWithHelp()
 		"\n"
 		"-h				: -> help\n"
 		"The input for specific values also may allow parsing vectors that are separated by ';'. If the lenght of the vector mismatches\n"
-		"the first value of the ';'-separated string is taken\n"
+		"the first value of the ';'-separated string is taken. The options for vector values include:\n"
+		"   [double]								-- constant value \n"
+		"   'r[double]-value;[double]-disorder'		-- uniform random [disorder] around specific [value] \n"
+		"   ';' separated							-- vector provided by the user \n"
 		" ------------------------------------------ Copyright : Maksymilian Kliczkowski, 2023 ------------------------------------------ "
 	);
 }
@@ -162,6 +174,7 @@ inline void UserInterface::init(int argc, char** argv)
 {
 	// initialize the timer
 	_timer			= Timer();
+	ran_			= randomGen(UI_RANDOM_SEED);
 	strVec input	= fromPtr(argc, argv, 1);																// change standard input to vec of strings
 	if (std::string option = this->getCmdOption(input, "-f"); option != "")
 		input		= this->parseInputFile(option);															// parse input from file
@@ -200,6 +213,82 @@ inline bool UserInterface::setOption<std::string>(std::string& value, cmdArg& ar
 	else
 		value			=	option;
 	return !setVal;
+}
+
+// ######################################################################################################################
+
+template<>
+inline bool UserInterface::setOption<std::string>(std::string& value, cmdArg& argv, std::string choice) {
+	std::string option	=	this->getCmdOption(argv, "-" + choice);
+	bool setVal			=	option.empty();
+	if (setVal)
+		value = this->setDefaultMsg(option, std::string(choice), std::string(choice + ":\n"), defaultParams);
+	else
+		value			=	option;
+	return !setVal;
+}
+
+// ######################################################################################################################
+
+/*
+* @brief Sets the option from a specific value given by the user
+* @param valueToSet a value to be set onto
+* @param valueSet a value to be set from
+* @returns whether the operation has been succesful
+*/
+template<typename _T, typename _Y>
+inline bool UserInterface::setOption(_T& valueToSet, const _Y& valueSet)
+{
+	BEGIN_CATCH_HANDLER
+		_valueToSet = _valueSet;
+	END_CATCH_HANDLER("Setting an option failed", ;);
+}
+
+// ######################################################################################################################
+
+/*
+* @brief Provides the possibility to input values as a vector to the UI input
+* @param value vector value
+* @param argv arguments from CMD
+* @param choice option name
+* @returns success of the setting
+*/
+template<class _Tin>
+inline bool UserInterface::setOption(std::vector<_Tin>& value, cmdArg& argv, std::string choice)
+{
+	bool setVal			=	false;
+	std::string option	=	this->getCmdOption(argv, "-" + choice);
+	strVec optionVec	=	{};
+
+	BEGIN_CATCH_HANDLER
+		if (setVal = option.find(UI_VECTOR_RANDOM) != std::string::npos; setVal)
+		{
+			optionVec	=	splitStr(option.substr(1));
+			double _val	=	stod(optionVec[0]);
+			double _dis =	stod(optionVec[1]);
+			value		=	ran_.createRanVec(value.size(), _dis, _val);
+		}
+		// check whether the value containts our special vector separating value
+		else if (setVal = option.find(UI_VECTOR_SEPARATOR) != std::string::npos; setVal)
+		{
+			optionVec	=	splitStr(option);
+			if (setVal	=	(option.size() == value.size()); setVal)
+				for (auto i = 0; i < value.size(); ++i)
+					value[i]	=	static_cast<_Tin>(stod(optionVec[i]));
+			else
+				for (auto i = 0; i < value.size(); ++i)
+					value[i]	=	static_cast<_Tin>(stod(optionVec[0]));
+		}
+		else
+			if(setVal = !option.empty(); setVal)
+				for (auto i = 0; i < value.size(); ++i)
+					value[i]	=	static_cast<_Tin>(stod(option));
+		return setVal;
+	END_CATCH_HANDLER("Couldn't set the vector value...", ;);
+
+	// fill value with 1.0's
+	std::fill(value.begin(), value.end(), 1.0);
+	return setVal;
 }
 
 // ######################################################################################################################

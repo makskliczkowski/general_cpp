@@ -108,7 +108,8 @@ public:
 
 	// #################### O T H E R   T Y P E S ####################
 
-	DCOL createRanVec(int _size, double _strength);
+	template <template <class _Tin> class _T, class _Tin>
+	_T<_Tin> createRanVec(int _size, double _strength, _Tin _around = 0.0);
 	CCOL createRanState(uint _gamma);
 	std::vector<CCOL> createRanState(uint _gamma, uint _realizations);
 
@@ -143,13 +144,15 @@ inline std::vector<_T> randomGen::choice(const std::vector<_T>& _iterable, size_
 * @brief Creates a random vector based on disorder strength
 * @param _size size of the vector
 * @param _strength strength of the disorder used
-* @returns a random vector from -_strength to _strength
+* @param _around value around which we create random coefficients
+* @returns a random vector from (-_strength + _around) to (_strength + _around)
 */
-inline DCOL randomGen::createRanVec(int _size, double _strength)
+template <template <class _Tin> class _T, class _Tin>
+inline _T<_Tin> randomGen::createRanVec(int _size, double _strength, _Tin _around)
 {
-	DCOL o(_size);
+	_T<_Tin> o(_size);
 	for (auto i = 0; i < _size; i++)
-		o(i) = (this->random<double>() * 2.0 - 1.0) * _strength;
+		o[i] = _around + (this->random<double>() * 2.0 - 1.0) * _strength;
 	return o;
 }
 
