@@ -83,22 +83,7 @@ template <typename _T>
 inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl) 
 {
 #ifdef FLOGTIME
-	// take the time
-	std::time_t now		= std::time(0);
-	char buf[42];
-#ifdef _WIN32
-	std::tm* now_tm		= new tm;
-	gmtime_s(now_tm, &now);
-#elif defined __linux__ 
-	std::tm* now_tm 	= std::localtime(&now);
-#endif
-	std::strftime(buf, 42, "%Y-%m-%d:%X", now_tm);
-	std::cout << "[" << buf << "]";
-	// clear memory
-#ifdef _WIN32
-	delete now_tm;
-#endif
-
+	std::cout << "[" << prettyTime() << "]";
 #endif // FLOGTIME
 	
 	std::cout << "[" << getSTR_LOG_TYPES(_typ) << "]";
@@ -130,21 +115,7 @@ template<>
 inline void LOGINFO(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl)
 {
 #ifdef FLOGTIME
-	// take the time
-	std::time_t now		= std::time(0);
-	char buf[42];
-#ifdef _WIN32
-	std::tm* now_tm		= new tm;
-	gmtime_s(now_tm, &now);
-#elif defined __linux__ 
-	std::tm* now_tm 	= std::localtime(&now);
-#endif
-	std::strftime(buf, 42, "%Y-%m-%d:%X", now_tm);
-	std::cout << "[" << buf << "]";
-	// clear memory
-#ifdef _WIN32
-	delete now_tm;
-#endif
+	std::cout << "[" << prettyTime() << "]";
 #endif // FLOGTIME
 
 	std::cout << "[" << getSTR_LOG_TYPES(_typ) << "]";

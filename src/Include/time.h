@@ -8,18 +8,18 @@
 /*
 * Define function signatures to use in debug scenarios
 */
-#if !defined(LOCALTIME_S)
-	#if defined(__unix__)
-		#define LOCALTIME_S(TIMER_T, ST) localtime_r(&TIMER_T, &ST)
-		#pragma message ("--> Using localtime_r")
-	#elif defined (_MSC_VER)
-		#define LOCALTIME_S(TIMER_T, ST) localtime_s(&ST, &TIMER_T)
-		#pragma message ("--> Using localtime_s")
-	#else 
-		#define LOCALTIME_S     static std::mutex mtx; std::lock_guard<std::mutex> lock(mtx); bt = *std::localtime(&timer);
-		#pragma message ("--> Using weird mutex")
-	#endif
-#endif
+//#if !defined(LOCALTIME_S)
+//	#if defined(__unix__)
+//		#define LOCALTIME_S(TIMER_T, ST) localtime_r(&TIMER_T, &ST)
+//		#pragma message ("--> Using localtime_r")
+//	#elif defined (_MSC_VER)
+//		#define LOCALTIME_S(TIMER_T, ST) localtime_s(&ST, &TIMER_T)
+//		#pragma message ("--> Using localtime_s")
+//	#else 
+//		#define LOCALTIME_S     static std::mutex mtx; std::lock_guard<std::mutex> lock(mtx); bt = *std::localtime(&timer);
+//		#pragma message ("--> Using weird mutex")
+//	#endif
+//#endif
 
 /*******************************
 * Contains the possible methods
@@ -247,36 +247,32 @@ public:
 
 /*
 * @brief pretty prints the time point
+* @param _tp specific timepoint
+* @returns string time in a given format %Y-%m-%d:%X
 */
-[[maybe_unused]] static std::string prettyTime(clk::time_point _tp)
+static std::string prettyTime(std::time_t now)
 {
-#ifdef HAS_FORMAT
-	return std::format("{0:%F_%T}", _tp);
-#else
-	auto curTime	=	\
-		clkS::to_time_t(clkS::now() + DURCAST<clkS::duration>(_tp - clk::now()));
-
-	// this function use static global pointer. so it is not thread safe solution
-	std::tm timeInfo;
-	LOCALTIME_S(curTime, timeInfo);
-	
-
-	// create a buffer
-	char buffer[128];
-
-	auto size			=	strftime(buffer,		
-									(int)sizeof(buffer),
-									PRETTY_TIME_FORMAT,
-									&timeInfo
-									);
-
-	//auto ms				=	to_ms(_tp) % 1000;
-
-	//size				+=	std::snprintf(buffer + size, 
-	//								(size_t)sizeof(buffer) - size,
-	//								PRETTY_TIME_FORMAT_MS, 
-	//								ms
-	//								);
-	return std::string(buffer, buffer + size);
+	// take the time
+	char buf[42];
+#ifdef _WIN32
+	std::tm* now_tm		= new tm;
+	gmtime_s(now_tm, &now);
+#elif defined __linux__ 
+	std::tm* now_tm 	= std::localtime(&now);
 #endif
+	std::strftime(buf, 42, "%Y-%m-%d:%X", now_tm);
+	// clear memory
+#ifdef _WIN32
+	delete now_tm;
+#endif
+	return std::string(buf);
+}
+
+/*
+* @brief pretty prints the time point
+* @returns string time in a given format %Y-%m-%d:%X
+*/
+static std::string prettyTime()
+{
+	return prettyTime(std::time(0));
 }

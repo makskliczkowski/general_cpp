@@ -237,11 +237,19 @@ public:
 	void printWithTime(std::string message);
 	~pBar()							=		default;
 	pBar() : timer(NOW) 
-	{ };
+	{ 
+		this->currUpdateVal		= 0;
+		this->currentProgress	= 0;
+		this->amountOfFiller	= 0;
+	};
 	pBar(const pBar& other)
 		: timer(other.timer), percentage(other.percentage), percentageSteps(other.percentageSteps)
 
-	{ };
+	{ 
+		this->currUpdateVal		= 0;
+		this->currentProgress	= 0;
+		this->amountOfFiller	= 0;
+	};
 	pBar(double percentage, int discreteSteps, clk::time_point _time = NOW)
 		: timer(_time)
 		, percentage(percentage)
@@ -253,6 +261,9 @@ public:
 			this->percentage	=	100 / discreteSteps;
 			percentageSteps		=	std::ceil(this->percentage * discreteSteps / 100.0);
 		}
+		this->currUpdateVal		= 0;
+		this->currentProgress	= 0;
+		this->amountOfFiller	= 0;
 	};
 
 	pBar& operator=(const pBar& other)
@@ -260,6 +271,9 @@ public:
 		this->timer				= other.timer;
 		this->percentage		= other.percentage;
 		this->percentageSteps	= other.percentageSteps;
+		this->currUpdateVal		= other.currUpdateVal;
+		this->currentProgress	= other.currentProgress;
+		this->amountOfFiller	= other.amountOfFiller;
 		return *this;
 	}
 protected:
@@ -271,23 +285,27 @@ protected:
 	std::string pBarUpdater			=		"|\\/";
 	// --------------------------- PROGRESS
 	clk::time_point timer;														            // inner clock
-	int amountOfFiller = 0;															        // length of filled elements
-	int pBarLength = 50;														            // length of a progress bar
-	int currUpdateVal = 0;														            // current value of the updated progress
-	double currentProgress = 0;													            // current progress
-	double neededProgress = 100;												            // final progress
+	int amountOfFiller		= 0;															// length of filled elements
+	int pBarLength			= 50;														    // length of a progress bar
+	int currUpdateVal		= 0;														    // current value of the updated progress
+	double currentProgress	= 0;													        // current progress
+	double neededProgress	= 100;												            // final progress
 public:
 	auto get_start_time()			const { return this->timer; };
 	double percentage = 34;																	// print percentage
 	int percentageSteps = 1;
 };
 
-#define PROGRESS_UPD(X, PBAR, TEXT)	BEGIN_CATCH_HANDLER										\
-										if (X % PBAR.percentageSteps == 0)					\
-											PBAR.printWithTime(LOG_LVL3 + SSTR(TEXT));		\
-									END_CATCH_HANDLER("Couldn't print progress: ", ;)										
+#define PROGRESS_UPD(X, PBAR, TEXT)		BEGIN_CATCH_HANDLER									\
+											if (X % PBAR.percentageSteps == 0)				\
+												PBAR.printWithTime(LOG_LVL3 + SSTR(TEXT));	\
+										END_CATCH_HANDLER("Couldn't print progress: ", ;)										
 
-
+#define PROGRESS_UPD_Q(X, PBAR, TEXT, Q)if(Q){												\
+										BEGIN_CATCH_HANDLER									\
+											if (X % PBAR.percentageSteps == 0)				\
+												PBAR.printWithTime(LOG_LVL3 + SSTR(TEXT));	\
+										END_CATCH_HANDLER("Couldn't print progress: ", ;)}	\
 
 #endif // !PROGRESS_H
 

@@ -108,8 +108,11 @@ public:
 
 	// #################### O T H E R   T Y P E S ####################
 
-	template <template <class _Tin> class _T, class _Tin>
-	_T<_Tin> createRanVec(int _size, double _strength, _Tin _around = 0.0);
+	template <class _T>
+	std::vector<_T> createRanVecStd(int _size, double _strength, _T _around = 0.0);
+	template <class _T>
+	COL<_T> createRanVec(int _size, double _strength, _T _around = 0.0);
+
 	CCOL createRanState(uint _gamma);
 	std::vector<CCOL> createRanState(uint _gamma, uint _realizations);
 
@@ -147,15 +150,30 @@ inline std::vector<_T> randomGen::choice(const std::vector<_T>& _iterable, size_
 * @param _around value around which we create random coefficients
 * @returns a random vector from (-_strength + _around) to (_strength + _around)
 */
-template <template <class _Tin> class _T, class _Tin>
-inline _T<_Tin> randomGen::createRanVec(int _size, double _strength, _Tin _around)
+template <class _T>
+inline COL<_T> randomGen::createRanVec(int _size, double _strength, _T _around)
 {
-	_T<_Tin> o(_size);
+	COL<_T> o(_size);
+	for (auto i = 0; i < _size; i++)
+		o(i) = _around + (this->random<double>() * 2.0 - 1.0) * _strength;
+	return o;
+}
+
+/*
+* @brief Creates a random vector based on disorder strength
+* @param _size size of the vector
+* @param _strength strength of the disorder used
+* @param _around value around which we create random coefficients
+* @returns a random vector from (-_strength + _around) to (_strength + _around)
+*/
+template <class _T>
+inline std::vector<_T> randomGen::createRanVecStd(int _size, double _strength, _T _around)
+{
+	std::vector<_T> o(_size);
 	for (auto i = 0; i < _size; i++)
 		o[i] = _around + (this->random<double>() * 2.0 - 1.0) * _strength;
 	return o;
 }
-
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
