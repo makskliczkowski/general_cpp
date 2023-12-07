@@ -55,8 +55,8 @@ public:
 	static void handleExceptions(std::exception_ptr _ePtr, const std::string& _msg);
 };
 
-#define BEGIN_CATCH_HANDLER				try{
-#define END_CATCH_HANDLER(message, DO)	}catch(...){ ExceptionHandler::handleExceptions(std::current_exception(), message); DO;}
+#define BEGIN_CATCH_HANDLER				try
+#define END_CATCH_HANDLER(message, DO)	catch(...){ ExceptionHandler::handleExceptions(std::current_exception(), message); DO;}
 
 #define IFELSE_EXCEPTION(IF, IFDO, THROW) if(IF) IFDO; else throw std::runtime_error(THROW);
 #define IF_EXCEPTION(IF, THROW) if(IF) throw std::runtime_error(THROW);

@@ -19,12 +19,14 @@
 template <typename T>
 inline int openFile(T& file, std::string fileName, std::ios_base::openmode mode = std::ios::out) {
     BEGIN_CATCH_HANDLER
+    {
         file.open(fileName, mode);
         if (!file.is_open()){
             throw ("Couldn't open a file: " + fileName + "\n");
             return 0;
         }
         END_CATCH_HANDLER("Exception opening/reading/closing file", ;)
+    }
     return 1;
 }
 

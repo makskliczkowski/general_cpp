@@ -227,8 +227,11 @@ template<typename _T, typename _Y>
 inline bool UserInterface::setOption(_T& valueToSet, const _Y& valueSet)
 {
 	BEGIN_CATCH_HANDLER
+	{
 		valueToSet = valueSet;
-	END_CATCH_HANDLER("Setting an option failed", ;);
+	}
+	END_CATCH_HANDLER("Setting an option failed", return false;);
+	return true;
 }
 
 // ######################################################################################################################
@@ -248,6 +251,7 @@ inline bool UserInterface::setOption(std::vector<_Tin>& value, cmdArg& argv, std
 	strVec optionVec	=	{};
 
 	BEGIN_CATCH_HANDLER
+	{
 		if (setVal = option.find(UI_VECTOR_RANDOM) != std::string::npos; setVal)
 		{
 			optionVec			=	splitStr(option.substr(1), ";");
@@ -272,6 +276,7 @@ inline bool UserInterface::setOption(std::vector<_Tin>& value, cmdArg& argv, std
 				for (auto i = 0; i < value.size(); ++i)
 					value[i]	=	static_cast<_Tin>(stod(option));
 		return setVal;
+	}
 	END_CATCH_HANDLER("Couldn't set the vector value...", ;);
 
 	// fill value with 1.0's

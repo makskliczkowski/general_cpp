@@ -296,15 +296,15 @@ public:
 	int percentageSteps = 1;
 };
 
-#define PROGRESS_UPD(X, PBAR, TEXT)		BEGIN_CATCH_HANDLER									\
+#define PROGRESS_UPD(X, PBAR, TEXT)		BEGIN_CATCH_HANDLER{								\
 											if (X % PBAR.percentageSteps == 0)				\
-												PBAR.printWithTime(LOG_LVL3 + SSTR(TEXT));	\
+												PBAR.printWithTime(LOG_LVL3 + SSTR(TEXT));}	\
 										END_CATCH_HANDLER("Couldn't print progress: ", ;)										
 
 #define PROGRESS_UPD_Q(X, PBAR, TEXT, Q)if(Q){												\
-										BEGIN_CATCH_HANDLER									\
+										BEGIN_CATCH_HANDLER{								\
 											if (X % PBAR.percentageSteps == 0)				\
-												PBAR.printWithTime(LOG_LVL3 + SSTR(TEXT));	\
+												PBAR.printWithTime(LOG_LVL3 + SSTR(TEXT));}	\
 										END_CATCH_HANDLER("Couldn't print progress: ", ;)}	\
 
 #endif // !PROGRESS_H

@@ -57,7 +57,9 @@ inline void Diagonalizer<_T>::diagS(arma::vec& eigVal_, arma::Mat<_T>& eigVec_, 
 	LOGINFO("Using Standard Diagonalization", LOG_TYPES::TRACE, 2);
 	auto [method, memory] = Diagonalizer<_T>::decideMethod(_mat);
 	BEGIN_CATCH_HANDLER
+	{
 		arma::eig_sym(eigVal_, eigVec_, arma::Mat<_T>(_mat), method);
+	}
 	END_CATCH_HANDLER("Memory exceeded. " + STRP(memory * 1e-6, 6), ;);
 	LOGINFO("Finished Standard Diagonalization", LOG_TYPES::TRACE, 2);
 }
@@ -75,7 +77,9 @@ inline void Diagonalizer<_T>::diagS(arma::vec& eigVal_, const _MatType<_T>& _mat
 	LOGINFO("Using Standard Diagonalization", LOG_TYPES::TRACE, 2);
 	auto [method, memory] = Diagonalizer<_T>::decideMethod(_mat);
 	BEGIN_CATCH_HANDLER
+	{
 		arma::eig_sym(eigVal_, arma::Mat<_T>(_mat));
+	}
 	END_CATCH_HANDLER("Memory exceeded. " + STRP(memory * 1e-6, 6), ;);
 	LOGINFO("Finished Standard Diagonalization", LOG_TYPES::TRACE, 2);
 }
