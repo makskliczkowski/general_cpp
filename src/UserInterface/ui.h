@@ -58,7 +58,7 @@ inline	std::string		FHANDLE_PARAM_DEFAULT	(std::string s)
 #define HANDLE_PARAM_HIGHERV(val)				SSTR("Value must be higher than : ") + STRP(val, 2)
 inline	HANDLE_FUN_TYPE	FHANDLE_PARAM_HIGHERV	(double _low = 0.0)
 {
-	return [=](std::string s) { if (stod(s) <= _low) return HANDLE_PARAM_HIGHERV(_low); return HANDLE_PARAM_DEFAULT; };
+	return [=](std::string s) { if (stod(s) < _low) return HANDLE_PARAM_HIGHERV(_low); return HANDLE_PARAM_DEFAULT; };
 };
 inline	std::string		FHANDLE_PARAM_HIGHER0	(std::string s)
 {
@@ -142,24 +142,24 @@ inline void UserInterface::exitWithHelp()
 		"The parser shall skip the whitelines in the commands.\n"
 		"To setup the input parameters from a file, one uses:\n"
 		"options:\n"
-		"-f [string]	: -> input file for all of the options : (default none) \n"
-		"-dir [string]	: -> saving directory : (default 'current directory') \n"
+		"-f [string] : -> input file for all of the options : (default none) \n"
+		"-dir [string] : -> saving directory : (default 'current directory') \n"
 		"Otherwise, the cmd line values are used. The parser allowes for more general features as well. Those include:\n"
 		"\n"
-		"-q	[0 or 1]	: -> quiet mode (no outputs) (default false)\n"
+		"-q	[0 or 1] : -> quiet mode (no outputs) (default false)\n"
 		"\n"
-		"-fun [int]		: -> function to be used in the calculations. There are predefined functions in the model that allow that:\n"
+		"-fun [int] : -> function to be used in the calculations. There are predefined functions in the model that allow that:\n"
 		"   The options divide each other on different categories according to the first number _ \n"
 		"   -1 (default option) : -> shows help \n"
 		"	Otherwise, the values shall be specified by a more general class\n"
 		"\n"
-		"-h				: -> help\n"
+		"-h	: -> help\n"
 		"The input for specific values also may allow parsing vectors that are separated by ';'. If the lenght of the vector mismatches\n"
 		"the first value of the ';'-separated string is taken. The options for vector values include:\n"
-		"   [double]								-- constant value \n"
-		"   'r[double]-value;[double]-disorder'		-- uniform random [disorder] around specific [value] \n"
-		"   ';' separated							-- vector provided by the user \n"
-		" ------------------------------------------ Copyright : Maksymilian Kliczkowski, 2023 ------------------------------------------ "
+		"   [double] -- constant value \n"
+		"   'r[double]-value;[double]-disorder'	-- uniform random [disorder] around specific [value] \n"
+		"   ';' separated -- vector provided by the user \n"
+		" ------------------------------------------ Copyright : Maksymilian Kliczkowski, 2023 ------------------------------------------ \n"
 	);
 }
 
