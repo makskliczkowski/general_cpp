@@ -6,6 +6,7 @@
 #include <random>
 #include <ctime>
 #include <numeric>
+// #include <ranges>
 
 // --- RANGES ---
 #ifdef __has_include
@@ -137,7 +138,7 @@ template<typename _T>
 inline std::vector<_T> randomGen::choice(const std::vector<_T>& _iterable, size_t _num)
 {
 	std::vector<_T> _out;
-	rng::sample(_iterable, std::back_inserter(_out), _num, this->engine);
+	// std::ranges(_iterable, std::back_inserter(_out), _num, this->engine);
 	return _out;
 }
 
