@@ -9,6 +9,7 @@
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // sets the specific option that is self-explanatory
 #define SETOPTION(n, S)							this->setOption(this->n.S##_, argv, SSTR(#S))
+#define SETOPTIOND(n, S, DEF)					this->setOption(this->n.S##_, argv, SSTR(#S), DEF)
 #define SETOPTIONDIRECT(n, S)					this->setOption(n, S)
 #define SETOPTIONV(n, S, v)						this->setOption(this->n.S##_, argv, SSTR(v)	)
 // sets the option with steps etc.
@@ -83,6 +84,7 @@ protected:
 
 	std::string mainDir									= "." + kPS;										// main directory - to be saved onto
 	uint threadNum										= 1;	
+	uint threadNumIn									= 1;	
 	int chosenFun										= -1;												// chosen function to be used later
 	bool quiet											= false;
 	
@@ -104,7 +106,7 @@ protected:
 	template <typename _T, typename _Y>
 	bool setOption(_T& valueToSet, const _Y& valueSet);
 	template <class _Tin>
-	bool setOption(std::vector<_Tin>& value, cmdArg& argv, std::string choice);
+	bool setOption(std::vector<_Tin>& value, cmdArg& argv, std::string choice, _Tin _default = 0.0);
 
 	// -------------------------- INIT -------------------------
 	void init(int argc, char** argv);
@@ -244,43 +246,44 @@ inline bool UserInterface::setOption(_T& valueToSet, const _Y& valueSet)
 * @returns success of the setting
 */
 template<class _Tin>
-inline bool UserInterface::setOption(std::vector<_Tin>& value, cmdArg& argv, std::string choice)
+inline bool UserInterface::setOption(std::vector<_Tin>& value, cmdArg& argv, std::string choice, _Tin _default)
 {
 	bool setVal			=	false;
 	std::string option	=	this->getCmdOption(argv, "-" + choice);
 	strVec optionVec	=	{};
 
-	BEGIN_CATCH_HANDLER
+	if (option != "")
 	{
-		if (setVal = option.find(UI_VECTOR_RANDOM) != std::string::npos; setVal)
+		BEGIN_CATCH_HANDLER
 		{
-			optionVec			=	splitStr(option.substr(1), ";");
-			double _val			=	stod(optionVec[1]);
-			double _dis			=	stod(optionVec[2]);
-			v_1d<double> _ranV	=	ran_.createRanVecStd(value.size(), _dis, _val);
-			value				=	_ranV;
-		}
-		// check whether the value containts our special vector separating value
-		else if (setVal = option.find(UI_VECTOR_SEPARATOR) != std::string::npos; setVal)
-		{
-			optionVec	=	splitStr(option, ";");
-			if (setVal	=	(option.size() == value.size()); setVal)
-				for (auto i = 0; i < value.size(); ++i)
-					value[i]	=	static_cast<_Tin>(stod(optionVec[i]));
+			if (setVal = option.find(UI_VECTOR_RANDOM) != std::string::npos; setVal)
+			{
+				optionVec			=	splitStr(option.substr(1), ";");
+				double _val			=	stod(optionVec[1]);
+				double _dis			=	stod(optionVec[2]);
+				v_1d<double> _ranV	=	ran_.createRanVecStd(value.size(), _dis, _val);
+				value				=	_ranV;
+			}
+			// check whether the value containts our special vector separating value
+			else if (setVal = option.find(UI_VECTOR_SEPARATOR) != std::string::npos; setVal)
+			{
+				optionVec	=	splitStr(option, ";");
+				if (setVal	=	(option.size() == value.size()); setVal)
+					for (auto i = 0; i < value.size(); ++i)
+						value[i]	=	static_cast<_Tin>(stod(optionVec[i]));
+				else
+					for (auto i = 0; i < value.size(); ++i)
+						value[i]	=	static_cast<_Tin>(stod(optionVec[0]));
+			}
 			else
-				for (auto i = 0; i < value.size(); ++i)
-					value[i]	=	static_cast<_Tin>(stod(optionVec[0]));
+				if(setVal = !option.empty(); setVal)
+					for (auto i = 0; i < value.size(); ++i)
+						value[i]	=	static_cast<_Tin>(stod(option));
+			return setVal;
 		}
-		else
-			if(setVal = !option.empty(); setVal)
-				for (auto i = 0; i < value.size(); ++i)
-					value[i]	=	static_cast<_Tin>(stod(option));
-		return setVal;
+		END_CATCH_HANDLER("Couldn't set the vector value...", ;);
 	}
-	END_CATCH_HANDLER("Couldn't set the vector value...", ;);
-
-	// fill value with 1.0's
-	std::fill(value.begin(), value.end(), 1.0);
+	std::fill(value.begin(), value.end(), _default);
 	return setVal;
 }
 

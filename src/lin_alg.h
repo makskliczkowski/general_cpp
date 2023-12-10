@@ -595,12 +595,80 @@ namespace VEC
 	* @param a starting point
 	*/
 	template<typename _T1, typename = typename std::enable_if<std::is_arithmetic<_T1>::value, _T1>::type>
-	std::vector<_T1> vecAtoB(_T1 N, _T1 a = 0)
+	inline std::vector<_T1> vecAtoB(_T1 N, _T1 a = 0)
 	{
 		std::vector<_T1> idxs(N);
 		std::iota(idxs.begin(), idxs.end(), a);
 		return idxs;
 	}
+
+	// #######################################################
+	// Vector math
+
+	// ADD
+
+	template <class _T>
+	inline void addVec(std::vector<_T>& _res, const std::vector<_T>& _toAdd)
+	{
+		if (_res.size() != _toAdd.size())
+			throw std::runtime_error("Size of vectors mismatch...");
+		for (auto i = 0; i < _res.size(); ++i)
+			_res[i] += _toAdd[i];
+	};
+
+	template <class _T>
+	inline std::vector<_T> addVecR(const std::vector<_T>& _res, const std::vector<_T>& _toAdd)
+	{
+		std::vector<_T> _out;
+		if (_res.size() != _toAdd.size())
+			throw std::runtime_error("Size of vectors mismatch...");
+		_out.resize(_res.size());
+		for (auto i = 0; i < _res.size(); ++i)
+			_out[i] = _toAdd[i] + _res[i];
+		return _out;
+	};
+
+	// SUBSTRACT
+
+	template <class _T>
+	inline void subVec(std::vector<_T>& _res, const std::vector<_T>& _toAdd)
+	{
+		if (_res.size() != _toAdd.size())
+			throw std::runtime_error("Size of vectors mismatch...");
+		for (auto i = 0; i < _res.size(); ++i)
+			_res[i] -= _toAdd[i];
+	};
+
+	template <class _T>
+	inline std::vector<_T> subVecR(const std::vector<_T>& _res, const std::vector<_T>& _toAdd)
+	{
+		std::vector<_T> _out;
+		if (_res.size() != _toAdd.size())
+			throw std::runtime_error("Size of vectors mismatch...");
+		_out.resize(_res.size());
+		for (auto i = 0; i < _res.size(); ++i)
+			_out[i] = _res[i] - _toAdd[i];
+		return _out;
+	};
+
+	// MULTIPLY
+
+	template <class _T>
+	inline void mulVec(std::vector<_T>& _res, _T _const)
+	{
+		for (auto i = 0; i < _res.size(); ++i)
+			_res[i] *= _const;
+	};
+
+	template <class _T>
+	inline std::vector<_T> mulVecR(const std::vector<_T>& _res, _T _const)
+	{
+		std::vector<_T> _out;
+		_out.resize(_res.size());
+		for (auto i = 0; i < _res.size(); ++i)
+			_out[i] = _const * _res[i];
+		return _out;
+	};
 };
 
 #endif

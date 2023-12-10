@@ -291,20 +291,20 @@ protected:
 	double currentProgress	= 0;													        // current progress
 	double neededProgress	= 100;												            // final progress
 public:
-	auto get_start_time()			const { return this->timer; };
+	auto get_start_time()			const	{ return this->timer; };
 	double percentage = 34;																	// print percentage
 	int percentageSteps = 1;
 };
 
 #define PROGRESS_UPD(X, PBAR, TEXT)		BEGIN_CATCH_HANDLER{								\
 											if (X % PBAR.percentageSteps == 0)				\
-												PBAR.printWithTime(LOG_LVL3 + SSTR(TEXT));}	\
+												PBAR.printWithTime(LOG_LVL1 + SSTR(TEXT));}	\
 										END_CATCH_HANDLER("Couldn't print progress: ", ;)										
 
 #define PROGRESS_UPD_Q(X, PBAR, TEXT, Q)if(Q){												\
 										BEGIN_CATCH_HANDLER{								\
 											if (X % PBAR.percentageSteps == 0)				\
-												PBAR.printWithTime(LOG_LVL3 + SSTR(TEXT));}	\
+												PBAR.printWithTime(LOG_LVL1 + SSTR(TEXT));}	\
 										END_CATCH_HANDLER("Couldn't print progress: ", ;)}	\
 
 #endif // !PROGRESS_H
