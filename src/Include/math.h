@@ -5,22 +5,28 @@
 #include <concepts>
 #include <type_traits>
 
-template<typename _T>
-concept HasDoubleType = std::is_base_of<double, _T>::value								|| 
-						std::is_base_of<long double, _T>::value							||
-						std::is_base_of<float, _T>::value;
+#ifdef __has_include
+#	if __has_include(<concepts>)
+		#include <concepts>
+		#include <type_traits>
+		template<typename _T>
+		concept HasDoubleType = std::is_base_of<double, _T>::value								|| 
+								std::is_base_of<long double, _T>::value							||
+								std::is_base_of<float, _T>::value;
 
-template<typename _T>
-concept HasIntType	  = std::is_base_of<short, _T>::value								||
-						std::is_base_of<unsigned short, _T>::value						||
-						std::is_base_of<int, _T>::value									|| 
-						std::is_base_of<unsigned int, _T>::value						||
-						std::is_base_of<long, _T>::value								||
-						std::is_base_of<unsigned long, _T>::value						||
-						std::is_base_of<long long, _T>::value							||
-						std::is_base_of<unsigned long long, _T>::value					||
-						std::is_base_of<uint_fast16_t, _T>::value						||
-						std::is_base_of<uint_fast32_t, _T>::value;
+		template<typename _T>
+		concept HasIntType	  = std::is_base_of<short, _T>::value								||
+								std::is_base_of<unsigned short, _T>::value						||
+								std::is_base_of<int, _T>::value									|| 
+								std::is_base_of<unsigned int, _T>::value						||
+								std::is_base_of<long, _T>::value								||
+								std::is_base_of<unsigned long, _T>::value						||
+								std::is_base_of<long long, _T>::value							||
+								std::is_base_of<unsigned long long, _T>::value					||
+								std::is_base_of<uint_fast16_t, _T>::value						||
+								std::is_base_of<uint_fast32_t, _T>::value;
+#	endif
+#endif
 /*******************************
 * Contains the possible methods
 * for using math in simulation.
