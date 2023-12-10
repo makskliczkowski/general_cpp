@@ -112,3 +112,8 @@ template <typename... Types>
 inline void strSeparated(std::string& out, char sep, Types... elements) {
 	strSepP(out, sep, 2, false, elements...);
 }
+
+inline bool endsWith(const std::string& _str, const std::string& _suf)
+{
+	return _str.size() >= _suf.size() && 0 == _str.compare(_str.size() - _suf.size(), _suf.size(), _suf);
+}
