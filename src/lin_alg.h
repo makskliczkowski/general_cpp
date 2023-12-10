@@ -38,14 +38,21 @@ using uint = unsigned int;
 #define D_HDF5USEDLL_ 
 
 // matrix base class concepts
-#include <concepts>
-#include <type_traits>
 
-template<typename _T>
-concept HasMatrixType = std::is_base_of<arma::Mat<double>, _T>::value					|| 
-						std::is_base_of<arma::Mat<std::complex<double>>, _T>::value		||
-						std::is_base_of<arma::SpMat<double>, _T>::value					||
-						std::is_base_of<arma::SpMat<std::complex<double>>, _T>::value;
+#ifdef __has_include
+#	if __has_include(<concepts>)
+#		include <concepts>
+#		include <type_traits>
+		template<typename _T>
+		concept HasMatrixType = std::is_base_of<arma::Mat<double>, _T>::value					|| 
+								std::is_base_of<arma::Mat<std::complex<double>>, _T>::value		||
+								std::is_base_of<arma::SpMat<double>, _T>::value					||
+								std::is_base_of<arma::SpMat<std::complex<double>>, _T>::value;
+#	endif
+#else
+#	pragma message ("--> Skipping concepts")
+#endif
+
 
 // ############################################################# DEFINITIONS FROM ARMADILLO #############################################################
 
