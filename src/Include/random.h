@@ -165,7 +165,7 @@ inline _T randomGen::choice(_T begin, _T end, size_t _num)
 	size_t left = std::distance(begin, end);
 	while (_num--)
 	{
-		_ITERABLE r = begin;
+		_T r = begin;
 		std::advance(r, rand() % left);
 		std::swap(*begin, *r);
 		++begin;
