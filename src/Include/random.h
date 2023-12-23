@@ -6,13 +6,12 @@
 #include <random>
 #include <ctime>
 #include <numeric>
-// #include <ranges>
 
 // --- RANGES ---
 #ifdef __has_include
 #	if __has_include(<ranges>)
 #		include <ranges>
-#   	define have_ranges 1
+#   	define HAS_RANGES 1
 namespace rng = std::ranges;
 #	elif __has_include(<experimental/ranges>)
 #		include <experimental/ranges>
@@ -20,9 +19,10 @@ namespace rng = std::ranges;
 #    	define experimental_ranges
 namespace rng = std::experimental::ranges;
 #	else
-#		define have_ranges 0
+#		define HAS_RANGES 0
 #	endif
 #endif
+
 
 // -------------------------------------------------------- RANDOM NUMBER CLASS --------------------------------------------------------
 
@@ -124,6 +124,8 @@ public:
 	// ####################### E L E M E N T S #######################
 	template<typename _T>
 	std::vector<_T> choice(const std::vector<_T>& _iterable, size_t _num);
+	template<class _T>
+	_T choice(_T begin, _T end, size_t _num);
 
 };
 
@@ -132,14 +134,44 @@ public:
 /*
 * @brief Choose _num of elements out of some iterable
 * @param _iterable iterable to choose from
-* @param _num number of elemets
+* @param _num number of elements
+* @returns vector of choices
 */
 template<typename _T>
 inline std::vector<_T> randomGen::choice(const std::vector<_T>& _iterable, size_t _num)
 {
 	std::vector<_T> _out;
-	// std::ranges(_iterable, std::back_inserter(_out), _num, this->engine);
+#if HAS_RANGES == 1
+	rng::sample(_iterable, std::back_inserter(_out), _num, this->engine);
+#else
+	_out = _iterable;
+	this->choice(_out.begin(), _out.end(), _num);
+#endif // DEBUG
+
 	return _out;
+}
+
+/*
+* @brief Uses the Fisher–Yates shuffle to obtain the random choice out of a container.
+* @url https://stackoverflow.com/questions/9345087/choose-m-elements-randomly-from-a-vector-containing-n-elements
+* @param begin begining of the container
+* @param end end of the container
+* @param _num number of elements
+* @returns iterator to the element
+*/
+template<class _T>
+inline _T randomGen::choice(_T begin, _T end, size_t _num)
+{
+	size_t left = std::distance(begin, end);
+	while (_num--)
+	{
+		_ITERABLE r = begin;
+		std::advance(r, rand() % left);
+		std::swap(*begin, *r);
+		++begin;
+		--left;
+	}
+	return begin;
 }
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -203,7 +235,8 @@ inline arma::Col<std::complex<double>> randomGen::createRanState(uint _gamma)
 {
 	if (_gamma <= 1)
 		return arma::Col<std::complex<double>>(1, arma::fill::eye);
-	return this->CUE(_gamma, _gamma) * (arma::Col<std::complex<double>>(_gamma, arma::fill::eye));
+	arma::Col<std::complex<double>> _state = this->CUE(_gamma, _gamma) * (arma::Col<std::complex<double>>(_gamma, arma::fill::eye));
+	return _state;
 }
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

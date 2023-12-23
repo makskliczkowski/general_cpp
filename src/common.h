@@ -16,7 +16,10 @@
 
 #include "Include/random.h"
 #include "Include/math.h"
-#include "flog.h"
+
+#ifndef FLOG_H
+#	include "flog.h"
+#endif
 
 #include <omp.h>
 #include <thread>

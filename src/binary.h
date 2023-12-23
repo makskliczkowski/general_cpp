@@ -9,9 +9,9 @@
 #ifndef BINARY_H
 #define BINARY_H
 
-// #ifndef COMMON_H
-#include "common.h"
-// #endif
+#ifndef COMMON_H
+#	include "common.h"
+#endif
 
 // --- BIT ---
 #ifdef __has_include

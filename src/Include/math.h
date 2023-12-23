@@ -1,11 +1,12 @@
 #pragma once
+#ifndef MATH_H
+#define MATH_H
+
 #include <cmath>
 #include <complex>
-// matrix base class concepts
-#include <concepts>
-#include <type_traits>
 
 #ifdef __has_include
+// matrix base class concepts
 #	if __has_include(<concepts>)
 		#include <concepts>
 		#include <type_traits>
@@ -119,3 +120,5 @@ namespace MATH
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 }
+
+#endif

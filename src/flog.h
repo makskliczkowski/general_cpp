@@ -1,12 +1,28 @@
 #pragma once
-#include "Include/files.h"
-#include "Include/directories.h"
-#include "Include/exceptions.h"
+/***************************************
+* Defines general logging optioons
+* APRIL 2023. UNDER CONSTANT DEVELOPMENT
+* MAKSYMILIAN KLICZKOWSKI, WUST, POLAND
+***************************************/
+#ifndef FLOG_H
+#define FLOG_H
+
+#ifndef FILES_H
+#	include "Include/files.h"
+#endif
+
+#ifndef DIRECTORIES_H
+#	include "Include/directories.h"
+#endif 
+
+//#ifndef EXCEPTIONS_H
+//#	include "Include/exceptions.h"
+//#endif
 
 #ifndef FLOGTIME
-#define FLOGTIME
-#include <time.h>
-#include <stdio.h>
+#	define FLOGTIME
+#	include <time.h>
+#	include <stdio.h>
 #endif
 
 /*******************************
@@ -242,3 +258,5 @@ inline void LOGINFO_CH_LVL(unsigned int _lvl)
 }
 
 // ##########################################################################################################################################
+
+#endif

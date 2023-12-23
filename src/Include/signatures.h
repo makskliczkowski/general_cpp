@@ -1,9 +1,19 @@
 #pragma once
+/***************************************
+* Defines signature pragmas and templates
+* APRIL 2023. UNDER CONSTANT DEVELOPMENT
+* MAKSYMILIAN KLICZKOWSKI, WUST, POLAND
+***************************************/
 
-#define RETURNS(...)		-> decltype((__VA_ARGS__))		{ return (__VA_ARGS__); }								// for quickly returning values
-#define DOES(...)											{ return (__VA_ARGS__); }																// for single line void functions
+#ifndef SIGNATURES_H
+#define SIGNATURES_H
 
 // ######################################################## C P P   V E R S I O N ########################################################
+#ifndef _PRAGMA_CPP
+#define _PRAGMA_CPP
+
+#define RETURNS(...)		-> decltype((__VA_ARGS__))		{ return (__VA_ARGS__); }								// for quickly returning values
+#define DOES(...)											{ return (__VA_ARGS__); }								// for single line void functions
 
 //! check compiler version, only C++17 or newer currently valid for this library
 //! older versions are not suppeortd
@@ -95,4 +105,7 @@
 #else 
 #define DESTRUCTOR_CALL 
 #define CONSTRUCTOR_CALL
+#endif
+
+#endif
 #endif

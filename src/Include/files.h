@@ -1,13 +1,15 @@
 #pragma once
-#include <ios>
-#include <iostream>
-#include <fstream>
-#include "time.h"
-
 /*******************************
 * Contains the possible methods
 * for handling files and print.
 *******************************/
+
+#ifndef FILES_H
+#define FILES_H
+#include <ios>
+#include <iostream>
+#include <fstream>
+#include "time.h"
 
 // ########################################################			    FILE AND STREAMS			########################################################
 
@@ -67,3 +69,4 @@ inline void printSeparated(std::ostream& output, char sep, uint16_t width, bool 
 	printSepP(output, sep, width, 8, elements...); if (endline) output << std::endl;
 }
 
+#endif

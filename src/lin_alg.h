@@ -547,7 +547,7 @@ namespace algebra
 
 namespace VEC
 {
-	// #######################################################
+	// ###################### T R A N S F O R M A T I O N ######################
 
 	/*
 	* @brief Transform vector of indices to full state in Fock real space basis.
@@ -579,7 +579,7 @@ namespace VEC
 		return _out;
 	}
 
-	// #######################################################
+	// ###################### F R O M   A R M A D I L L O ######################
 
 	/*
 	* @brief Transform container type to std::vector of the same subtype
@@ -596,6 +596,8 @@ namespace VEC
 		return t_;
 	}
 
+	// ###################### I N I T I A L I Z A T I O N ######################
+
 	/*
 	* @brief Creates a vector from a to (a + N - 1)
 	* @param N size of the vector
@@ -609,10 +611,10 @@ namespace VEC
 		return idxs;
 	}
 
-	// #######################################################
+	// ######################### M A T H E M A T I C S #########################
 	// Vector math
 
-	// ADD
+	// ---------- ADD ----------
 
 	template <class _T>
 	inline void addVec(std::vector<_T>& _res, const std::vector<_T>& _toAdd)
@@ -635,7 +637,7 @@ namespace VEC
 		return _out;
 	};
 
-	// SUBSTRACT
+	// ------- SUBSTRACT -------
 
 	template <class _T>
 	inline void subVec(std::vector<_T>& _res, const std::vector<_T>& _toAdd)
@@ -658,7 +660,7 @@ namespace VEC
 		return _out;
 	};
 
-	// MULTIPLY
+	// ------- MULTIPLY --------
 
 	template <class _T>
 	inline void mulVec(std::vector<_T>& _res, _T _const)
@@ -675,6 +677,33 @@ namespace VEC
 		for (auto i = 0; i < _res.size(); ++i)
 			_out[i] = _const * _res[i];
 		return _out;
+	};
+
+	// ############################# S O R T I N G #############################
+
+	template <class VectorIterator, typename Compare>
+	inline void bubbleSort(VectorIterator _b, VectorIterator _e, Compare compare, uint* _comparisons = nullptr)
+	{
+		auto _distance	= std::distance(_b, _e);
+		// return already
+		if (_distance <= 0)
+			return;
+
+		// access each element
+		for (auto i = 0; i < _distance; i++)
+		{
+			// compare elements
+			for (auto j = 0; j < _distance - i; j++)
+			{
+				if (compare(*(_b + i), (*(_b + j))))
+				{
+					if(_comparisons)
+						*_comparisons += 1;
+					// swap 'em
+					std::swap(*(_b + i), (*(_b + j)));
+				}
+			}
+		}
 	};
 };
 
