@@ -575,7 +575,7 @@ namespace VEC
 	{
 		sul::dynamic_bitset<> _out(_Ns);
 		for (auto& i : _state)
-			_out[i] = true;
+			_out[_Ns - i - 1] = true;
 		return _out;
 	}
 
