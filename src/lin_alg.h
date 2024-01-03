@@ -16,7 +16,7 @@
 using uint = unsigned int;
 // ############################################################## INCLUDE FROM ARMADILLO #############################################################
 
-#define ARMA_WARN_LEVEL 3
+#define ARMA_WARN_LEVEL 1
 #define ARMA_USE_LAPACK             
 #define ARMA_PRINT_EXCEPTIONS
 //#define ARMA_BLAS_LONG_LONG                                                                 // using long long inside LAPACK call

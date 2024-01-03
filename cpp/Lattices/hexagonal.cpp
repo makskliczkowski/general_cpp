@@ -6,21 +6,24 @@
 HexagonalLattice::HexagonalLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 	: Lx(Lx), Ly(Ly), Lz(Lz)
 {
-	this->dim = dim;
-	this->_BC = static_cast<BoundaryConditions>(_BC);
-	this->type = getSTR_BoundaryConditions(this->_BC);
+	this->dim	= dim;
+	this->_BC	= static_cast<BoundaryConditions>(_BC);
+	this->type_	=		LatticeTypes::HEX;
+	this->type	=		SSTR(getSTR_LatticeTypes(this->type_));
+
 	// fix sites depending on _BC
 	switch (this->dim)
 	{
 	case 1:
-		this->Ly = 1; this->Lz = 1;
-		this->nnForward = { 0 };
-		this->nnnForward = { 0 };
+		this->Ly = 1; 
+		this->Lz = 1;
+		this->nnForward	= { 0 };
+		this->nnnForward	= { 0 };
 		break;
 	case 2:
 		this->Lz = 1;
-		this->nnForward = { 0, 1, 2 };
-		this->nnnForward = { 0, 1, 2 };
+		this->nnForward	= { 0, 1, 2 };
+		this->nnnForward	= { 0, 1, 2 };
 		break;
 	default:
 		break;
