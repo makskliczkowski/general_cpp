@@ -91,7 +91,7 @@ inline std::ostream& operator<< (std::ostream& out, const v_1d<T>& v) {
 	{
 		for (int i = 0; i < v.size(); i++)
 			out << STRP(v[i], 10) << ",";
-		out << "\b\n"; 
+		out << "\b"; 
 		// use two ANSI backspace characters '\b' to overwrite final ", "
 	}
 	return out;

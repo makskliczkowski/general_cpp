@@ -44,10 +44,10 @@ using uint = unsigned int;
 #		include <concepts>
 #		include <type_traits>
 		template<typename _T>
-		concept HasMatrixType = std::is_base_of<arma::Mat<double>, _T>::value					|| 
-								std::is_base_of<arma::Mat<std::complex<double>>, _T>::value		||
-								std::is_base_of<arma::SpMat<double>, _T>::value					||
-								std::is_base_of<arma::SpMat<std::complex<double>>, _T>::value;
+		concept HasMatrixType = std::is_base_of<arma::Mat<double>, _T>::value						|| 
+										std::is_base_of<arma::Mat<std::complex<double>>, _T>::value		||
+										std::is_base_of<arma::SpMat<double>, _T>::value						||
+										std::is_base_of<arma::SpMat<std::complex<double>>, _T>::value;
 #	endif
 #else
 #	pragma message ("--> Skipping concepts")
@@ -57,24 +57,25 @@ using uint = unsigned int;
 // ############################################################# DEFINITIONS FROM ARMADILLO #############################################################
 
 #define DIAG(X)									arma::diagmat(X)
-#define EYE(X)									arma::eye(X,X)
-#define ZEROV(X)								arma::zeros(X)
-#define ZEROM(X)								arma::zeros(X,X)
+#define EYE(X)										arma::eye(X,X)
+#define ZEROV(X)									arma::zeros(X)
+#define ZEROM(X)									arma::zeros(X,X)
 #define SUBV(X, fst, lst)						X.subvec(fst, lst)
-#define SUBM(X, fstr, fstc, lstr, lstc)			X.submat(fstr, fstc, lstr, lstc)
+#define SUBM(X, fstr, fstc, lstr, lstc)	X.submat(fstr, fstc, lstr, lstc)
 #define UPDATEV(L, R, condition)				if (condition) (L += R); else (L -= R);
-using CCOL										= arma::Col<std::complex<double>>;
-using CMAT										= arma::Mat<std::complex<double>>;
-using DCOL										= arma::Col<double>;
-using DMAT										= arma::Mat<double>;
+using CCOL											= arma::Col<std::complex<double>>;
+using CMAT											= arma::Mat<std::complex<double>>;
+using DCOL											= arma::Col<double>;
+using DMAT											= arma::Mat<double>;
 template <typename _T>
-using COL										= arma::Col<_T>;
+using COL											= arma::Col<_T>;
 template <typename _T>
-using MAT										= arma::Mat<_T>;
+using MAT											= arma::Mat<_T>;
 
 
 namespace algebra 
 {
+
 	// ##################################################################################################################################################
 	// ##################################################################################################################################################
 	// ################################################################# G E N E R A L ##################################################################
@@ -84,41 +85,41 @@ namespace algebra
 	// ################################################################## CONJUGATE #####################################################################
 
 	template <typename _T>
-	inline auto conjugate(_T x)		-> _T		{ return std::conj(x); };
+	inline auto conjugate(_T x)		-> _T			{ return std::conj(x); };
 	template <>
 	inline auto conjugate(double x)	-> double	{ return x; };
 	template <>
-	inline auto conjugate(float x)	-> float	{ return x; };
+	inline auto conjugate(float x)	-> float		{ return x; };
 	template <>
-	inline auto conjugate(int x)	-> int		{ return x; };
+	inline auto conjugate(int x)		-> int		{ return x; };
 
 
 	// ###################################################################### REAL ######################################################################
 	
 	template <typename _T>
-	inline auto real(_T x)			-> double	{ return std::real(x); };
+	inline auto real(_T x)				-> double	{ return std::real(x); };
 	template <>
-	inline auto real(double x)		-> double	{ return x; };
+	inline auto real(double x)			-> double	{ return x; };
 
 	// ###################################################################### IMAG ######################################################################
 
 	template <typename _T>
-	inline auto imag(_T x)			-> double	{ return std::imag(x); };
+	inline auto imag(_T x)				-> double	{ return std::imag(x); };
 	template <>
-	inline auto imag(double x)		-> double	{ return 0.0; };
+	inline auto imag(double x)			-> double	{ return 0.0; };
 	
 	// ###################################################################### CAST #####################################################################
 
 	template <typename _T>
-	inline auto cast(std::complex<double> x)			-> _T		{ return x; };
+	inline auto cast(std::complex<double> x)				-> _T			{ return x; };
 	template <>
 	inline auto cast<double>(std::complex<double> x)	-> double	{ return std::real(x); };
 
-	// ##################################################################################################################################################
-	// ##################################################################################################################################################
-	// ############################################################# MATRIX MULTIPLICATION ##############################################################
-	// ##################################################################################################################################################
-	// ##################################################################################################################################################
+	// #################################################################################################################################################
+	// #################################################################################################################################################
+	// ############################################################# MATRIX MULTIPLICATION #############################################################
+	// #################################################################################################################################################
+	// #################################################################################################################################################
 
 	/*
 	* @brief Allows to calculate the matrix consisting of COL vector times ROW vector
@@ -183,13 +184,56 @@ namespace algebra
 			m2Set = SUBM(mSet, row, col, row + nrow - 1, col + ncol - 1);
 	}
 
-	// ##################################################################################################################################################
-	// ##################################################################################################################################################
-	// ############################################################# MATRIX DECOMPOSITIONS ##############################################################
-	// ##################################################################################################################################################
-	// ##################################################################################################################################################
+	// #################################################################################################################################################
+	// #################################################################################################################################################
+	// ############################################################### MATRIX PROPERTIES ###############################################################
+	// #################################################################################################################################################
+	// #################################################################################################################################################
+
+	/*
+	* @brief Calculate the Pfaffian of a skew square matrix A
+	* !TODO
+	*/
+	template <typename _T>
+	_T pfaffian(const arma::Mat<_T>& A, arma::u64 N)
+	{
+		if (N == 0)
+		{
+			return _T(1.0);
+		}
+		else if (N == 1)
+		{
+			return _T(0.0);
+		}
+		else
+		{
+			_T pfa = 0.0;
+			for (int i = 1; i < N; ++i)
+			{
+				arma::Mat<_T> Atmp = A;
+				// kill rows and columns
+				Atmp.shed_col(i);
+				Atmp.shed_row(i);
+				Atmp.shed_row(0);
+				// additional (from definition)
+				if (N > 2)
+					Atmp.shed_col(0);
+				// recursively calculate 
+				pfa += (((i+1) % 2) == 0 ? 1. : -1.) * A(0, i) * pfaffian(Atmp, N - 2);
+			}
+			return pfa;
+		}
+	}
+
+	// #################################################################################################################################################
+	// #################################################################################################################################################
+	// ############################################################# MATRIX DECOMPOSITIONS #############################################################
+	// #################################################################################################################################################
+	// #################################################################################################################################################
+
 	template<typename _T>
-	class UDT{
+	class UDT
+	{
 	public:
 		arma::Mat<_T> U;
 		arma::Col<_T> D;			// here we will put D vector - diagonal part of R
@@ -509,7 +553,7 @@ namespace algebra
 				for(int j = 0; j < d; j++)
 					matL(i,j) *= this->Ds(i) / right->Db(j);
 
-			// matR = 1/(D_max_a) * Ua^\dag * Ub * D_min_b
+			// matR = 1/(D_max_a) * Ua^\\dag * Ub * D_min_b
 			arma::Mat<_T> matR = this->U.t() * right->U;
 			for(int i = 0; i < d; i++)
 				for(int j = 0; j < d; j++)
@@ -547,6 +591,47 @@ namespace algebra
 
 namespace VEC
 {
+	// ######################### S T A T I S T I C A L #########################
+	
+	/*
+	* @brief Calculates the mean of the vector
+	* @param _v vector to calculate the mean of
+	* @returns mean from vector samples
+	*/
+	template<typename _T>
+	inline _T mean(const std::vector<_T>& _v)
+	{
+		if (_v.empty())
+			return 0;
+		return std::reduce(_v.begin(), _v.end()) / _v.size();
+	}
+
+	/*
+	* @brief Calculates the variance of the vector
+	* @param _v vector to calculate the variance of
+	* @returns variance from vector samples
+	*/
+	template<typename _T>
+	inline _T var(const std::vector<_T>& _v)
+	{
+		if (_v.empty())
+			return 0;
+		_T _mean		= VEC::mean(_v);
+		_T _sqSum	= std::inner_product(_v.begin(), _v.end(), _v.begin(), 0.0);
+		return _sqSum / _v.size() - _mean * _mean;
+	}
+
+	/*
+	* @brief Calculates the standard deviation of the vector
+	* @param _v vector to calculate the standard deviation of
+	* @returns standard deviation from vector samples
+	*/
+	template<typename _T>
+	inline _T std(const std::vector<_T>& _v)
+	{
+		return std::sqrt(VEC::var(_v));
+	}
+
 	// ###################### T R A N S F O R M A T I O N ######################
 
 	/*

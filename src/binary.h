@@ -175,7 +175,7 @@ inline void intToBaseSpin(_T1 idx, arma::Col<_T2>& vec, float _spin = 1.0) {
 
 template<typename _T1, typename _T2>
 inline void intToBaseSpin(_T1 idx, v_1d<_T2>& vec, float _spin = 1.0) {
-	const auto size = vec.n_elem;
+	const auto size = vec.size();
 	for (int k = 0; k < size; k++)
 		vec[k] = checkBit(idx, (size - 1) - k) ? _spin : -_spin;
 }

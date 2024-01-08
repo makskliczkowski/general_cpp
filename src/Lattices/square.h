@@ -11,13 +11,13 @@ class SquareLattice : public Lattice
 {
 private:
 	bool symmetry	= false;																								// if we shall include symmetry in saving greens
-	int Lx			= 1;																												// spatial x-length
-	int Ly			= 1;																												// spatial y-length
-	int Lz			= 1;																												// spatial z-length
+	int Lx			= 1;																									// spatial x-length
+	int Ly			= 1;																									// spatial y-length
+	int Lz			= 1;																									// spatial z-length
 
-	double a		= 1;
-	double b		= 1;
-	double c		= 1;
+	double a			= 1;
+	double b			= 1;
+	double c			= 1;
 
 
 public:
@@ -27,20 +27,20 @@ public:
 		LOGINFOG(this->get_info() + " is destroyed.", LOG_TYPES::INFO, 3);
 	}
 	SquareLattice() = default;
-	SquareLattice(int Lx, int Ly = 1, int Lz = 1, int dim = 1, int _BC = 0);											// general constructor
+	SquareLattice(int Lx, int Ly = 1, int Lz = 1, int dim = 1, int _BC = 0);							// general constructor
 
 	// GETTERS
-	arma::vec getRealVec(int x, int y, int z)				const override { return { a * x, b * y, c * z }; };
-	int get_Lx()											const override { return this->Lx; };
-	int get_Ly()											const override { return this->Ly; };
-	int get_Lz()											const override { return this->Lz; };
-	int getNorm(int x, int y, int z)						const override { return this->spatialNorm[x][y][z]; };
-	int get_nn(int lat_site, direction d)					const override;
+	arma::vec getRealVec(int x, int y, int z)					const override { return { a * x, b * y, c * z }; };
+	int get_Lx()														const override { return this->Lx; };
+	int get_Ly()														const override { return this->Ly; };
+	int get_Lz()														const override { return this->Lz; };
+	int getNorm(int x, int y, int z)								const override { return this->spatialNorm[x][y][z]; };
+	int get_nn(int lat_site, direction d)						const override;
 
 	// ----------------------- GETTERS NEI
 	v_1d<uint> get_nn_ForwardNum(int site, v_1d<uint> p)	const override { return this->nnForward; };
 	v_1d<uint> get_nnn_ForwardNum(int site, v_1d<uint> p)	const override { return this->nnnForward; };
-	uint get_nn_ForwardNum(int site, int num)				const override { return this->nnForward[num]; };
+	uint get_nn_ForwardNum(int site, int num)					const override { return this->nnForward[num]; };
 	uint get_nnn_ForwardNum(int site, int num)				const override { return this->nnnForward[num]; };
 
 	// ----------------------- CALCULATORS
