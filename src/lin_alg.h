@@ -83,7 +83,6 @@ namespace algebra
 	// ##################################################################################################################################################
 
 	// ################################################################## CONJUGATE #####################################################################
-
 	template <typename _T>
 	inline auto conjugate(_T x)		-> _T			{ return std::conj(x); };
 	template <>
@@ -93,16 +92,13 @@ namespace algebra
 	template <>
 	inline auto conjugate(int x)		-> int		{ return x; };
 
-
 	// ###################################################################### REAL ######################################################################
-	
 	template <typename _T>
 	inline auto real(_T x)				-> double	{ return std::real(x); };
 	template <>
 	inline auto real(double x)			-> double	{ return x; };
 
 	// ###################################################################### IMAG ######################################################################
-
 	template <typename _T>
 	inline auto imag(_T x)				-> double	{ return std::imag(x); };
 	template <>
@@ -111,9 +107,27 @@ namespace algebra
 	// ###################################################################### CAST #####################################################################
 
 	template <typename _T>
-	inline auto cast(std::complex<double> x)				-> _T			{ return x; };
+	inline auto cast(std::complex<double> x)										-> _T	{ return x; };
 	template <>
-	inline auto cast<double>(std::complex<double> x)	-> double	{ return std::real(x); };
+	inline auto cast<double>(std::complex<double> x)							-> double { return std::real(x); };
+	// Armadillo columns
+	template <typename _T>
+	inline auto cast(const arma::Col<double>& x)									-> arma::Col<_T> { return x; };
+	template <>
+	inline auto cast<std::complex<double>>(const arma::Col<double>& x)	-> arma::Col<std::complex<double>> { return x + std::complex<double>(0, 1) * arma::ones(x.n_rows); };
+	template <typename _T>
+	inline auto cast(const arma::Col<std::complex<double>>& x)				-> arma::Col<_T> { return x; };
+	template <>
+	inline auto cast<double>(const arma::Col<std::complex<double>>& x)	-> arma::Col<double> { return arma::real(x); };
+	// Armadillo matrices 
+	template <typename _T>
+	inline auto cast(const arma::Mat<double>& x)									-> arma::Mat<_T> { return x; };
+	template <>
+	inline auto cast<std::complex<double>>(const arma::Mat<double>& x)	-> arma::Mat<std::complex<double>> { return x + std::complex<double>(0, 1) * arma::ones(x.n_rows, x.n_cols); };
+	template <typename _T>
+	inline auto cast(const arma::Mat<std::complex<double>>& x)				-> arma::Mat<_T> { return x; };
+	template <>
+	inline auto cast<double>(const arma::Mat<std::complex<double>>& x)	-> arma::Mat<double> { return arma::real(x); };
 
 	// #################################################################################################################################################
 	// #################################################################################################################################################
@@ -589,6 +603,144 @@ namespace algebra
 // dynamic bitset
 #include "Dynamic/dynamic_bitset.hpp"
 
+// ######################################################## SAVER #######################################################
+
+template <typename _T>
+inline bool saveAlgebraic(const std::string& _path, const std::string& _file, const arma::Mat<_T>& _toSave, const std::string& _db = "weights")
+{
+#ifdef _DEBUG
+	LOGINFO(_path + _file, LOG_TYPES::INFO, 3);
+#endif
+	createDir(_path);
+	bool _isSaved	= false;
+#ifdef HAS_CXX20
+	if (_file.ends_with(".h5"))
+#else
+	if (endsWith(_file, ".h5"))
+#endif
+		_isSaved	= _toSave.save(arma::hdf5_name(_path + _file, _db));
+#ifdef HAS_CXX20
+	else if (_file.ends_with(".bin"))
+#else
+	else if (endsWith(_file, ".bin"))
+#endif
+		_isSaved	= _toSave.save(_path + _file);
+#ifdef HAS_CXX20
+	else if (_file.ends_with(".txt") || _file.ends_with(".dat"))
+#else
+	else if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
+#endif
+		_isSaved	= _toSave.save(_path + _file, arma::arma_ascii);
+	return _isSaved;
+}
+
+template <typename _T>
+inline bool saveAlgebraic(const std::string& _path, const std::string& _file, const arma::Col<_T>& _toSave, const std::string& _db = "weights")
+{
+#ifdef _DEBUG
+	LOGINFO(_path + _file, LOG_TYPES::INFO, 3);
+#endif
+	createDir(_path);
+	bool _isSaved	= false;
+#ifdef HAS_CXX20
+	if (_file.ends_with(".h5"))
+#else
+	if (endsWith(_file, ".h5"))
+#endif
+		_isSaved	= _toSave.save(arma::hdf5_name(_path + _file, _db));
+#ifdef HAS_CXX20
+	else if (_file.ends_with(".bin"))
+#else
+	else if (endsWith(_file, ".bin"))
+#endif
+		_isSaved	= _toSave.save(_path + _file);
+#ifdef HAS_CXX20
+	else if (_file.ends_with(".txt") || _file.ends_with(".dat"))
+#else
+	else if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
+#endif
+		_isSaved	= _toSave.save(_path + _file, arma::arma_ascii);
+	return _isSaved;
+}
+
+template <typename _T>
+inline bool loadAlgebraic(const std::string& _path, const std::string& _file, arma::Mat<_T>& _toSet, const std::string& _db = "weights")
+{
+#ifdef _DEBUG
+	LOGINFO(LOG_TYPES::INFO, _path + _file, 3);
+#endif
+	createDir(_path);
+	bool _isSaved = false;
+#ifdef HAS_CXX20
+	if (_file.ends_with(".h5"))
+#else
+	if (endsWith(_file, ".h5"))
+#endif
+	{
+		_toSet.load(arma::hdf5_name(_path + _file, _db));
+		return true;
+	}
+#ifdef HAS_CXX20
+	else if (_file.ends_with(".bin"))
+#else
+	else if (endsWith(_file, ".bin"))
+#endif
+	{
+		_toSet.load(_path + _file);
+		return true;
+	}
+#ifdef HAS_CXX20
+	else if (_file.ends_with(".txt") || _file.ends_with(".dat"))
+#else
+	else if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
+#endif
+	{
+		_toSet.load(_path + _file, arma::arma_ascii);
+		return true;
+	}
+	return _isSaved;
+}
+
+template <typename _T>
+inline bool loadAlgebraic(const std::string& _path, const std::string& _file, arma::Col<_T>& _toSet, const std::string& _db = "weights")
+{
+#ifdef _DEBUG
+	LOGINFO(_path + _file, LOG_TYPES::INFO, 3, '#');
+#endif
+	createDir(_path);
+	bool _isSaved = false;
+#ifdef HAS_CXX20
+	if (_file.ends_with(".h5"))
+#else
+	if (endsWith(_file, ".h5"))
+#endif
+	{
+		_toSet.load(arma::hdf5_name(_path + _file, _db));
+		return true;
+	}
+#ifdef HAS_CXX20
+	else if (_file.ends_with(".bin"))
+#else
+	else if (endsWith(_file, ".bin"))
+#endif
+	{
+		_toSet.load(_path + _file);
+		return true;
+	}
+#ifdef HAS_CXX20
+	else if (_file.ends_with(".txt") || _file.ends_with(".dat"))
+#else
+	else if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
+#endif
+	{
+		_toSet.load(_path + _file, arma::arma_ascii);
+		return true;
+	}
+	return _isSaved;
+}
+
+
+
 namespace VEC
 {
 	// ######################### S T A T I S T I C A L #########################
@@ -606,6 +758,17 @@ namespace VEC
 		return std::reduce(_v.begin(), _v.end()) / _v.size();
 	}
 
+	template<typename _T>
+	inline arma::Mat<_T> mean(const std::vector<arma::Mat<_T>>& _v)
+	{
+		if (_v.empty())
+			return arma::Mat<_T>(1, 1, arma::fill::zeros);
+		arma::Mat<_T> _out = arma::Mat<_T>(_v[0].n_rows, _v[1].n_cols, arma::fill::zeros);
+		for (uint i = 0; i < _v.size(); i++)
+			_out += _v[i];
+		return _out / _v.size();
+	}
+
 	/*
 	* @brief Calculates the variance of the vector
 	* @param _v vector to calculate the variance of
@@ -621,6 +784,18 @@ namespace VEC
 		return _sqSum / _v.size() - _mean * _mean;
 	}
 
+	template<typename _T>
+	inline arma::Mat<_T> var(const std::vector<arma::Mat<_T>>& _v)
+	{
+		if (_v.empty())
+			return arma::Mat<_T>(1, 1, arma::fill::zeros);
+		arma::Mat<_T> _out = arma::Mat<_T>(_v[0].n_rows, _v[1].n_cols, arma::fill::zeros);
+		arma::Mat<_T> _mean= VEC::mean<_T>(_v);
+		for (uint i = 0; i < _v.size(); i++)
+			_out += _v[i] * _v[i];
+		return _out / _v.size() - _mean * _mean;
+	}
+	
 	/*
 	* @brief Calculates the standard deviation of the vector
 	* @param _v vector to calculate the standard deviation of
@@ -630,6 +805,12 @@ namespace VEC
 	inline _T std(const std::vector<_T>& _v)
 	{
 		return std::sqrt(VEC::var(_v));
+	}
+
+	template<typename _T>
+	inline arma::Mat<_T> std(const std::vector<arma::Mat<_T>>& _v)
+	{
+		return arma::sqrt(VEC::var(_v));
 	}
 
 	// ###################### T R A N S F O R M A T I O N ######################

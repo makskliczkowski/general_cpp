@@ -34,13 +34,13 @@
 
 // --------------------------------------------------------				SUPPRESS WARNINGS				--------------------------------------------------------
 #if defined(_MSC_VER)
-#define DISABLE_WARNING_PUSH           __pragma(warning( push ))
-#define DISABLE_WARNING_POP            __pragma(warning( pop )) 
-#define DISABLE_WARNING(warningNumber) __pragma(warning( disable : warningNumber ))
+#define DISABLE_WARNING_PUSH								 __pragma(warning( push ))
+#define DISABLE_WARNING_POP									__pragma(warning( pop )) 
+#define DISABLE_WARNING(warningNumber)						__pragma(warning( disable : warningNumber ))
 
-#define DISABLE_OVERFLOW								 DISABLE_WARNING(26451)
-#define DISABLE_WARNING_UNREFERENCED_FORMAL_PARAMETER    DISABLE_WARNING(4100)
-#define DISABLE_WARNING_UNREFERENCED_FUNCTION            DISABLE_WARNING(4505)
+#define DISABLE_OVERFLOW									DISABLE_WARNING(26451)
+#define DISABLE_WARNING_UNREFERENCED_FORMAL_PARAMETER		DISABLE_WARNING(4100)
+#define DISABLE_WARNING_UNREFERENCED_FUNCTION				DISABLE_WARNING(4505)
 // other warnings you want to deactivate...
 
 #elif defined(__GNUC__) || defined(__clang__)
@@ -138,14 +138,14 @@ inline bool checkBit(_T n, int k, int base) {
 	return val;
 }
 
-template<typename _T1, typename _T2=_T1>
-inline bool checkBit(const v_1d<_T2>& n, uint L) {
-	return n[L];
+template<typename _T1>
+inline bool checkBit(const v_1d<_T1>& n, uint L) {
+	return n[L] > 0;
 }
 
-template<typename _T1, typename _T2 = _T1>
-inline bool checkBit(const arma::Col<_T2>& n, uint L) {
-	return n(L);
+template<typename _T1>
+inline bool checkBit(const arma::Col<_T1>& n, uint L) {
+	return n(L) > 0;
 }
 
 // ########################################################  				  transformations   				 ########################################################
@@ -479,6 +479,5 @@ template <typename _T>
 inline arma::Col<_T> reverseBitsV(const arma::Col<_T>& n, int L) {
 	return arma::reverse(n);
 }
-
 
 #endif

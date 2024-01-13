@@ -70,6 +70,7 @@ BEGIN_ENUM(LOG_TYPES)
 }
 END_ENUM(LOG_TYPES);
 #define LOG_INFO(TYP)								"[" + SSTR(getSTR_LOG_TYPES(TYP)) + "]"
+#define LOG_ERROR(MSG)								LOGINFO(MSG + " -- " + __func__, LOG_TYPES::ERROR, 0); throw std::runtime_error(MSG + " -- " + __func__)
 
 // --- create log file if necessary ---
 #ifdef LOG_FILE
@@ -176,10 +177,10 @@ inline void LOGINFOG(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl)
 * @param _desiredSize width of the log columns
 * @param fill filling the empty space with that character
 */
-inline void LOGINFO(LOG_TYPES _typ, 
-					const std::string& _msg,
+inline void LOGINFO(const std::string& _msg,
+					LOG_TYPES _typ,
 					unsigned int _desiredSize,
-					char fill			= '#',
+					char fill,
 					unsigned int _lvl	= 0)
 {
 	auto _tailLen	= _msg.size();
@@ -225,7 +226,7 @@ inline void LOGINFO(unsigned int _n)
 	std::string _out	=	"";
 	for (auto i = 0; i < _n; ++i)
 		_out			+=	"\n";
-	LOGINFO(LOG_TYPES::TRACE, _out, 0);
+	LOGINFO(_out, LOG_TYPES::TRACE, 0, '#');
 }
 
 // ##########################################################################################################################################
@@ -239,11 +240,11 @@ inline void LOGINFO(unsigned int _n)
 inline void LOGINFO(const clk::time_point& _t, const std::string& funName, unsigned int _lvl = 0)
 {
 	LOGINFO(1);
-	LOGINFO(LOG_TYPES::TRACE, "", 30, '%', std::max(int(_lvl) - 2, 0));
+	LOGINFO("", LOG_TYPES::TRACE, 30, '%', std::max(int(_lvl) - 2, 0));
 	LOGINFO("Function: " + funName + " took:",	LOG_TYPES::TIME, _lvl);
 	LOGINFO(STR(t_ms(_t)) + " ms",				LOG_TYPES::TIME, _lvl + 1);
 	LOGINFO(STR(t_s(_t)) +	" s",				LOG_TYPES::TIME, _lvl + 1);
-	LOGINFO(LOG_TYPES::TRACE, "", 30, '%', std::max(int(_lvl) - 2, 0));
+	LOGINFO("", LOG_TYPES::TRACE, 30, '%', std::max(int(_lvl) - 2, 0));
 	LOGINFO(1);
 }
 

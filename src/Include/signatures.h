@@ -42,8 +42,8 @@
 #endif
 
 // ######################################################## C A L L S ########################################################
-
 #if defined(_DEBUG)
+#	define FUN_SIGNATURE		__func__
 #	define DESTRUCTOR_CALL		std::cout << FUN_SIGNATURE << "->\t destructor called" << std::endl << std::endl;
 #	define CONSTRUCTOR_CALL		std::cout << FUN_SIGNATURE << "->\t constructor called" << std::endl << std::endl;
 #else 
