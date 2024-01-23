@@ -119,18 +119,17 @@ const v_1d<ull> BinaryPowers = { ULLPOW(0) , ULLPOW(1) , ULLPOW(2) , ULLPOW(3),
 * @param k Number of bit (from 0 to 63) - count from right!!!
 * @returns Bool on if the bit is set or not
 */
-template <typename _T>
-inline bool checkBit(_T n, int k) {
-	return _T(n & (_T(1) << k));
+inline bool checkBit(ull n, int k)
+{
+	return static_cast<bool>(n & (ull(1) << k));
 }
 
-template <typename _T>
-inline bool checkBit(_T n, int k, int base) {
+inline bool checkBit(ull n, int k, int base) {
 	if (base == 2)
 		return checkBit(n, k);
 	// iterate more than 1 bit to get the real number at that position
-	_T val = 0;
-	_T exp = 1;
+	ull val = 0;
+	ull exp = 1;
 	for (auto i = 0; i < base / 2; i++) {
 		val += checkBit(n, k + i) * exp;
 		exp *= 2;
@@ -144,7 +143,14 @@ inline bool checkBit(const v_1d<_T1>& n, uint L) {
 }
 
 template<typename _T1>
-inline bool checkBit(const arma::Col<_T1>& n, uint L) {
+inline bool checkBit(const arma::Col<_T1>& n, uint L) 
+{
+	return n(L) > 0;
+}
+
+template<typename _T1>
+inline bool checkBit(arma::Col<_T1>& n, uint L)
+{
 	return n(L) > 0;
 }
 
@@ -402,6 +408,8 @@ inline _T flip(_T n, int k) {
 	return checkBit(n, k) ? (_T(n) - (_T)BinaryPowers[k]) : (n + BinaryPowers[k]);
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+
 template<typename _T>
 inline v_1d<_T> flip(const v_1d<_T>& n, int k, float _spin = 1.0) {
 	auto tmp = n;
@@ -412,6 +420,8 @@ inline v_1d<_T> flip(const v_1d<_T>& n, int k, float _spin = 1.0) {
 #endif
 	return tmp;
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////
 
 template<typename _T>
 inline arma::Col<_T> flip(const arma::Col<_T>& n, int k, float _spin = 1.0) {
@@ -424,6 +434,8 @@ inline arma::Col<_T> flip(const arma::Col<_T>& n, int k, float _spin = 1.0) {
 	return tmp;
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////
+
 template<typename _T>
 inline void flip(v_1d<_T>& n, int k, int placeholer, float _spin = 1.0) {
 #ifdef SPIN
@@ -432,6 +444,8 @@ inline void flip(v_1d<_T>& n, int k, int placeholer, float _spin = 1.0) {
 	n[k] = (n[k] == _spin) ? 0 : _spin;
 #endif
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////
 
 template<typename _T>
 inline void flip(arma::Col<_T>& n, int k, int placeholer, float _spin = 1.0) {

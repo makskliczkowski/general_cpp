@@ -26,12 +26,13 @@ using uint = unsigned int;
 //#define ARMA_USE_ARPACK 
 #define ARMA_USE_MKL_ALLOC
 #define ARMA_USE_MKL_TYPES
-#define ARMA_DONT_USE_OPENMP
+//#define ARMA_DONT_USE_OPENMP
 #define ARMA_USE_HDF5
 ////#define ARMA_USE_OPENMP
 #define ARMA_ALLOW_FAKE_GCC
 #define ARMA_DONT_PRINT_CXX11_WARNING
 #define ARMA_DONT_PRINT_CXX03_WARNING
+#define ARMA_DONT_PRINT_FAST_MATH_WARNING
 #include <armadillo>
 
 #define DH5_USE_110_API
