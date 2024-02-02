@@ -302,8 +302,12 @@ public:
 #define PROGRESS_UPD(X, PBAR, TEXT)		BEGIN_CATCH_HANDLER{								\
 											if (X % PBAR.percentageSteps == 0)				\
 												PBAR.printWithTime(LOG_LVL1 + SSTR(TEXT));}	\
-										END_CATCH_HANDLER("Couldn't print progress: ", ;)										
-
+										END_CATCH_HANDLER("Couldn't print progress: ", ;)		
+#define PROGRESS_UPD_DO(X, PBAR, TXT, D)BEGIN_CATCH_HANDLER{								\
+											if (X % PBAR.percentageSteps == 0)				\
+												PBAR.printWithTime(LOG_LVL1 + SSTR(TXT));	\
+												D;										}	\
+										END_CATCH_HANDLER("Couldn't print progress: ", ;)		
 #define PROGRESS_UPD_Q(X, PBAR, TEXT, Q)if(Q){												\
 										BEGIN_CATCH_HANDLER{								\
 											if (X % PBAR.percentageSteps == 0)				\
