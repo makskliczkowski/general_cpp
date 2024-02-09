@@ -1,5 +1,4 @@
 #pragma once
-
 /*******************************
 * Contains the possible methods
 * for linear algebra usage.
@@ -12,9 +11,10 @@
 *******************************/
 
 #ifndef ALG_H
-	#define ALG_H
+#define ALG_H
+
 using uint = unsigned int;
-// ############################################################## INCLUDE FROM ARMADILLO #############################################################
+// ############################################## INCLUDE FROM ARMADILLO #############################################
 
 #define ARMA_WARN_LEVEL 1
 #define ARMA_USE_LAPACK             
@@ -46,33 +46,44 @@ using uint = unsigned int;
 #		include <type_traits>
 		template<typename _T>
 		concept HasMatrixType = std::is_base_of<arma::Mat<double>, _T>::value						|| 
-										std::is_base_of<arma::Mat<std::complex<double>>, _T>::value		||
-										std::is_base_of<arma::SpMat<double>, _T>::value						||
-										std::is_base_of<arma::SpMat<std::complex<double>>, _T>::value;
+								std::is_base_of<arma::Mat<std::complex<double>>, _T>::value			||
+								std::is_base_of<arma::SpMat<double>, _T>::value						||
+								std::is_base_of<arma::SpMat<std::complex<double>>, _T>::value;
 #	endif
 #else
 #	pragma message ("--> Skipping concepts")
 #endif
 
 
-// ############################################################# DEFINITIONS FROM ARMADILLO #############################################################
+// ############################################# DEFINITIONS FROM ARMADILLO #############################################
 
-#define DIAG(X)									arma::diagmat(X)
+#define DIAG(X)										arma::diagmat(X)
 #define EYE(X)										arma::eye(X,X)
 #define ZEROV(X)									arma::zeros(X)
 #define ZEROM(X)									arma::zeros(X,X)
-#define SUBV(X, fst, lst)						X.subvec(fst, lst)
-#define SUBM(X, fstr, fstc, lstr, lstc)	X.submat(fstr, fstc, lstr, lstc)
-#define UPDATEV(L, R, condition)				if (condition) (L += R); else (L -= R);
+#define SUBV(X, fst, lst)							X.subvec(fst, lst)
+#define SUBM(X, fstr, fstc, lstr, lstc)				X.submat(fstr, fstc, lstr, lstc)
+#define UPDATEV(L, R, condition)					if (condition) (L += R); else (L -= R);
+
+// types
+
 using CCOL											= arma::Col<std::complex<double>>;
 using CMAT											= arma::Mat<std::complex<double>>;
 using DCOL											= arma::Col<double>;
 using DMAT											= arma::Mat<double>;
+
+// template types
+
 template <typename _T>
 using COL											= arma::Col<_T>;
 template <typename _T>
 using MAT											= arma::Mat<_T>;
 
+// #######################################################################################################################
+// #######################################################################################################################
+// ##################################################### A L G E B R A ###################################################
+// #######################################################################################################################
+// #######################################################################################################################
 
 namespace algebra 
 {
@@ -85,50 +96,50 @@ namespace algebra
 
 	// ################################################################## CONJUGATE #####################################################################
 	template <typename _T>
-	inline auto conjugate(_T x)		-> _T			{ return std::conj(x); };
+	inline auto conjugate(_T x)														-> _T		{ return std::conj(x); };
 	template <>
-	inline auto conjugate(double x)	-> double	{ return x; };
+	inline auto conjugate(double x)													-> double	{ return x; };
 	template <>
-	inline auto conjugate(float x)	-> float		{ return x; };
+	inline auto conjugate(float x)													-> float	{ return x; };
 	template <>
-	inline auto conjugate(int x)		-> int		{ return x; };
+	inline auto conjugate(int x)													-> int		{ return x; };
 
-	// ###################################################################### REAL ######################################################################
 	template <typename _T>
-	inline auto real(_T x)				-> double	{ return std::real(x); };
+	inline auto real(_T x)															-> double	{ return std::real(x); };
 	template <>
-	inline auto real(double x)			-> double	{ return x; };
+	inline auto real(double x)														-> double	{ return x; };
 
-	// ###################################################################### IMAG ######################################################################
 	template <typename _T>
-	inline auto imag(_T x)				-> double	{ return std::imag(x); };
+	inline auto imag(_T x)															-> double	{ return std::imag(x); };
 	template <>
-	inline auto imag(double x)			-> double	{ return 0.0; };
+	inline auto imag(double x)														-> double	{ return 0.0; };
 	
 	// ###################################################################### CAST #####################################################################
 
 	template <typename _T>
-	inline auto cast(std::complex<double> x)										-> _T	{ return x; };
+	inline auto cast(std::complex<double> x)										-> _T								{ return x; };
 	template <>
-	inline auto cast<double>(std::complex<double> x)							-> double { return std::real(x); };
+	inline auto cast<double>(std::complex<double> x)								-> double							{ return std::real(x); };
+	
 	// Armadillo columns
 	template <typename _T>
-	inline auto cast(const arma::Col<double>& x)									-> arma::Col<_T> { return x; };
+	inline auto cast(const arma::Col<double>& x)									-> arma::Col<_T>					{ return x; };
 	template <>
-	inline auto cast<std::complex<double>>(const arma::Col<double>& x)	-> arma::Col<std::complex<double>> { return x + std::complex<double>(0, 1) * arma::ones(x.n_rows); };
+	inline auto cast<std::complex<double>>(const arma::Col<double>& x)				-> arma::Col<std::complex<double>>	{ return x + std::complex<double>(0, 1) * arma::ones(x.n_rows); };
 	template <typename _T>
-	inline auto cast(const arma::Col<std::complex<double>>& x)				-> arma::Col<_T> { return x; };
+	inline auto cast(const arma::Col<std::complex<double>>& x)						-> arma::Col<_T>					{ return x; };
 	template <>
-	inline auto cast<double>(const arma::Col<std::complex<double>>& x)	-> arma::Col<double> { return arma::real(x); };
+	inline auto cast<double>(const arma::Col<std::complex<double>>& x)				-> arma::Col<double>				{ return arma::real(x); };
+	
 	// Armadillo matrices 
 	template <typename _T>
-	inline auto cast(const arma::Mat<double>& x)									-> arma::Mat<_T> { return x; };
+	inline auto cast(const arma::Mat<double>& x)									-> arma::Mat<_T>					{ return x; };
 	template <>
-	inline auto cast<std::complex<double>>(const arma::Mat<double>& x)	-> arma::Mat<std::complex<double>> { return x + std::complex<double>(0, 1) * arma::ones(x.n_rows, x.n_cols); };
+	inline auto cast<std::complex<double>>(const arma::Mat<double>& x)				-> arma::Mat<std::complex<double>>	{ return x + std::complex<double>(0, 1) * arma::ones(x.n_rows, x.n_cols); };
 	template <typename _T>
-	inline auto cast(const arma::Mat<std::complex<double>>& x)				-> arma::Mat<_T> { return x; };
+	inline auto cast(const arma::Mat<std::complex<double>>& x)						-> arma::Mat<_T>					{ return x; };
 	template <>
-	inline auto cast<double>(const arma::Mat<std::complex<double>>& x)	-> arma::Mat<double> { return arma::real(x); };
+	inline auto cast<double>(const arma::Mat<std::complex<double>>& x)				-> arma::Mat<double>				{ return arma::real(x); };
 
 	// #################################################################################################################################################
 	// #################################################################################################################################################
@@ -602,9 +613,10 @@ namespace algebra
 };
 
 // dynamic bitset
-#include "Dynamic/dynamic_bitset.hpp"
+#include "Include/str.h"
+#include "Include/directories.h"
 
-// ######################################################## SAVER #######################################################
+// ###################################################### S A V E R ######################################################
 
 template <typename _T>
 inline bool saveAlgebraic(const std::string& _path, const std::string& _file, const arma::Mat<_T>& _toSave, const std::string& _db = "weights")
@@ -741,237 +753,5 @@ inline bool loadAlgebraic(const std::string& _path, const std::string& _file, ar
 }
 
 
-
-namespace VEC
-{
-	// ######################### S T A T I S T I C A L #########################
-	
-	/*
-	* @brief Calculates the mean of the vector
-	* @param _v vector to calculate the mean of
-	* @returns mean from vector samples
-	*/
-	template<typename _T>
-	inline _T mean(const std::vector<_T>& _v)
-	{
-		if (_v.empty())
-			return 0;
-		return std::reduce(_v.begin(), _v.end()) / _v.size();
-	}
-
-	template<typename _T>
-	inline arma::Mat<_T> mean(const std::vector<arma::Mat<_T>>& _v)
-	{
-		if (_v.empty())
-			return arma::Mat<_T>(1, 1, arma::fill::zeros);
-		arma::Mat<_T> _out = arma::Mat<_T>(_v[0].n_rows, _v[1].n_cols, arma::fill::zeros);
-		for (uint i = 0; i < _v.size(); i++)
-			_out += _v[i];
-		return _out / _v.size();
-	}
-
-	/*
-	* @brief Calculates the variance of the vector
-	* @param _v vector to calculate the variance of
-	* @returns variance from vector samples
-	*/
-	template<typename _T>
-	inline _T var(const std::vector<_T>& _v)
-	{
-		if (_v.empty())
-			return 0;
-		_T _mean		= VEC::mean(_v);
-		_T _sqSum	= std::inner_product(_v.begin(), _v.end(), _v.begin(), 0.0);
-		return _sqSum / _v.size() - _mean * _mean;
-	}
-
-	template<typename _T>
-	inline arma::Mat<_T> var(const std::vector<arma::Mat<_T>>& _v)
-	{
-		if (_v.empty())
-			return arma::Mat<_T>(1, 1, arma::fill::zeros);
-		arma::Mat<_T> _out = arma::Mat<_T>(_v[0].n_rows, _v[1].n_cols, arma::fill::zeros);
-		arma::Mat<_T> _mean= VEC::mean<_T>(_v);
-		for (uint i = 0; i < _v.size(); i++)
-			_out += _v[i] * _v[i];
-		return _out / _v.size() - _mean * _mean;
-	}
-	
-	/*
-	* @brief Calculates the standard deviation of the vector
-	* @param _v vector to calculate the standard deviation of
-	* @returns standard deviation from vector samples
-	*/
-	template<typename _T>
-	inline _T std(const std::vector<_T>& _v)
-	{
-		return std::sqrt(VEC::var(_v));
-	}
-
-	template<typename _T>
-	inline arma::Mat<_T> std(const std::vector<arma::Mat<_T>>& _v)
-	{
-		return arma::sqrt(VEC::var(_v));
-	}
-
-	// ###################### T R A N S F O R M A T I O N ######################
-
-	/*
-	* @brief Transform vector of indices to full state in Fock real space basis.
-	* @param _Ns number of lattice sites
-	* @param _state single particle orbital indices
-	* @returns an Armadillo vector in the Fock basis
-	*/
-	template<typename _T>
-	inline arma::Col<double> transformIdxToState(uint _Ns, const _T& _state)
-	{
-		arma::Col<double> _out(_Ns, arma::fill::zeros);
-		for (auto& i : _state)
-			_out(i) = 1;
-		return _out;
-	}
-
-	/*
-	* @brief Transform vector of indices to full state in Fock real space basis.
-	* @param _Ns number of lattice sites
-	* @param _state single particle orbital indices
-	* @returns an Armadillo vector in the Fock basis
-	*/
-	template<typename _T>
-	inline sul::dynamic_bitset<> transformIdxToBitset(uint _Ns, const _T& _state)
-	{
-		sul::dynamic_bitset<> _out(_Ns);
-		for (auto& i : _state)
-			_out[_Ns - i - 1] = true;
-		return _out;
-	}
-
-	// ###################### F R O M   A R M A D I L L O ######################
-
-	/*
-	* @brief Transform container type to std::vector of the same subtype
-	* @param _in container with a given type
-	* @returns std::vector of a given type
-	*/
-	template<template <class _Tin> class _T, class _Tin>
-	inline std::vector<_Tin> colToVec(const _T<_Tin>& _in)
-	{
-		std::vector<_Tin> t_(_in.size());
-		
-		for (auto it = 0; it < _in.size(); ++it)
-			t_[it] = _in[it];
-		return t_;
-	}
-
-	// ###################### I N I T I A L I Z A T I O N ######################
-
-	/*
-	* @brief Creates a vector from a to (a + N - 1)
-	* @param N size of the vector
-	* @param a starting point
-	*/
-	template<typename _T1, typename = typename std::enable_if<std::is_arithmetic<_T1>::value, _T1>::type>
-	inline std::vector<_T1> vecAtoB(_T1 N, _T1 a = 0)
-	{
-		std::vector<_T1> idxs(N);
-		std::iota(idxs.begin(), idxs.end(), a);
-		return idxs;
-	}
-
-	// ######################### M A T H E M A T I C S #########################
-	// Vector math
-
-	// ---------- ADD ----------
-
-	template <class _T>
-	inline void addVec(std::vector<_T>& _res, const std::vector<_T>& _toAdd)
-	{
-		if (_res.size() != _toAdd.size())
-			throw std::runtime_error("Size of vectors mismatch...");
-		for (auto i = 0; i < _res.size(); ++i)
-			_res[i] += _toAdd[i];
-	};
-
-	template <class _T>
-	inline std::vector<_T> addVecR(const std::vector<_T>& _res, const std::vector<_T>& _toAdd)
-	{
-		std::vector<_T> _out;
-		if (_res.size() != _toAdd.size())
-			throw std::runtime_error("Size of vectors mismatch...");
-		_out.resize(_res.size());
-		for (auto i = 0; i < _res.size(); ++i)
-			_out[i] = _toAdd[i] + _res[i];
-		return _out;
-	};
-
-	// ------- SUBSTRACT -------
-
-	template <class _T>
-	inline void subVec(std::vector<_T>& _res, const std::vector<_T>& _toAdd)
-	{
-		if (_res.size() != _toAdd.size())
-			throw std::runtime_error("Size of vectors mismatch...");
-		for (auto i = 0; i < _res.size(); ++i)
-			_res[i] -= _toAdd[i];
-	};
-
-	template <class _T>
-	inline std::vector<_T> subVecR(const std::vector<_T>& _res, const std::vector<_T>& _toAdd)
-	{
-		std::vector<_T> _out;
-		if (_res.size() != _toAdd.size())
-			throw std::runtime_error("Size of vectors mismatch...");
-		_out.resize(_res.size());
-		for (auto i = 0; i < _res.size(); ++i)
-			_out[i] = _res[i] - _toAdd[i];
-		return _out;
-	};
-
-	// ------- MULTIPLY --------
-
-	template <class _T>
-	inline void mulVec(std::vector<_T>& _res, _T _const)
-	{
-		for (auto i = 0; i < _res.size(); ++i)
-			_res[i] *= _const;
-	};
-
-	template <class _T>
-	inline std::vector<_T> mulVecR(const std::vector<_T>& _res, _T _const)
-	{
-		std::vector<_T> _out;
-		_out.resize(_res.size());
-		for (auto i = 0; i < _res.size(); ++i)
-			_out[i] = _const * _res[i];
-		return _out;
-	};
-
-	// ############################# S O R T I N G #############################
-
-	template <class VectorIterator, typename Compare>
-	inline void bubbleSort(VectorIterator _b, VectorIterator _e, Compare compare, uint* _comparisons = nullptr)
-	{
-		auto _distance	= std::distance(_b, _e);
-		// return already
-		if (_distance <= 0)
-			return;
-
-		// access each element
-		for (auto i = 0; i < _distance; i++)
-		{
-			// compare elements
-			for (auto j = 0; j < _distance - i; j++)
-			{
-				if (compare(*(_b + i), (*(_b + j))))
-				{
-					if(_comparisons)
-						*_comparisons += 1;
-					// swap 'em
-					std::swap(*(_b + i), (*(_b + j)));
-				}
-			}
-		}
-	};
-};
 
 #endif

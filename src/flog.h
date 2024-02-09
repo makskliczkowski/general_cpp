@@ -70,7 +70,7 @@ BEGIN_ENUM(LOG_TYPES)
 }
 END_ENUM(LOG_TYPES);
 #define LOG_INFO(TYP)								"[" + SSTR(getSTR_LOG_TYPES(TYP)) + "]"
-#define LOG_ERROR(MSG)								LOGINFO(MSG + " -- " + __func__, LOG_TYPES::ERROR, 0); throw std::runtime_error(MSG + " -- " + __func__)
+#define LOG_ERROR(MSG)								LOGINFO(MSG + " -- " + std::string(__func__), LOG_TYPES::ERROR, 0); throw std::runtime_error(MSG + " -- " + std::string(__func__))
 
 // --- create log file if necessary ---
 #ifdef LOG_FILE
