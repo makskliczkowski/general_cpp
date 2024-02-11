@@ -302,7 +302,7 @@ inline std::vector<arma::Col<_T>> randomGen::createRanState(uint _gamma, uint _r
 	// go through gammas
 	for (int j = 0; j < _realizations; ++j)
 		if (_gamma > 1)
-			_HM.push_back(createRanState<cpx>(_gamma));
+			_HM.push_back(createRanState<_T>(_gamma));
 		else
 			_HM.push_back({ 1.0 });
 	return _HM;
