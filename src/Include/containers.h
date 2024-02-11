@@ -192,6 +192,26 @@ namespace Vectors
 		return _freq;
 	}
 
+	template<uint _Trunc, typename _T, typename _B = std::allocator<_T>>
+	inline std::unordered_map<_T, size_t> freq(const std::vector<_T, _B>& _container, uint _cut = 0)
+	{
+		std::unordered_map<_T, size_t> _freq;
+		// go through elements
+		for (auto& _elem : _container)
+			++_freq[Math::trunc<_T, _Trunc>(_elem)];
+
+		// check if we cut something
+		if (_cut > 0)
+		{
+			std::erase_if(_freq, [&](const auto& elem)
+				{
+					auto const& [key, val] = elem;
+					return val <= _cut;
+				});
+		}
+		return _freq;
+	}
+
 	// -------------------------------------------------------------------------
 
 	/*
@@ -206,8 +226,8 @@ namespace Vectors
 		std::vector<std::vector<_T, _A>> _combinations;
 		// get size of the iterable
 		size_t N = _iterable.size();
-		std::vector<bool> bitmask(_num, false);		// Initialize bitmask 
-		bitmask.resize(N, 0);			// N-K trailing 0's
+		std::vector<bool> bitmask(_num, true);		// Initialize bitmask 
+		bitmask.resize(N, 0);						// N-K trailing 0's
 
 		// Helper function to generate combinations
 		auto generateCombination = [&]() 

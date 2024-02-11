@@ -46,8 +46,8 @@ using ld						=					long double;
 constexpr long double PI		=					3.141592653589793238462643383279502884L;			// it is me, pi
 constexpr long double TWOPI		=					2.0L * PI;											// it is me, 2pi
 constexpr long double PIHALF	=					PI / 2.0L;											// it is me, half a pi
-constexpr double LOG_TWO		=					0.30102999566398119521373889472449;
-constexpr double LOG_HALF		=					-LOG_TWO;
+constexpr long double LOG_TWO	=					0.69314718055994530941723212145818L;
+constexpr long double LOG_HALF	=					-LOG_TWO;
 constexpr cpx I					=					cpx(0, 1);											// imaginary unit
 const auto global_seed			=					std::random_device{}();								// global seed for classes
 

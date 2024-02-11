@@ -95,7 +95,7 @@ inline _T variance(_T _av2, _T _av, int _norm)
 
 // ###############################################################################
 
-namespace MATH
+namespace Math
 {
 
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -119,6 +119,16 @@ namespace MATH
 
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+	/*
+	* @brief Truncates a number at the given precision in base 10
+	* @param _val value to be truncated
+	* @returns truncated value
+	*/
+	template <typename _T, uint _P>
+	inline _T trunc(_T _val)
+	{
+		return std::round(_val * (_P + 1)) / (_P + 1);
+	}
 }
 
 #endif
