@@ -9,7 +9,7 @@
 
 #include "../Dynamic/dynamic_bitset.hpp"
 #include "../lin_alg.h"
-#include "../math.h"
+#include "maths.h"
 
 // #################################################### G E N E R A L ####################################################
 
