@@ -46,9 +46,9 @@ public:
 
 	// -----------------------------------------------------------------------
 
-	auto newSeed(std::uint64_t seed)			-> void					{ this->engine = XoshiroCpp::Xoshiro256PlusPlus(randomGen::seedInit(seed)); };
-	auto seed()									const -> std::uint64_t	{ return this->seed_; }
-
+	auto newSeed(std::uint64_t seed)			-> void									{ this->engine = XoshiroCpp::Xoshiro256PlusPlus(randomGen::seedInit(seed)); };
+	auto seed()									const -> std::uint64_t					{ return this->seed_; }
+	auto eng()								const -> XoshiroCpp::Xoshiro256PlusPlus		{ return this->engine; }
 	// --------------------- WRAPPERS ON RANDOM FUNCTIONS ---------------------
 
 	template <typename _T, typename _T2 = _T>
