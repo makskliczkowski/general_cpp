@@ -333,7 +333,7 @@ namespace algebra
 		{
 			// First, find the largest entry in A[k + 1:, k] and
 			// permute it to A[k + 1, k]
-			u64 kp = k + 1 + arma::abs(A.col(k).subvec(k + 1, N - 1)).index_max();
+			auto kp = k + 1 + arma::abs(A.col(k).subvec(k + 1, N - 1)).index_max();
 
 			// Check if we need to pivot
 			if (kp != k + 1)
@@ -403,7 +403,7 @@ namespace algebra
 		case PfaffianAlgorithms::ParlettReid:
 			return pfaffian_p<_T>(A, N);
 		case PfaffianAlgorithms::Householder:
-			LOGINFO("Householder Pfaffian algorithm not implemented yet.", LOG_TYPES::ERROR, 2);
+			//LOGINFO("Householder Pfaffian algorithm not implemented yet.", LOG_TYPES::ERROR, 2);
 			return 0;
 		case PfaffianAlgorithms::Schur:
 			return pfaffian_s<_T>(A, N);
