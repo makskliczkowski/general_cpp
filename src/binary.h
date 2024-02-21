@@ -109,6 +109,170 @@ const v_1d<ull> BinaryPowers = { ULLPOW(0) , ULLPOW(1) , ULLPOW(2) , ULLPOW(3),
 								 ULLPOW(28), ULLPOW(29), ULLPOW(30), ULLPOW(31),
 								 ULLPOW(32), ULLPOW(33), ULLPOW(34), ULLPOW(35),
 								 ULLPOW(36), ULLPOW(37), ULLPOW(38), ULLPOW(39)};
+
+namespace Binary
+{
+	// ###################################### CHECK BIT ######################################
+
+	template<typename _T>
+	typename std::enable_if<!std::is_arithmetic<_T>::value, bool>::type
+	check(const _T& n, const int k)	{ return n[L] > 0; };
+	
+	template<typename _T>
+	typename std::enable_if<std::is_arithmetic<_T>::value, bool>::type
+	check(const _T& n, const int k)	{ return static_cast<bool>(n & (_T(1) << k)); };
+
+	// ##################################### INT TO BASE #####################################
+
+	template<typename _T, class _VectorType, bool _customSpin = true>
+	typename std::enable_if<std::is_arithmetic<_T>::value, void>::type
+	int2base(const _T& n, _VectorType& _vec, double _spin = 1.0)
+	{
+		auto _size = _vec.size();
+		for (int k = 0; k < _size; ++k)
+			_vec[k] = Binary::check(n, (_size - 1) - k) ? _spin : -_spin;
+	}
+
+	template<typename _T, class _VectorType>
+	typename std::enable_if<std::is_arithmetic<_T>::value, void>::type
+	int2base(const _T& n, _VectorType& _vec)
+	{
+		auto _size = _vec.size();
+		for (int k = 0; k < _size; ++k)
+			_vec[k] = Binary::check(n, (_size - 1) - k);
+	}
+
+	// ##################################### BASE TO INT #####################################
+
+	template<typename _T, class _VectorType, bool _customSpin = true>
+	typename std::enable_if<std::is_arithmetic<_T>::value, _T>::type
+	base2int(_VectorType& _vec, double _spin = 1.0)
+	{
+		auto _size	=	_vec.size();
+		_T val		=	0;
+		for (int k = 0; k < _size; ++k)
+			val += static_cast<_T1>((vec[size - 1 - k] / _spin + 1.0) / 2.0) * BinaryPowers[k];
+		return val;
+	}
+
+	template<typename _T, class _VectorType>
+	typename std::enable_if<std::is_arithmetic<_T>::value, _T>::type
+	base2int(_VectorType& _vec, double _spin)
+	{
+		auto _size	=	_vec.size();
+		_T val		=	0;
+		for (int k = 0; k < _size; ++k)
+			val		+=	static_cast<_T>(_vec[_size - 1 - k]) * BinaryPowers[k];
+		return val;
+	}
+
+	// ##################################### FLIP ALL #####################################
+
+	template<typename _T>
+	typename std::enable_if<std::is_arithmetic<_T>::value, bool>::type
+	flipAll(const _T& n, const size_t L) { return BinaryPowers[L] - n - 1; };
+
+	// ##################################### ROTATE LEFT #####################################
+
+
+
+	// ##################################### FLIP SINGLE BIT #####################################
+
+	// ################################## REVERSE ALL BITS ###################################
+
+	/*
+	* @brief Function that calculates the bit reverse, note that 64 bit representation
+	* is now taken and one has to be sure that it doesn't exceede it (which it doesn't, we sure)
+	* @param L We need to know how many bits does the number really take because the function can take up to 64
+	* @returns number with reversed bits moved to be maximally of size L again
+	*/
+	template <typename _T = u64>
+	typename std::enable_if<std::is_arithmetic<_T>::value, _T>::type
+	rev(const _T& n, size_t L) 
+	{
+		_T _rev = (lookup[n & 0xffULL] << 56)	|				// consider the first 8 bits
+			(lookup[(n >> 8) & 0xffULL] << 48)	|				// consider the next 8 bits
+			(lookup[(n >> 16) & 0xffULL] << 40) |				// consider the next 8 bits
+			(lookup[(n >> 24) & 0xffULL] << 32) |				// consider the next 8 bits
+			(lookup[(n >> 32) & 0xffULL] << 24) |				// consider the next 8 bits
+			(lookup[(n >> 40) & 0xffULL] << 16) |				// consider the next 8 bits
+			(lookup[(n >> 48) & 0xffULL] << 8)	|				// consider the next 8 bits
+			(lookup[(n >> 54) & 0xffULL]);						// consider last 8 bits
+		return (_rev >> (64 - L));								// get back to the original maximal number
+	}
+
+	// #################################### EXTRACT BITS #####################################
+
+	/*
+	* @brief Extracts the leftmost _sizeL bits from the number n according to the mask. Then it creates an integer out of it.
+	*/
+	template<size_t _size, typename _T, bool _left = true>
+	typename std::enable_if<std::is_arithmetic<_T>::value, _T>::type
+	extract_ord(const _T& n, const _T& _sizeL)
+	{
+		return n >> (_size - _sizeL);
+	}
+
+	template<size_t _size, typename _T>
+	typename std::enable_if<std::is_arithmetic<_T>::value, _T>::type
+	extract_ord(const _T& n, const _T& _sizeR)
+	{
+		return n & (BinaryPowers[_sizeR] - 1);
+	}
+
+	/*
+	* @brief Extracts the bits from the number n according to the mask. Then it creates an integer out of it.
+	*/
+	template<typename _T>
+	typename std::enable_if<std::is_arithmetic<_T>::value, _T>::type
+	extract(const _T& n, const u64& _mask)
+	{
+		_T _res			= 0;
+		uint _pos_mask	= 0;
+		uint _pos_res	= 0;
+
+		// go through mask elements
+		while (_mask)
+		{
+			// extract the least significant bit
+			if (_mask & 1)
+			{
+				_res		|= ((n >> _pos_mask) & 1) << _pos_res;
+				_pos_res	+= 1;
+			}
+			_mask		>>= 1;
+			_pos_mask	+=	1;
+		}
+		return _res;
+	}
+
+	/*
+	* @brief Prepare the mask for the extraction of bits
+	* @param _vec Vector of bit positions to extract. Positions are counted from 0 to maximal value (should be 63). 
+	* Indices are count from 0. 
+	* @returns The mask for the extraction
+	*/
+	template<typename _T, class _VectorType, bool _Inv = false>
+	typename std::enable_if<std::is_arithmetic<_T>::value, _T>::type
+	prepareMask(_VectorType& _vec, size_t _size)
+	{
+		_T _mask = 0;
+		for (const auto& _pos : _vec)
+			_mask |= 1 << (_size - 1 - _pos);
+		return _mask;
+	}
+
+	template<typename _T, class _VectorType>
+	typename std::enable_if<std::is_arithmetic<_T>::value, _T>::type
+	prepareMask(_VectorType& _vec, size_t _size)
+	{
+		return Binary::flipAll(prepareMask<_T, _VectorType, false>(_vec, _size), _size);
+	}
+
+};
+
+
+
 // ########################################################				 binary search				 ########################################################
 
 // ---------------------------------- check bit ----------------------------------

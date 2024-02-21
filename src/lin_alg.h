@@ -26,7 +26,7 @@ using uint = unsigned int;
 //#define ARMA_USE_ARPACK 
 #define ARMA_USE_MKL_ALLOC
 #define ARMA_USE_MKL_TYPES
-//#define ARMA_DONT_USE_OPENMP
+#define ARMA_DONT_USE_OPENMP
 #define ARMA_USE_HDF5
 ////#define ARMA_USE_OPENMP
 #define ARMA_ALLOW_FAKE_GCC
@@ -325,7 +325,7 @@ namespace algebra
 #endif
 		// quick return if possible
 		if (N % 2 == 1)
-			return 0;
+			return 0; 
 		// work on a copy of A
 
 		_T pfaffian = 1.0;
@@ -395,9 +395,9 @@ namespace algebra
 	template <typename _T>
 	_T pfaffian(const arma::Mat<_T>& A, arma::u64 N, PfaffianAlgorithms _alg = PfaffianAlgorithms::ParlettReid)
 	{
-#ifdef _DEBUG
-		A.save(arma::hdf5_name("A.h5"));
-#endif
+//#ifdef _DEBUG
+//		A.save(arma::hdf5_name("A.h5"));
+//#endif
 		switch (_alg)
 		{
 		case PfaffianAlgorithms::ParlettReid:
