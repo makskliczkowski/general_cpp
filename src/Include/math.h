@@ -2,8 +2,6 @@
 #include <cmath>
 #include <complex>
 // matrix base class concepts
-#include <concepts>
-#include <type_traits>
 
 #ifdef __has_include
 #	if __has_include(<concepts>)
