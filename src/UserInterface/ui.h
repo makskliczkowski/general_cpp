@@ -42,7 +42,7 @@
 #define UI_OTHER_MAP(p, v, f)					{ #p					, std::make_tuple(STRP(v, 2), f)						}
 #define UI_VECTOR_SEPARATOR						';'
 #define UI_VECTOR_RANDOM						'r'
-#define UI_RANDOM_SEED							420	// if set to zero, completely random is created, otherwise integer seed is used
+#define UI_RANDOM_SEED							0	// if set to zero, completely random is created, otherwise integer seed is used
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 // -------------------------------------------------------- Make a User interface class --------------------------------------------------------

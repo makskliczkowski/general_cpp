@@ -1,9 +1,11 @@
 #pragma once
-
 /*******************************
 * Contains the possible methods
 * for directories creation etc.
 *******************************/
+
+#ifndef DIRECTORIES_H
+#define DIRECTORIES_H
 
 // --- FILESYSTEM : DIRECTORY CREATION ---
 #ifdef __has_include
@@ -103,3 +105,5 @@ std::string makeDirsC(const _Ty&... folders)
 	createDir(_folder);
 	return _folder;
 }
+
+#endif

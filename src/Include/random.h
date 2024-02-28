@@ -6,13 +6,13 @@
 #include <random>
 #include <ctime>
 #include <numeric>
-// #include <ranges>
+#include <type_traits>
 
 // --- RANGES ---
 #ifdef __has_include
 #	if __has_include(<ranges>)
 #		include <ranges>
-#   	define have_ranges 1
+#   	define HAS_RANGES 1
 namespace rng = std::ranges;
 #	elif __has_include(<experimental/ranges>)
 #		include <experimental/ranges>
@@ -20,9 +20,10 @@ namespace rng = std::ranges;
 #    	define experimental_ranges
 namespace rng = std::experimental::ranges;
 #	else
-#		define have_ranges 0
+#		define HAS_RANGES 0
 #	endif
 #endif
+
 
 // -------------------------------------------------------- RANDOM NUMBER CLASS --------------------------------------------------------
 
@@ -30,116 +31,226 @@ namespace rng = std::experimental::ranges;
 * @brief Random number generator class based on Xorshiro256
 * @link 
 */
-class randomGen {
+class randomGen 
+{
 private:
 	XoshiroCpp::Xoshiro256PlusPlus engine;
 	std::uint64_t seed_ = 0;
 public:
-	explicit randomGen(std::uint64_t seed = std::random_device{}()) 
-	{
-		this->newSeed(seed);
-		this->seed_ = seed;
-		srand((unsigned int)seed);
-	}
+
+	explicit randomGen(std::uint64_t seed = std::random_device{}());
 
 	// #################### S E E D   I N I T I A L I Z E R ##################
 
-	/*
-	* @brief Creates random seed based on 64bit unsigned integer
-	* @parma n 64bit unsigned integer
-	* @returns new seed for Xavier256 initializer
-	*/
-	static auto seedInit(uint64_t n)		->uint64_t
-	{
-		uint64_t z = (n += 0x9e3779b97f4a7c15);
-		z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9;
-		z = (z ^ (z >> 27)) * 0x94d049bb133111eb;
-		return z ^ (z >> 31);
-	}
+	static auto seedInit(uint64_t n) -> uint64_t;
 
-	/*
-	* @brief initialize seed
-	*/
-	auto newSeed(std::uint64_t seed)		-> void				{ this->engine = XoshiroCpp::Xoshiro256PlusPlus(randomGen::seedInit(seed)); };
-	auto seed()								-> std::uint64_t	{ return this->seed_; }
+	// -----------------------------------------------------------------------
 
-
+	auto newSeed(std::uint64_t seed)			-> void									{ this->engine = XoshiroCpp::Xoshiro256PlusPlus(randomGen::seedInit(seed)); };
+	auto seed()									const -> std::uint64_t					{ return this->seed_; }
+	auto eng()								const -> XoshiroCpp::Xoshiro256PlusPlus		{ return this->engine; }
 	// --------------------- WRAPPERS ON RANDOM FUNCTIONS ---------------------
 
-	/*
-	* @brief Creates a Xavier random variable
-	* @link https://365datascience.com/tutorials/machine-learning-tutorials/what-is-xavier-initialization/
-	*/
-	template <typename T>
-	auto xavier(T in, T out, float xav = 6) -> T				{ return std::uniform_real_distribution<T>(-1., +1.)(engine) * std::sqrt(xav / (in + out)); };
+	template <typename _T, typename _T2 = _T>
+	auto random(_T _min = 0, _T2 _max = 1)		-> typename std::common_type<_T, _T2>::type;
+
+	template <typename _T, typename _T2 = _T>
+	auto randomInt(_T _min, _T2 _max)			-> typename std::common_type<_T, _T2>::type;
+
+	template<typename _T, typename _T2 = _T>
+	auto randomNormal(_T _m = 0, _T2 _s = 1)	-> typename std::common_type<_T, _T2>::type;
 
 	template <typename T>
-	auto kaiming(T in)						-> T				{ return std::uniform_real_distribution<T>(-1., +1.)(engine) * std::sqrt(6.0 / in); };
+	auto xavier(T in, T out, float xav = 6)		-> T;
 
-	// #################### U N I F O R M ####################
-
-	/*
-	* @brief random real uniform distribution : _min <= x < _max
-	* @param _min smallest value
-	* @param _max highest value
-	*/
 	template <typename T>
-	auto random(T _min = 0, T _max = 1)		-> T				{ return std::uniform_real_distribution<T>(_min, _max)(engine); };
+	auto kaiming(T in) -> T;
 
-	/*
-	* @brief random integer from range _min <= x < _max
-	*/
 	template <typename T>
-	auto randomInt(T _min, T _max)			-> T				{ return static_cast<long long>(_min + static_cast<T>((_max - _min) * this->random<double>())); };
-
-	// #################### N O R M A L ####################
-
-	/*
-	* @brief random normal distribution
-	*/
-	template <typename T>
-	auto randomNormal(T _m = 0, T _s = 1)	-> T				{ return std::normal_distribution(_m, _s)(engine); };
-
-	/*
-	* @brief Bernoulli distributed random variable
-	* @param p probability in the Bernoulli distribution
-	*/
-	template <typename T>
-	auto bernoulli(T p)						-> T				{ return std::bernoulli_distribution(p)(engine); };
+	auto bernoulli(T p) -> T;
 
 	// #################### O T H E R   T Y P E S ####################
 
 	template <class _T>
 	std::vector<_T> createRanVecStd(int _size, double _strength, _T _around = 0.0);
+
 	template <class _T>
 	COL<_T> createRanVec(int _size, double _strength, _T _around = 0.0);
 
-	CCOL createRanState(uint _gamma);
-	std::vector<CCOL> createRanState(uint _gamma, uint _realizations);
+	template<typename _T>
+	arma::Col<_T> createRanState(uint _gamma);
+
+	template<typename _T>
+	std::vector<arma::Col<_T>> createRanState(uint _gamma, uint _realizations);
 
 	// ####################### M A T R I C E S #######################
+
 	DMAT GOE(uint _x, uint _y) const;
 	CMAT CUE(uint _x, uint _y) const;
 
 	// ####################### E L E M E N T S #######################
-	template<typename _T>
-	std::vector<_T> choice(const std::vector<_T>& _iterable, size_t _num);
+
+	template<typename _T, typename _A = std::allocator<_T>>
+	std::vector<_T, _A> choice(const std::vector<_T, _A>& _iterable, size_t _num);
+
+	template<class _T>
+	_T choice(_T begin, _T end, size_t _num);
 
 };
 
+// ######################################################################################################################
+
+inline randomGen::randomGen(std::uint64_t seed)
+{
+	this->newSeed(seed);
+	this->seed_ = seed;
+	srand((unsigned int)seed);
+}
+
+// ----------------------------------------------------------------------------------------------------------------------
+
+/*
+* @brief Creates random seed based on 64bit unsigned integer
+* @parma n 64bit unsigned integer
+* @returns new seed for Xavier256 initializer
+*/
+inline uint64_t randomGen::seedInit(uint64_t n)
+{
+	uint64_t z	= (n += 0x9e3779b97f4a7c15);
+	z			= (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9;
+	z			= (z ^ (z >> 27)) * 0x94d049bb133111eb;
+	return z ^ (z >> 31);
+}
+
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+/*
+* @brief Creates a uniform random variable
+* @param _min minimum value
+* @param _max maximum value
+* @returns a uniform random variable
+*/
+template <typename _T, typename _T2>
+inline typename std::common_type<_T, _T2>::type randomGen::random(_T _min, _T2 _max)
+{
+	using result_type = typename std::common_type<_T, _T2>::type;
+	return std::uniform_real_distribution<result_type>(_min, _max)(this->engine);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+/*
+* @brief Creates a normal random variable
+* @param _m mean
+* @param _s standard deviation
+* @returns a normal random variable
+*/
+template <typename _T, typename _T2>
+inline typename std::common_type<_T, _T2>::type randomGen::randomNormal(_T _m, _T2 _s)
+{
+	using result_type = typename std::common_type<_T, _T2>::type;
+	return std::normal_distribution<result_type>(_m, _s)(this->engine);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+/*
+* @brief Creates an integer random variable
+* @param _min minimum value
+* @param _max maximum value
+* @returns an integer random variable
+*/
+template<typename _T, typename _T2>
+inline typename std::common_type<_T, _T2>::type randomGen::randomInt(_T _min, _T2 _max)
+{
+	using result_type = typename std::common_type<_T, _T2>::type;
+	return std::uniform_int_distribution<result_type>(_min, _max - 1)(this->engine);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+/*
+* @brief Creates a Xavier random variable
+* @param in number of inputs
+* @param out number of outputs
+* @param xav factor
+* @link https://365datascience.com/tutorials/machine-learning-tutorials/what-is-xavier-initialization/
+*/
+template<typename T>
+inline auto randomGen::xavier(T in, T out, float xav) -> T
+{
+	return std::uniform_real_distribution<T>(-1., +1.)(this->engine) * std::sqrt(xav / (in + out));
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+template<typename T>
+inline auto randomGen::kaiming(T in) -> T
+{
+	return std::uniform_real_distribution<T>(-1., +1.)(engine) * std::sqrt(6.0 / in);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+/*
+* @brief Creates a bernoulli random variable
+* @param p probability of success
+* @returns a bernoulli random variable
+*/
+template<typename T>
+inline T randomGen::bernoulli(T p)
+{
+	return std::bernoulli_distribution(p)(this->engine);
+}
+
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 /*
 * @brief Choose _num of elements out of some iterable
 * @param _iterable iterable to choose from
-* @param _num number of elemets
+* @param _num number of elements
+* @returns vector of choices
 */
-template<typename _T>
-inline std::vector<_T> randomGen::choice(const std::vector<_T>& _iterable, size_t _num)
+template<typename _T, typename _A>
+inline std::vector<_T, _A> randomGen::choice(const std::vector<_T, _A>& _iterable, size_t _num)
 {
-	std::vector<_T> _out;
-	// std::ranges(_iterable, std::back_inserter(_out), _num, this->engine);
+	std::vector<_T, _A> _out;
+#if HAS_RANGES == 1
+	rng::sample(_iterable, std::back_inserter(_out), _num, this->engine);
+#else
+	_out = _iterable;
+	this->choice(_out.begin(), _out.end(), _num);
+#endif // DEBUG
 	return _out;
+}
+
+// ----------------------------------------------------------------------------------------------------------------------
+
+/*
+* @brief Uses the Fisher–Yates shuffle to obtain the random choice out of a container.
+* @url https://stackoverflow.com/questions/9345087/choose-m-elements-randomly-from-a-vector-containing-n-elements
+* @param begin begining of the container
+* @param end end of the container
+* @param _num number of elements
+* @returns iterator to the element
+*/
+template<class _T>
+inline _T randomGen::choice(_T begin, _T end, size_t _num)
+{
+	size_t left = std::distance(begin, end);
+	while (_num--)
+	{
+		_T r = begin;
+		std::advance(r, rand() % left);
+		std::swap(*begin, *r);
+		++begin;
+		--left;
+	}
+	return begin;
 }
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -183,27 +294,41 @@ inline std::vector<_T> randomGen::createRanVecStd(int _size, double _strength, _
 * @param _gamm number of combinations
 * @param _realizations number of realizations of the random state
 */
-inline std::vector<CCOL> randomGen::createRanState(uint _gamma, uint _realizations)
+template<typename _T>
+inline std::vector<arma::Col<_T>> randomGen::createRanState(uint _gamma, uint _realizations)
 {
-	std::vector<CCOL> _HM = {};
+	std::vector<arma::Col<_T>> _HM = {};
 
 	// go through gammas
 	for (int j = 0; j < _realizations; ++j)
 		if (_gamma > 1)
-			_HM.push_back(createRanState(_gamma));
+			_HM.push_back(createRanState<_T>(_gamma));
 		else
 			_HM.push_back({ 1.0 });
 	return _HM;
 }
 
+// ------------------------------------------------------------------------------------------------------------------
+
 /*
 * @brief Generates random superposition of _gamma states (the states shall not repeat, I guess...)
 */
-inline arma::Col<std::complex<double>> randomGen::createRanState(uint _gamma)
+template<typename _T>
+inline arma::Col<_T> randomGen::createRanState(uint _gamma)
 {
 	if (_gamma <= 1)
-		return arma::Col<std::complex<double>>(1, arma::fill::eye);
-	return this->CUE(_gamma, _gamma) * (arma::Col<std::complex<double>>(_gamma, arma::fill::eye));
+		return arma::Col<_T>(1, arma::fill::eye);
+	arma::Col<_T> _state = this->CUE(_gamma, _gamma) * (arma::Col<_T>(_gamma, arma::fill::eye));
+	return _state;
+}
+
+template<>
+inline arma::Col<double> randomGen::createRanState(uint _gamma)
+{
+	if (_gamma <= 1)
+		return arma::Col<double>(1, arma::fill::eye);
+	arma::Col<double> _state = this->GOE(_gamma, _gamma) * (arma::Col<double>(_gamma, arma::fill::eye));
+	return _state;
 }
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

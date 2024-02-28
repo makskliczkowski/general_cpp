@@ -1,7 +1,9 @@
 #pragma once
 #include <exception>
 #include <stdexcept>
-#include "signatures.h"
+#ifndef SIGNATURES_H
+#	include "signatures.h"
+#endif
 #include "str.h"
 
 /*******************************
@@ -9,6 +11,8 @@
 * for handling the exceptions.
 * REV : 01/12/23 - Maks Kliczkowski
 *******************************/
+#ifndef EXCEPTIONS_H
+#define EXCEPTIONS_H
 
 constexpr auto LOG_LVL0 = "";
 constexpr auto LOG_LVL1 = "\t->";
@@ -60,3 +64,5 @@ public:
 
 #define IFELSE_EXCEPTION(IF, IFDO, THROW) if(IF) IFDO; else throw std::runtime_error(THROW);
 #define IF_EXCEPTION(IF, THROW) if(IF) throw std::runtime_error(THROW);
+
+#endif

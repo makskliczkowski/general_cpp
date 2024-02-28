@@ -6,8 +6,8 @@
 * Maksymilian Kliczkowski, 2023
 *******************************/
 
-#include "../../lin_alg.h"
 #include "../../flog.h"
+#include "../containers.h"
 #include "../random.h"
 #include <complex>
 

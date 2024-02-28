@@ -1,5 +1,4 @@
 #pragma once
-
 /*******************************
 * Contains the possible methods
 * for linear algebra usage.
@@ -12,11 +11,12 @@
 *******************************/
 
 #ifndef ALG_H
-	#define ALG_H
-using uint = unsigned int;
-// ############################################################## INCLUDE FROM ARMADILLO #############################################################
+#define ALG_H
 
-#define ARMA_WARN_LEVEL 3
+using uint = unsigned int;
+// ############################################## INCLUDE FROM ARMADILLO #############################################
+
+#define ARMA_WARN_LEVEL 1
 #define ARMA_USE_LAPACK             
 #define ARMA_PRINT_EXCEPTIONS
 //#define ARMA_BLAS_LONG_LONG                                                                 // using long long inside LAPACK call
@@ -32,6 +32,7 @@ using uint = unsigned int;
 #define ARMA_ALLOW_FAKE_GCC
 #define ARMA_DONT_PRINT_CXX11_WARNING
 #define ARMA_DONT_PRINT_CXX03_WARNING
+#define ARMA_DONT_PRINT_FAST_MATH_WARNING
 #include <armadillo>
 
 #define DH5_USE_110_API
@@ -44,9 +45,9 @@ using uint = unsigned int;
 #		include <concepts>
 #		include <type_traits>
 		template<typename _T>
-		concept HasMatrixType = std::is_base_of<arma::Mat<double>, _T>::value					|| 
-								std::is_base_of<arma::Mat<std::complex<double>>, _T>::value		||
-								std::is_base_of<arma::SpMat<double>, _T>::value					||
+		concept HasMatrixType = std::is_base_of<arma::Mat<double>, _T>::value						|| 
+								std::is_base_of<arma::Mat<std::complex<double>>, _T>::value			||
+								std::is_base_of<arma::SpMat<double>, _T>::value						||
 								std::is_base_of<arma::SpMat<std::complex<double>>, _T>::value;
 #	endif
 #else
@@ -54,27 +55,44 @@ using uint = unsigned int;
 #endif
 
 
-// ############################################################# DEFINITIONS FROM ARMADILLO #############################################################
+// ############################################# DEFINITIONS FROM ARMADILLO #############################################
 
-#define DIAG(X)									arma::diagmat(X)
-#define EYE(X)									arma::eye(X,X)
-#define ZEROV(X)								arma::zeros(X)
-#define ZEROM(X)								arma::zeros(X,X)
-#define SUBV(X, fst, lst)						X.subvec(fst, lst)
-#define SUBM(X, fstr, fstc, lstr, lstc)			X.submat(fstr, fstc, lstr, lstc)
-#define UPDATEV(L, R, condition)				if (condition) (L += R); else (L -= R);
-using CCOL										= arma::Col<std::complex<double>>;
-using CMAT										= arma::Mat<std::complex<double>>;
-using DCOL										= arma::Col<double>;
-using DMAT										= arma::Mat<double>;
-template <typename _T>
-using COL										= arma::Col<_T>;
-template <typename _T>
-using MAT										= arma::Mat<_T>;
+#define DIAG(X)										arma::diagmat(X)
+#define EYE(X)										arma::eye(X,X)
+#define ZEROV(X)									arma::zeros(X)
+#define ZEROM(X)									arma::zeros(X,X)
+#define SUBV(X, fst, lst)							X.subvec(fst, lst)
+#define SUBM(X, fstr, fstc, lstr, lstc)				X.submat(fstr, fstc, lstr, lstc)
+#define UPDATEV(L, R, condition)					if (condition) (L += R); else (L -= R);
 
+// types
+
+using CCOL											= arma::Col<std::complex<double>>;
+using CMAT											= arma::Mat<std::complex<double>>;
+using DCOL											= arma::Col<double>;
+using DMAT											= arma::Mat<double>;
+
+// template types
+
+template <typename _T>
+using COL											= arma::Col<_T>;
+template <typename _T>
+using MAT											= arma::Mat<_T>;
+
+// #######################################################################################################################
+
+// #######################################################################################################################
+// ##################################################### A L G E B R A ###################################################
+// #######################################################################################################################
+
+// #######################################################################################################################
+
+#include "./Include/random.h"
+#include "./Include/maths.h"
 
 namespace algebra 
 {
+
 	// ##################################################################################################################################################
 	// ##################################################################################################################################################
 	// ################################################################# G E N E R A L ##################################################################
@@ -82,43 +100,80 @@ namespace algebra
 	// ##################################################################################################################################################
 
 	// ################################################################## CONJUGATE #####################################################################
+	template <typename _T>
+	inline auto conjugate(_T x)														-> _T		{ return std::conj(x); };
+	template <>
+	inline auto conjugate(double x)													-> double	{ return x; };
+	template <>
+	inline auto conjugate(float x)													-> float	{ return x; };
+	template <>
+	inline auto conjugate(int x)													-> int		{ return x; };
 
 	template <typename _T>
-	inline auto conjugate(_T x)		-> _T		{ return std::conj(x); };
+	inline auto real(_T x)															-> double	{ return std::real(x); };
 	template <>
-	inline auto conjugate(double x)	-> double	{ return x; };
-	template <>
-	inline auto conjugate(float x)	-> float	{ return x; };
-	template <>
-	inline auto conjugate(int x)	-> int		{ return x; };
-
-
-	// ###################################################################### REAL ######################################################################
-	
-	template <typename _T>
-	inline auto real(_T x)			-> double	{ return std::real(x); };
-	template <>
-	inline auto real(double x)		-> double	{ return x; };
-
-	// ###################################################################### IMAG ######################################################################
+	inline auto real(double x)														-> double	{ return x; };
 
 	template <typename _T>
-	inline auto imag(_T x)			-> double	{ return std::imag(x); };
+	inline auto imag(_T x)															-> double	{ return std::imag(x); };
 	template <>
-	inline auto imag(double x)		-> double	{ return 0.0; };
+	inline auto imag(double x)														-> double	{ return 0.0; };
 	
 	// ###################################################################### CAST #####################################################################
 
 	template <typename _T>
-	inline auto cast(std::complex<double> x)			-> _T		{ return x; };
+	inline auto cast(std::complex<double> x)										-> _T								{ return x; };
 	template <>
-	inline auto cast<double>(std::complex<double> x)	-> double	{ return std::real(x); };
+	inline auto cast<double>(std::complex<double> x)								-> double							{ return std::real(x); };
+	
+	// Armadillo columns
+	template <typename _T>
+	inline auto cast(const arma::Col<double>& x)									-> arma::Col<_T>					{ return x; };
+	template <>
+	inline auto cast<std::complex<double>>(const arma::Col<double>& x)				-> arma::Col<std::complex<double>>	{ return x + std::complex<double>(0, 1) * arma::ones(x.n_rows); };
+	template <typename _T>
+	inline auto cast(const arma::Col<std::complex<double>>& x)						-> arma::Col<_T>					{ return x; };
+	template <>
+	inline auto cast<double>(const arma::Col<std::complex<double>>& x)				-> arma::Col<double>				{ return arma::real(x); };
+	
+	// Armadillo matrices 
+	template <typename _T>
+	inline auto cast(const arma::Mat<double>& x)									-> arma::Mat<_T>					{ return x; };
+	template <>
+	inline auto cast<std::complex<double>>(const arma::Mat<double>& x)				-> arma::Mat<std::complex<double>>	{ return x + std::complex<double>(0, 1) * arma::ones(x.n_rows, x.n_cols); };
+	template <typename _T>
+	inline auto cast(const arma::Mat<std::complex<double>>& x)						-> arma::Mat<_T>					{ return x; };
+	template <>
+	inline auto cast<double>(const arma::Mat<std::complex<double>>& x)				-> arma::Mat<double>				{ return arma::real(x); };
 
-	// ##################################################################################################################################################
-	// ##################################################################################################################################################
-	// ############################################################# MATRIX MULTIPLICATION ##############################################################
-	// ##################################################################################################################################################
-	// ##################################################################################################################################################
+	// #################################################################################################################################################
+	
+	// #################################################################################################################################################
+	// ############################################################# MATRIX MULTIPLICATION #############################################################
+	// #################################################################################################################################################
+	
+	// #################################################################################################################################################
+
+	/*
+	* @brief same as in https://numpy.org/doc/stable/reference/generated/numpy.outer.html
+	* @param A first vector
+	* @param B second vector
+	* @returns the outer product of two vectors
+	*/
+	template <template <typename _T1i> class _T1, template <typename _T2i> class _T2, typename _T1i, typename _T2i>
+	arma::Mat<typename std::common_type<_T1i, _T2i>::type> outer(const _T1<_T1i>& A, const _T2<_T2i>& B)
+	{
+		using res_typ = typename std::common_type<_T1i, _T2i>::type;
+		arma::Mat<res_typ> out(A.n_elem, B.n_elem, arma::fill::zeros);
+
+		for(size_t i = 0; i < A.n_elem; i++)
+			for(size_t j = 0; j < B.n_elem; j++)
+				out(i, j) = res_typ(A(i) * B(j));
+
+		return out;
+	}
+
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 	/*
 	* @brief Allows to calculate the matrix consisting of COL vector times ROW vector
@@ -183,13 +238,195 @@ namespace algebra
 			m2Set = SUBM(mSet, row, col, row + nrow - 1, col + ncol - 1);
 	}
 
-	// ##################################################################################################################################################
-	// ##################################################################################################################################################
-	// ############################################################# MATRIX DECOMPOSITIONS ##############################################################
-	// ##################################################################################################################################################
-	// ##################################################################################################################################################
+	// #################################################################################################################################################
+	
+	// #################################################################################################################################################
+	// ############################################################### MATRIX PROPERTIES ###############################################################
+	// #################################################################################################################################################
+	
+	// #################################################################################################################################################
+
+	enum class PfaffianAlgorithms
+	{
+		ParlettReid,
+		Householder,
+		Schur,
+		Hessenberg,
+		Recursive
+	};
+
+	/*
+	* @brief Calculate the Pfaffian of a skew square matrix A. Use the recursive definition.
+	* @link https://s3.amazonaws.com/researchcompendia_prod/articles/2f85f444b9e340246d9991177acf9732-2013-12-23-02-19-16/a30-wimmer.pdf
+	* @param A skew-symmetric matrix
+	* @param N size of the matrix
+	* @returns the Pfaffian of a skew-symmetric matrix A
+	*/
+	template <typename _T>
+	_T pfaffian_r(const arma::Mat<_T>& A, arma::u64 N)
+	{
+		if (N == 0)
+			return _T(1.0);
+		else if (N == 1)
+			return _T(0.0);
+		else
+		{
+			_T pfa = 0.0;
+			for (arma::u64 i = 2; i <= N; i++)
+			{
+				arma::Mat<_T> temp = A;
+				_T _sign = (i % 2 == 0) ? 1. : -1.;
+				temp.shed_col(i - 1);
+				temp.shed_row(i - 1);
+				temp.shed_row(0);
+				if (N > 2)
+					temp.shed_col(0);
+				pfa += _sign * A(0, i - 1) * pfaffian_r(temp, N - 2);
+			}
+			return pfa;
+		}
+	}
+
+	// #################################################################################################################################################
+
+	/*
+	* @brief Computing the Pfaffian of a skew-symmetric matrix. Using the fact that for an arbitrary skew-symmetric matrix,
+	* the pfaffian Pf(B A B^T ) = det(B)Pf(A). This is done via Hessenberg decomposition.
+	* @param A skew-symmetric matrix
+	* @param N size of the matrix
+	* @returns the Pfaffian of a skew-symmetric matrix A
+	*/
+	template <typename _T>
+	_T pfaffian_hess(const arma::Mat<_T>& A, arma::u64 N)
+	{
+		// calculate the Upper Hessenberg decomposition. Take the upper diagonal only
+		arma::Mat<_T> H, Q;
+		arma::hess(Q, H, A);
+		return arma::det(Q) * arma::prod(arma::Col<_T>(H.diag(1)).elem(arma::regspace<arma::uvec>(0, N - 1, 2)));
+	}
+
+	// #################################################################################################################################################
+
+	/*
+	* @brief Computing the Pfaffian of a skew-symmetric matrix. Using the fact that for an arbitrary skew-symmetric matrix,
+	* the pfaffian Pf(B A B^T ) = det(B)Pf(A). This is done via Parlett-Reid algorithm.
+	* @param A skew-symmetric matrix
+	* @param N size of the matrix
+	* @returns the Pfaffian of a skew-symmetric matrix A
+	*/
+	template <typename _T>
+	_T pfaffian_p(arma::Mat<_T> A, arma::u64 N)
+	{
+		if(!(A.n_rows == A.n_cols && A.n_rows == N && N > 0))
+			throw std::runtime_error("Error: Matrix size must be even for Pfaffian calculation.");
+#ifdef _DEBUG
+		// Check if it's skew-symmetric
+		//if(!(((A + A.st()).max()) < 1e-14))
+#endif
+		// quick return if possible
+		if (N % 2 == 1)
+			return 0; 
+		// work on a copy of A
+
+		_T pfaffian = 1.0;
+		for (arma::u64 k = 0; k < N - 1; k += 2)
+		{
+			// First, find the largest entry in A[k + 1:, k] and
+			// permute it to A[k + 1, k]
+			auto kp = k + 1 + arma::abs(A.col(k).subvec(k + 1, N - 1)).index_max();
+
+			// Check if we need to pivot
+			if (kp != k + 1)
+			{
+				// interchange rows k + 1 and kp
+				A.swap_rows(k + 1, kp);
+
+				// Then interchange columns k + 1 and kp
+				A.swap_cols(k + 1, kp);
+
+				// every interchange corresponds to a "-" in det(P)
+				pfaffian *= -1;
+			}
+
+			// Now form the Gauss vector
+			if (A(k + 1, k) != 0.0)
+			{
+				pfaffian *=	A(k, k + 1);
+				if (k + 2 < N)
+				{
+					arma::Row<_T> tau	=	A.row(k).subvec(k + 2, N - 1) / A(k, k + 1);
+					// Update the matrix block A(k + 2:, k + 2)
+					const auto col				=	A.col(k + 1).subvec(k + 2, N - 1);
+					auto subMat 				=	A.submat(k + 2, k + 2, N - 1, N - 1);	
+					const auto col_times_row	=	outer(col, tau);
+					const auto row_times_col	=	outer(tau, col);
+					//col_times_row.print("COL * TAU");
+					//row_times_col.print("TAU * COL");
+					subMat				+=	row_times_col;
+					subMat				-=	col_times_row;
+				}
+			}
+			// if we encounter a zero on the super/subdiagonal, the Pfaffian is 0
+			else
+				return 0.0;
+		}
+		return pfaffian;
+	}
+
+	// #################################################################################################################################################
+	
+	/*
+	* @brief Computing the Pfaffian of a skew-symmetric matrix. Using the fact that for an arbitrary skew-symmetric matrix,
+	* the pfaffian Pf(B A B^T ) = det(B)Pf(A). This is done via Schur decomposition.
+	* @param A skew-symmetric matrix
+	* @param N size of the matrix
+	* @returns the Pfaffian of a skew-symmetric matrix A
+	*/
+	template <typename _T>
+	_T pfaffian_s(arma::Mat<_T> A, arma::u64 N)
+	{
+		arma::Mat<_T> U, S;
+		arma::schur(U, S, A);
+		return arma::det(U) * arma::prod(arma::Col<_T>(S.diag(1)).elem(arma::regspace<arma::uvec>(0, N - 1, 2)));
+	}
+	
+	// #################################################################################################################################################
+
+	template <typename _T>
+	_T pfaffian(const arma::Mat<_T>& A, arma::u64 N, PfaffianAlgorithms _alg = PfaffianAlgorithms::ParlettReid)
+	{
+//#ifdef _DEBUG
+//		A.save(arma::hdf5_name("A.h5"));
+//#endif
+		switch (_alg)
+		{
+		case PfaffianAlgorithms::ParlettReid:
+			return pfaffian_p<_T>(A, N);
+		case PfaffianAlgorithms::Householder:
+			//LOGINFO("Householder Pfaffian algorithm not implemented yet.", LOG_TYPES::ERROR, 2);
+			return 0;
+		case PfaffianAlgorithms::Schur:
+			return pfaffian_s<_T>(A, N);
+		case PfaffianAlgorithms::Hessenberg:
+			return pfaffian_hess<_T>(A, N);
+		case PfaffianAlgorithms::Recursive:
+			return pfaffian_r(A, N);
+		default:
+			return pfaffian_p<_T>(A, N);
+		}
+	}
+
+	// #################################################################################################################################################
+	
+	// #################################################################################################################################################
+	// ############################################################# MATRIX DECOMPOSITIONS #############################################################
+	// #################################################################################################################################################
+	
+	// #################################################################################################################################################
+
 	template<typename _T>
-	class UDT{
+	class UDT
+	{
 	public:
 		arma::Mat<_T> U;
 		arma::Col<_T> D;			// here we will put D vector - diagonal part of R
@@ -509,7 +746,7 @@ namespace algebra
 				for(int j = 0; j < d; j++)
 					matL(i,j) *= this->Ds(i) / right->Db(j);
 
-			// matR = 1/(D_max_a) * Ua^\dag * Ub * D_min_b
+			// matR = 1/(D_max_a) * Ua^\\dag * Ub * D_min_b
 			arma::Mat<_T> matR = this->U.t() * right->U;
 			for(int i = 0; i < d; i++)
 				for(int j = 0; j < d; j++)
@@ -543,139 +780,145 @@ namespace algebra
 };
 
 // dynamic bitset
-#include "Dynamic/dynamic_bitset.hpp"
+#include "Include/str.h"
+#include "Include/directories.h"
 
-namespace VEC
+// ###################################################### S A V E R ######################################################
+
+template <typename _T>
+inline bool saveAlgebraic(const std::string& _path, const std::string& _file, const arma::Mat<_T>& _toSave, const std::string& _db = "weights")
 {
-	// #######################################################
+#ifdef _DEBUG
+	LOGINFO(_path + _file, LOG_TYPES::INFO, 3);
+#endif
+	createDir(_path);
+	bool _isSaved	= false;
+#ifdef HAS_CXX20
+	if (_file.ends_with(".h5"))
+#else
+	if (endsWith(_file, ".h5"))
+#endif
+		_isSaved	= _toSave.save(arma::hdf5_name(_path + _file, _db));
+#ifdef HAS_CXX20
+	else if (_file.ends_with(".bin"))
+#else
+	else if (endsWith(_file, ".bin"))
+#endif
+		_isSaved	= _toSave.save(_path + _file);
+#ifdef HAS_CXX20
+	else if (_file.ends_with(".txt") || _file.ends_with(".dat"))
+#else
+	else if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
+#endif
+		_isSaved	= _toSave.save(_path + _file, arma::arma_ascii);
+	return _isSaved;
+}
 
-	/*
-	* @brief Transform vector of indices to full state in Fock real space basis.
-	* @param _Ns number of lattice sites
-	* @param _state single particle orbital indices
-	* @returns an Armadillo vector in the Fock basis
-	*/
-	template<typename _T>
-	inline arma::Col<double> transformIdxToState(uint _Ns, const _T& _state)
+template <typename _T>
+inline bool saveAlgebraic(const std::string& _path, const std::string& _file, const arma::Col<_T>& _toSave, const std::string& _db = "weights")
+{
+#ifdef _DEBUG
+	LOGINFO(_path + _file, LOG_TYPES::INFO, 3);
+#endif
+	createDir(_path);
+	bool _isSaved	= false;
+#ifdef HAS_CXX20
+	if (_file.ends_with(".h5"))
+#else
+	if (endsWith(_file, ".h5"))
+#endif
+		_isSaved	= _toSave.save(arma::hdf5_name(_path + _file, _db));
+#ifdef HAS_CXX20
+	else if (_file.ends_with(".bin"))
+#else
+	else if (endsWith(_file, ".bin"))
+#endif
+		_isSaved	= _toSave.save(_path + _file);
+#ifdef HAS_CXX20
+	else if (_file.ends_with(".txt") || _file.ends_with(".dat"))
+#else
+	else if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
+#endif
+		_isSaved	= _toSave.save(_path + _file, arma::arma_ascii);
+	return _isSaved;
+}
+
+template <typename _T>
+inline bool loadAlgebraic(const std::string& _path, const std::string& _file, arma::Mat<_T>& _toSet, const std::string& _db = "weights")
+{
+#ifdef _DEBUG
+	LOGINFO(LOG_TYPES::INFO, _path + _file, 3);
+#endif
+	createDir(_path);
+	bool _isSaved = false;
+#ifdef HAS_CXX20
+	if (_file.ends_with(".h5"))
+#else
+	if (endsWith(_file, ".h5"))
+#endif
 	{
-		arma::Col<double> _out(_Ns, arma::fill::zeros);
-		for (auto& i : _state)
-			_out(i) = 1;
-		return _out;
+		_toSet.load(arma::hdf5_name(_path + _file, _db));
+		return true;
 	}
-
-	/*
-	* @brief Transform vector of indices to full state in Fock real space basis.
-	* @param _Ns number of lattice sites
-	* @param _state single particle orbital indices
-	* @returns an Armadillo vector in the Fock basis
-	*/
-	template<typename _T>
-	inline sul::dynamic_bitset<> transformIdxToBitset(uint _Ns, const _T& _state)
+#ifdef HAS_CXX20
+	else if (_file.ends_with(".bin"))
+#else
+	else if (endsWith(_file, ".bin"))
+#endif
 	{
-		sul::dynamic_bitset<> _out(_Ns);
-		for (auto& i : _state)
-			_out[i] = true;
-		return _out;
+		_toSet.load(_path + _file);
+		return true;
 	}
-
-	// #######################################################
-
-	/*
-	* @brief Transform container type to std::vector of the same subtype
-	* @param _in container with a given type
-	* @returns std::vector of a given type
-	*/
-	template<template <class _Tin> class _T, class _Tin>
-	inline std::vector<_Tin> colToVec(const _T<_Tin>& _in)
+#ifdef HAS_CXX20
+	else if (_file.ends_with(".txt") || _file.ends_with(".dat"))
+#else
+	else if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
+#endif
 	{
-		std::vector<_Tin> t_(_in.size());
-		
-		for (auto it = 0; it < _in.size(); ++it)
-			t_[it] = _in[it];
-		return t_;
+		_toSet.load(_path + _file, arma::arma_ascii);
+		return true;
 	}
+	return _isSaved;
+}
 
-	/*
-	* @brief Creates a vector from a to (a + N - 1)
-	* @param N size of the vector
-	* @param a starting point
-	*/
-	template<typename _T1, typename = typename std::enable_if<std::is_arithmetic<_T1>::value, _T1>::type>
-	inline std::vector<_T1> vecAtoB(_T1 N, _T1 a = 0)
+template <typename _T>
+inline bool loadAlgebraic(const std::string& _path, const std::string& _file, arma::Col<_T>& _toSet, const std::string& _db = "weights")
+{
+#ifdef _DEBUG
+	LOGINFO(_path + _file, LOG_TYPES::INFO, 3, '#');
+#endif
+	createDir(_path);
+	bool _isSaved = false;
+#ifdef HAS_CXX20
+	if (_file.ends_with(".h5"))
+#else
+	if (endsWith(_file, ".h5"))
+#endif
 	{
-		std::vector<_T1> idxs(N);
-		std::iota(idxs.begin(), idxs.end(), a);
-		return idxs;
+		_toSet.load(arma::hdf5_name(_path + _file, _db));
+		return true;
 	}
-
-	// #######################################################
-	// Vector math
-
-	// ADD
-
-	template <class _T>
-	inline void addVec(std::vector<_T>& _res, const std::vector<_T>& _toAdd)
+#ifdef HAS_CXX20
+	else if (_file.ends_with(".bin"))
+#else
+	else if (endsWith(_file, ".bin"))
+#endif
 	{
-		if (_res.size() != _toAdd.size())
-			throw std::runtime_error("Size of vectors mismatch...");
-		for (auto i = 0; i < _res.size(); ++i)
-			_res[i] += _toAdd[i];
-	};
-
-	template <class _T>
-	inline std::vector<_T> addVecR(const std::vector<_T>& _res, const std::vector<_T>& _toAdd)
+		_toSet.load(_path + _file);
+		return true;
+	}
+#ifdef HAS_CXX20
+	else if (_file.ends_with(".txt") || _file.ends_with(".dat"))
+#else
+	else if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
+#endif
 	{
-		std::vector<_T> _out;
-		if (_res.size() != _toAdd.size())
-			throw std::runtime_error("Size of vectors mismatch...");
-		_out.resize(_res.size());
-		for (auto i = 0; i < _res.size(); ++i)
-			_out[i] = _toAdd[i] + _res[i];
-		return _out;
-	};
+		_toSet.load(_path + _file, arma::arma_ascii);
+		return true;
+	}
+	return _isSaved;
+}
 
-	// SUBSTRACT
 
-	template <class _T>
-	inline void subVec(std::vector<_T>& _res, const std::vector<_T>& _toAdd)
-	{
-		if (_res.size() != _toAdd.size())
-			throw std::runtime_error("Size of vectors mismatch...");
-		for (auto i = 0; i < _res.size(); ++i)
-			_res[i] -= _toAdd[i];
-	};
-
-	template <class _T>
-	inline std::vector<_T> subVecR(const std::vector<_T>& _res, const std::vector<_T>& _toAdd)
-	{
-		std::vector<_T> _out;
-		if (_res.size() != _toAdd.size())
-			throw std::runtime_error("Size of vectors mismatch...");
-		_out.resize(_res.size());
-		for (auto i = 0; i < _res.size(); ++i)
-			_out[i] = _res[i] - _toAdd[i];
-		return _out;
-	};
-
-	// MULTIPLY
-
-	template <class _T>
-	inline void mulVec(std::vector<_T>& _res, _T _const)
-	{
-		for (auto i = 0; i < _res.size(); ++i)
-			_res[i] *= _const;
-	};
-
-	template <class _T>
-	inline std::vector<_T> mulVecR(const std::vector<_T>& _res, _T _const)
-	{
-		std::vector<_T> _out;
-		_out.resize(_res.size());
-		for (auto i = 0; i < _res.size(); ++i)
-			_out[i] = _const * _res[i];
-		return _out;
-	};
-};
 
 #endif

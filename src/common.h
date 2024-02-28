@@ -15,8 +15,11 @@
 // ########################################################				  OTHER					########################################################
 
 #include "Include/random.h"
-#include "Include/math.h"
-#include "flog.h"
+#include "Include/maths.h"
+
+#ifndef FLOG_H
+#	include "flog.h"
+#endif
 
 #include <omp.h>
 #include <thread>
@@ -43,9 +46,12 @@ using ld						=					long double;
 constexpr long double PI		=					3.141592653589793238462643383279502884L;			// it is me, pi
 constexpr long double TWOPI		=					2.0L * PI;											// it is me, 2pi
 constexpr long double PIHALF	=					PI / 2.0L;											// it is me, half a pi
+constexpr long double LOG_TWO	=					0.69314718055994530941723212145818L;
+constexpr long double LOG_HALF	=					-LOG_TWO;
 constexpr cpx I					=					cpx(0, 1);											// imaginary unit
 const auto global_seed			=					std::random_device{}();								// global seed for classes
 
+// end lines
 #define EL std::endl
 #define stout std::cout << std::setprecision(8) << std::fixed											// standard out
 #define stoutc(c) if(c) stout <<  std::setprecision(8) << std::fixed	
@@ -88,7 +94,7 @@ inline std::ostream& operator<< (std::ostream& out, const v_1d<T>& v) {
 	{
 		for (int i = 0; i < v.size(); i++)
 			out << STRP(v[i], 10) << ",";
-		out << "\b\n"; 
+		out << "\b"; 
 		// use two ANSI backspace characters '\b' to overwrite final ", "
 	}
 	return out;
@@ -299,8 +305,12 @@ public:
 #define PROGRESS_UPD(X, PBAR, TEXT)		BEGIN_CATCH_HANDLER{								\
 											if (X % PBAR.percentageSteps == 0)				\
 												PBAR.printWithTime(LOG_LVL1 + SSTR(TEXT));}	\
-										END_CATCH_HANDLER("Couldn't print progress: ", ;)										
-
+										END_CATCH_HANDLER("Couldn't print progress: ", ;)		
+#define PROGRESS_UPD_DO(X, PBAR, TXT, D)BEGIN_CATCH_HANDLER{								\
+											if (X % PBAR.percentageSteps == 0)				\
+												PBAR.printWithTime(LOG_LVL1 + SSTR(TXT));	\
+												D;										}	\
+										END_CATCH_HANDLER("Couldn't print progress: ", ;)		
 #define PROGRESS_UPD_Q(X, PBAR, TEXT, Q)if(Q){												\
 										BEGIN_CATCH_HANDLER{								\
 											if (X % PBAR.percentageSteps == 0)				\

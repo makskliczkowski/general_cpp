@@ -1,9 +1,12 @@
 #pragma once
+#ifndef MATH_H
+#define MATH_H
+
 #include <cmath>
 #include <complex>
-// matrix base class concepts
 
 #ifdef __has_include
+// matrix base class concepts
 #	if __has_include(<concepts>)
 		#include <concepts>
 		#include <type_traits>
@@ -92,7 +95,7 @@ inline _T variance(_T _av2, _T _av, int _norm)
 
 // ###############################################################################
 
-namespace MATH
+namespace Math
 {
 
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -116,4 +119,16 @@ namespace MATH
 
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+	/*
+	* @brief Truncates a number at the given precision in base 10
+	* @param _val value to be truncated
+	* @returns truncated value
+	*/
+	template <typename _T, uint _P>
+	inline _T trunc(_T _val)
+	{
+		return std::round(_val * (_P + 1)) / (_P + 1);
+	}
 }
+
+#endif

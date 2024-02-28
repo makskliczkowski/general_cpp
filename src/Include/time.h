@@ -35,12 +35,12 @@
 
 using clkS						=				std::chrono::system_clock;
 #define DUR										std::chrono::duration
-#define DURCAST									std::chrono::duration_cast
+#define DURCAST								std::chrono::duration_cast
 #define NOW										std::chrono::high_resolution_clock::now()	    			
-#define DURATION(t1, t2)						static_cast<long double>(DURCAST<std::chrono::microseconds>(DUR(t1 - t2)).count())
-#define DURATIONS(t1, t2)						static_cast<long double>(DURCAST<std::chrono::seconds>(DUR(t1 - t2)).count())
-#define DURATIONMS(t1, t2)						static_cast<long double>(DURCAST<std::chrono::milliseconds>(DUR(t1 - t2)).count())
-#define DURATIONMUS(t1, t2)						DURATION(t1, t2)
+#define DURATION(t1, t2)					static_cast<long double>(DURCAST<std::chrono::microseconds>(DUR(t1 - t2)).count())
+#define DURATIONS(t1, t2)					static_cast<long double>(DURCAST<std::chrono::seconds>(DUR(t1 - t2)).count())
+#define DURATIONMS(t1, t2)					static_cast<long double>(DURCAST<std::chrono::milliseconds>(DUR(t1 - t2)).count())
+#define DURATIONMUS(t1, t2)				DURATION(t1, t2)
 
 /*
 * @brief The duration in seconds from a given time point
@@ -48,30 +48,30 @@ using clkS						=				std::chrono::system_clock;
 */
 inline auto t_s(clk::time_point start)			RETURNS(DURATIONS(NOW, start));
 inline auto t_s(clk::time_point start, 
-				clk::time_point end)			RETURNS(DURATIONS(end, start));
+				clk::time_point end)					RETURNS(DURATIONS(end, start));
 inline auto TS(clk::time_point start)			-> std::string { return STRP(t_s(start), 3) + " s";				};
 inline auto TS(clk::time_point start,
-				 clk::time_point end)			-> std::string { return STRP(t_s(start, end), 3) + " s";		};
+				 clk::time_point end)				-> std::string { return STRP(t_s(start, end), 3) + " s";		};
 /*
 * @brief The duration in seconds from a given time point
 * @param point in time from which we calculate the interval
 */
-inline auto t_ms(clk::time_point start)			RETURNS(DURATIONMS(NOW, start));
+inline auto t_ms(clk::time_point start)		RETURNS(DURATIONMS(NOW, start));
 inline auto t_ms(clk::time_point start, 
-				 clk::time_point end)			RETURNS(DURATIONMS(end, start));
+				 clk::time_point end)				RETURNS(DURATIONMS(end, start));
 inline auto TMS(clk::time_point start)			-> std::string { return STRP(t_ms(start), 3) + " ms";			};
 inline auto TMS(clk::time_point start,	
-				 clk::time_point end)			-> std::string { return STRP(t_ms(start, end), 3) + " ms";		};
+				 clk::time_point end)				-> std::string { return STRP(t_ms(start, end), 3) + " ms";		};
 /*
 * @brief The duration in seconds from a given time point
 * @param point in time from which we calculate the interval
 */
 inline auto t_mus(clk::time_point start)		RETURNS(DURATION(NOW, start));
 inline auto t_mus(clk::time_point start,
-				  clk::time_point end)			RETURNS(DURATION(end, start));
-inline auto TMUS(clk::time_point start)			-> std::string { return STRP(t_mus(start), 3) + " mus";			};
+				  clk::time_point end)				RETURNS(DURATION(end, start));
+inline auto TMUS(clk::time_point start)		-> std::string { return STRP(t_mus(start), 3) + " mus";			};
 inline auto TMUS(clk::time_point start,
-				 clk::time_point end)			-> std::string { return STRP(t_mus(start, end), 3) + " mus"; }	;
+				 clk::time_point end)				-> std::string { return STRP(t_mus(start, end), 3) + " mus"; }	;
 
 #define stouts(text, start)		stout	<< text <<	" -> time : " << tim_s(start)	<< " s"		<< EL					
 #define stoutms(text, start)	stout	<< text <<	" -> time : " << tim_ms(start)	<< " ms"	<< EL			

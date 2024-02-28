@@ -1,7 +1,7 @@
 #pragma once
 
 #ifndef ALG_H
-#include "../lin_alg.h"
+#include "containers.h"
 #endif // !ALG_H
 
 // ######################################################## binning ########################################################

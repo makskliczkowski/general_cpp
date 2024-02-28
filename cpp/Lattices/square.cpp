@@ -23,11 +23,11 @@ SquareLattice::SquareLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 		break;
 	case 2:
 		this->Lz = 1;
-		this->nnForward		= { 0,1 };
+		this->nnForward	= { 0,1 };
 		this->nnnForward	= { 0,1 };
 		break;
 	case 3:
-		this->nnForward		= { 0,1,2 };
+		this->nnForward	= { 0,1,2 };
 		this->nnnForward	= { 0,1,2 };
 		break;
 	default:
