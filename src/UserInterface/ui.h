@@ -108,6 +108,7 @@ protected:
 	template <class _Tin>
 	bool setOption(std::vector<_Tin>& value, cmdArg& argv, std::string choice, _Tin _default = 0.0);
 
+
 	// -------------------------- INIT -------------------------
 	void init(int argc, char** argv);
 
@@ -121,6 +122,9 @@ public:
 	virtual void funChoice()							= 0;												// allows to choose the method without recompilation of the whole code
 
 	// ----------------------- REAL PARSING -----------------------
+	void parseOthers(cmdArg& argv);
+	void parseMainDir(cmdArg& argv);
+
 	virtual void parseModel(int argc, cmdArg& argv)		= 0;												// the function to parse the command line
 	virtual cmdArg parseInputFile(std::string filename);													// if the input is taken from file we need to make it look the same way as the command line does
 	
@@ -288,6 +292,28 @@ inline bool UserInterface::setOption(std::vector<_Tin>& value, cmdArg& argv, std
 }
 
 // ######################################################################################################################
+
+/*
+* @brief Parses the input for the directory
+* @param argv arguments from CMD
+*/
+inline void UserInterface::parseMainDir(cmdArg& argv)
+{
+	bool setDir [[maybe_unused]] = this->setOption(this->mainDir, argv, "dir");
+	if (this->mainDir.starts_with("./"))
+		this->mainDir = makeDirsC(fs::current_path().string(), "DATA", this->mainDir.substr(2));
+	else
+		this->mainDir = makeDirsC(this->mainDir);
+}
+
+inline void UserInterface::parseOthers(cmdArg & argv)
+{
+	this->setOption(this->quiet, argv, "q");
+	this->setOption(this->threadNum, argv, "th");
+	// later function choice
+	this->setOption(this->chosenFun, argv, "fun");
+}
+
 
 #endif // !UI_H
 

@@ -54,8 +54,18 @@ public:
 	template <typename _T, typename _T2 = _T>
 	auto random(_T _min = 0, _T2 _max = 1)		-> typename std::common_type<_T, _T2>::type;
 
+	template <typename _T, typename _T2, template <class> typename _V>
+	auto random(_T _mn, _T2 _mx, size_t _s)		-> _V<typename std::common_type<_T, _T2>::type>;
+
+	// ---------------------
+
 	template <typename _T, typename _T2 = _T>
 	auto randomInt(_T _min, _T2 _max)			-> typename std::common_type<_T, _T2>::type;
+
+	template <typename _T, typename _T2, template <class> typename _V>
+	auto randomInt(_T _mn, _T2 _mx, size_t _s)  -> _V<typename std::common_type<_T, _T2>::type>;
+
+	// ---------------------
 
 	template<typename _T, typename _T2 = _T>
 	auto randomNormal(_T _m = 0, _T2 _s = 1)	-> typename std::common_type<_T, _T2>::type;
@@ -84,9 +94,15 @@ public:
 	std::vector<arma::Col<_T>> createRanState(uint _gamma, uint _realizations);
 
 	// ####################### M A T R I C E S #######################
-
-	DMAT GOE(uint _x, uint _y) const;
-	CMAT CUE(uint _x, uint _y) const;
+	
+	template <typename _T>
+	arma::Mat<_T>  GOE(uint _x, uint _y) const;
+	template <typename _T>
+	arma::Mat<_T> GOE(uint _x) const { return GOE<_T>(_x, _x); };
+	template <typename _T>
+	arma::Mat<_T>  CUE(uint _x, uint _y) const;
+	template <typename _T>
+	arma::Mat<_T> CUE(uint _x) const { return CUE<_T>(_x, _x); };
 
 	// ####################### E L E M E N T S #######################
 
@@ -139,6 +155,15 @@ inline typename std::common_type<_T, _T2>::type randomGen::random(_T _min, _T2 _
 	return std::uniform_real_distribution<result_type>(_min, _max)(this->engine);
 }
 
+template <typename _T, typename _T2, template <class> typename _V>
+inline _V<typename std::common_type<_T, _T2>::type> randomGen::random(_T _mn, _T2 _mx, size_t _s)
+{
+	using result_type = typename std::common_type<_T, _T2>::type;
+	_V<result_type> _out(_size);
+	// generate random numbers
+	std::generate(_out.begin(), _out.end(), [&]() { return std::uniform_real_distribution<result_type>(_min, _max - 1)(this->engine); });
+	return _out;}
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 /*
@@ -167,6 +192,16 @@ inline typename std::common_type<_T, _T2>::type randomGen::randomInt(_T _min, _T
 {
 	using result_type = typename std::common_type<_T, _T2>::type;
 	return std::uniform_int_distribution<result_type>(_min, _max - 1)(this->engine);
+}
+
+template <typename _T, typename _T2, template <class> typename _V>
+inline _V<typename std::common_type<_T, _T2>::type> randomGen::randomInt(_T _min, _T2 _max, size_t _size)
+{
+	using result_type = typename std::common_type<_T, _T2>::type;
+	_V<result_type> _out(_size);
+	// generate random numbers
+	std::generate(_out.begin(), _out.end(), [&]() { return std::uniform_int_distribution<result_type>(_min, _max - 1)(this->engine); });
+	return _out;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -318,7 +353,7 @@ inline arma::Col<_T> randomGen::createRanState(uint _gamma)
 {
 	if (_gamma <= 1)
 		return arma::Col<_T>(1, arma::fill::eye);
-	arma::Col<_T> _state = this->CUE(_gamma, _gamma) * (arma::Col<_T>(_gamma, arma::fill::eye));
+	arma::Col<_T> _state = this->CUE<_T>(_gamma, _gamma) * (arma::Col<_T>(_gamma, arma::fill::eye));
 	return _state;
 }
 
@@ -327,7 +362,7 @@ inline arma::Col<double> randomGen::createRanState(uint _gamma)
 {
 	if (_gamma <= 1)
 		return arma::Col<double>(1, arma::fill::eye);
-	arma::Col<double> _state = this->GOE(_gamma, _gamma) * (arma::Col<double>(_gamma, arma::fill::eye));
+	arma::Col<double> _state = this->GOE<double>(_gamma, _gamma) * (arma::Col<double>(_gamma, arma::fill::eye));
 	return _state;
 }
 
@@ -336,9 +371,10 @@ inline arma::Col<double> randomGen::createRanState(uint _gamma)
 /*
 * @brief Creates a GOE matrix...
 */ 
-inline arma::Mat<double> randomGen::GOE(uint _x, uint _y) const
+template <typename _T>
+inline arma::Mat<_T> randomGen::GOE(uint _x, uint _y) const
 {
-	arma::Mat<double> A(_x, _y, arma::fill::randn);
+	arma::Mat<_T> A(_x, _y, arma::fill::randn);
 	return 0.5 * (A + A.t());
 }
 
@@ -349,7 +385,8 @@ inline arma::Mat<double> randomGen::GOE(uint _x, uint _y) const
 * A Random matrix distributed with Haar measure...
 * ... https://doi.org/10.48550/arXiv.math-ph/0609050 ...
 */
-inline arma::Mat<std::complex<double>> randomGen::CUE(uint _x, uint _y) const
+template <typename _T>
+inline arma::Mat<_T> randomGen::CUE(uint _x, uint _y) const
 {
 	arma::Mat<std::complex<double>> A(_x, _y, arma::fill::zeros);
 	A.set_real(arma::Mat<double>(_x, _y, arma::fill::randn));
@@ -357,7 +394,7 @@ inline arma::Mat<std::complex<double>> randomGen::CUE(uint _x, uint _y) const
 
 	arma::Mat<std::complex<double>> Q, R;
 	arma::qr(Q, R, A);
-	return Q;
+	return algebra::cast<_T>(Q);
 	//auto _diag	= R.diag();
 	//_diag		= _diag / arma::abs(_diag);
 	//return Q * DIAG(_diag) * Q;
