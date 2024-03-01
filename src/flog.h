@@ -54,6 +54,7 @@ enum LOG_TYPES
 	ERROR,
 	TRACE,
 	CHOICE,
+	DEBUG,
 	FINISH,
 	WARNING
 };
@@ -65,6 +66,7 @@ BEGIN_ENUM(LOG_TYPES)
 	DECL_ENUM_ELEMENT(ERROR),
 	DECL_ENUM_ELEMENT(TRACE),
 	DECL_ENUM_ELEMENT(CHOICE),
+	DECL_ENUM_ELEMENT(DEBUG),
 	DECL_ENUM_ELEMENT(FINISH),
 	DECL_ENUM_ELEMENT(WARNING)
 }
@@ -99,6 +101,11 @@ inline void SET_LOG_TIME() {
 template <typename _T>
 inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl) 
 {
+#ifdef _DEBUG
+	if(_typ == LOG_TYPES::DEBUG)
+		return;
+#endif // _DEBUG
+
 #ifdef FLOGTIME
 	std::cout << "[" << prettyTime() << "]";
 #endif // FLOGTIME
@@ -131,6 +138,11 @@ inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl)
 template<>
 inline void LOGINFO(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl)
 {
+#ifdef _DEBUG
+	if(_typ == LOG_TYPES::DEBUG)
+		return;
+#endif // _DEBUG
+
 #ifdef FLOGTIME
 	std::cout << "[" << prettyTime() << "]";
 #endif // FLOGTIME
@@ -240,11 +252,11 @@ inline void LOGINFO(unsigned int _n)
 inline void LOGINFO(const clk::time_point& _t, const std::string& funName, unsigned int _lvl = 0)
 {
 	//LOGINFO(1);
-	LOGINFO("", LOG_TYPES::TRACE, 30, '%', std::max(int(_lvl) - 2, 0));
+	//LOGINFO("", LOG_TYPES::TRACE, 30, '%', std::max(int(_lvl) - 2, 0));
 	LOGINFO("Function: " + funName + " took:",	LOG_TYPES::TIME, _lvl);
 	LOGINFO(STR(t_ms(_t)) + " ms",				LOG_TYPES::TIME, _lvl + 1);
-	LOGINFO(STR(t_s(_t)) +	" s",				LOG_TYPES::TIME, _lvl + 1);
-	LOGINFO("", LOG_TYPES::TRACE, 30, '%', std::max(int(_lvl) - 2, 0));
+	//LOGINFO(STR(t_s(_t)) +	" s",				LOG_TYPES::TIME, _lvl + 1);
+	//LOGINFO("", LOG_TYPES::TRACE, 30, '%', std::max(int(_lvl) - 2, 0));
 	//LOGINFO(1);
 }
 

@@ -12,6 +12,7 @@
 #define SETOPTIOND(n, S, DEF)					this->setOption(this->n.S##_, argv, SSTR(#S), DEF)
 #define SETOPTIONDIRECT(n, S)					this->setOption(n, S)
 #define SETOPTIONV(n, S, v)						this->setOption(this->n.S##_, argv, SSTR(v)	)
+#define SETOPTIONVECTOR(n, S)					std::tie(this->n.S##_ra_, this->n.S##_r_) = this->setOption(this->n.S##_, argv, SSTR(#S))
 // sets the option with steps etc.
 #define SETOPTION_STEP(x, S)					SETOPTION(x, S);							\
 												SETOPTION(x, S##0);							\
@@ -23,6 +24,10 @@
 #define UI_PARAM_CREATE_DEFAULTD(PAR, TYP, VAL)	const			TYP _##PAR = VAL; TYP PAR##_ = VAL 
 // sets default value for single parameters 
 #define UI_PARAM_SET_DEFAULT(PAR)				this->PAR##_	=	this->_##PAR
+#define UI_PARAM_SET_DEFAULT_STRUCT(S, PAR)		this->S.PAR##_  =	this->S._##PAR
+// creates a default value for the vector type
+#define UI_PARAM_CREATE_DEFAULTV(PAR, TYP)		std::vector<TYP> PAR##_; TYP PAR##_r_ = 0.0; TYP PAR##_ra_ = 0.0;
+
 // specifies parameters in the UI that distinguish between step in range, starting point, number of steps and disorder strength
 #define UI_PARAM_STEP(TYP, PAR, VAL)			UI_PARAM_CREATE_DEFAULTD(PAR, TYP, VAL);	\
 												UI_PARAM_CREATE_DEFAULTD(PAR##0,TYP,0.0);	\
@@ -106,7 +111,7 @@ protected:
 	template <typename _T, typename _Y>
 	bool setOption(_T& valueToSet, const _Y& valueSet);
 	template <class _Tin>
-	bool setOption(std::vector<_Tin>& value, cmdArg& argv, std::string choice, _Tin _default = 0.0);
+	std::pair<_Tin, _Tin> setOption(std::vector<_Tin>& value, cmdArg& argv, std::string choice, _Tin _default = 0.0);
 
 
 	// -------------------------- INIT -------------------------
@@ -220,7 +225,6 @@ inline bool UserInterface::setOption<std::string>(std::string& value, cmdArg& ar
 		value			=	option;
 	return !setVal;
 }
-
 // ######################################################################################################################
 
 /*
@@ -245,14 +249,15 @@ inline bool UserInterface::setOption(_T& valueToSet, const _Y& valueSet)
 /*
 * @brief Provides the possibility to input values as a vector to the UI input
 * @param value vector value
-* @param argv arguments from CMD
 * @param choice option name
-* @returns success of the setting
+* @returns the value of the option randomness
 */
 template<class _Tin>
-inline bool UserInterface::setOption(std::vector<_Tin>& value, cmdArg& argv, std::string choice, _Tin _default)
+inline std::pair<_Tin, _Tin> UserInterface::setOption(std::vector<_Tin>& value, cmdArg& argv, std::string choice, _Tin _default)
 {
 	bool setVal			=	false;
+	double _rVal        =	0.0;
+	double _val			=	0.0;
 	std::string option	=	this->getCmdOption(argv, "-" + choice);
 	strVec optionVec	=	{};
 
@@ -260,12 +265,13 @@ inline bool UserInterface::setOption(std::vector<_Tin>& value, cmdArg& argv, std
 	{
 		BEGIN_CATCH_HANDLER
 		{
+			// check if the vector is of the random type
 			if (setVal = option.find(UI_VECTOR_RANDOM) != std::string::npos; setVal)
 			{
 				optionVec			=	splitStr(option.substr(1), ";");
-				double _val			=	stod(optionVec[1]);
-				double _dis			=	stod(optionVec[2]);
-				v_1d<double> _ranV	=	ran_.createRanVecStd(value.size(), _dis, _val);
+				_val				=	stod(optionVec[1]);
+				_rVal				=	stod(optionVec[2]);
+				v_1d<double> _ranV	=	ran_.rvector<v_1d<double>>(value.size(), _rVal, _val);
 				value				=	_ranV;
 			}
 			// check whether the value containts our special vector separating value
@@ -279,16 +285,20 @@ inline bool UserInterface::setOption(std::vector<_Tin>& value, cmdArg& argv, std
 					for (auto i = 0; i < value.size(); ++i)
 						value[i]	=	static_cast<_Tin>(stod(optionVec[0]));
 			}
+			// if the value is not a vector, we set the value to the same value
 			else
+			{
+				_val	=	static_cast<_Tin>(stod(option));
 				if(setVal = !option.empty(); setVal)
 					for (auto i = 0; i < value.size(); ++i)
-						value[i]	=	static_cast<_Tin>(stod(option));
-			return setVal;
+						value[i]	=	_val;
+			}
+			return std::make_pair(_val, _rVal);
 		}
 		END_CATCH_HANDLER("Couldn't set the vector value...", ;);
 	}
 	std::fill(value.begin(), value.end(), _default);
-	return setVal;
+	return std::make_pair(_val, _rVal);
 }
 
 // ######################################################################################################################

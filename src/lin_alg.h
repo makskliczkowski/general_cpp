@@ -54,6 +54,21 @@ using uint = unsigned int;
 #	pragma message ("--> Skipping concepts")
 #endif
 
+// #######################################################################################################################
+
+template<class _T, typename = void>
+struct inner_type 
+{
+	using type = _T;
+};
+
+template<class T>
+struct inner_type<T, std::void_t<typename T::value_type>>
+	: inner_type<typename T::value_type> {};
+
+template<class T>
+using inner_type_t = typename inner_type<T>::type;
+
 
 // ############################################# DEFINITIONS FROM ARMADILLO #############################################
 
@@ -130,7 +145,7 @@ namespace algebra
 	template <typename _T>
 	inline auto cast(const arma::Col<double>& x)									-> arma::Col<_T>					{ return x; };
 	template <>
-	inline auto cast<std::complex<double>>(const arma::Col<double>& x)				-> arma::Col<std::complex<double>>	{ return x + std::complex<double>(0, 1) * arma::ones(x.n_rows); };
+	inline auto cast<std::complex<double>>(const arma::Col<double>& x)				-> arma::Col<std::complex<double>>	{ return x + std::complex<double>(0, 1) * arma::zeros(x.n_rows); };
 	template <typename _T>
 	inline auto cast(const arma::Col<std::complex<double>>& x)						-> arma::Col<_T>					{ return x; };
 	template <>
@@ -140,11 +155,20 @@ namespace algebra
 	template <typename _T>
 	inline auto cast(const arma::Mat<double>& x)									-> arma::Mat<_T>					{ return x; };
 	template <>
-	inline auto cast<std::complex<double>>(const arma::Mat<double>& x)				-> arma::Mat<std::complex<double>>	{ return x + std::complex<double>(0, 1) * arma::ones(x.n_rows, x.n_cols); };
+	inline auto cast<std::complex<double>>(const arma::Mat<double>& x)				-> arma::Mat<std::complex<double>>	{ return x + std::complex<double>(0, 1) * arma::zeros(x.n_rows, x.n_cols); };
 	template <typename _T>
 	inline auto cast(const arma::Mat<std::complex<double>>& x)						-> arma::Mat<_T>					{ return x; };
 	template <>
 	inline auto cast<double>(const arma::Mat<std::complex<double>>& x)				-> arma::Mat<double>				{ return arma::real(x); };
+	
+	template <typename _T>
+	inline auto cast(const arma::SpMat<double>& x)									-> arma::SpMat<_T>					{ return x; };
+	template <>
+	inline auto cast<std::complex<double>>(const arma::SpMat<double>& x)			-> arma::SpMat<std::complex<double>>{ return x + std::complex<double>(0, 1) * arma::SpMat<double>(); };
+	template <typename _T>
+	inline auto cast(const arma::SpMat<std::complex<double>>& x)					-> arma::SpMat<_T>					{ return x; };
+	template <>
+	inline auto cast<double>(const arma::SpMat<std::complex<double>>& x)			-> arma::SpMat<double>				{ return arma::real(x); };
 
 	// #################################################################################################################################################
 	

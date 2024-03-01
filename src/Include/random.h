@@ -3,6 +3,7 @@
 #define RANDOM_H
 
 #include "../xoshiro_pp.h"
+#include "../lin_alg.h"
 #include <random>
 #include <ctime>
 #include <numeric>
@@ -81,6 +82,9 @@ public:
 
 	// #################### O T H E R   T Y P E S ####################
 
+	template<class _V, typename _T>
+	_V rvector(size_t _size, _T _disorder, _T _around);
+
 	template <class _T>
 	std::vector<_T> createRanVecStd(int _size, double _strength, _T _around = 0.0);
 
@@ -113,6 +117,8 @@ public:
 	_T choice(_T begin, _T end, size_t _num);
 
 };
+
+// ######################################################################################################################
 
 // ######################################################################################################################
 
@@ -289,6 +295,15 @@ inline _T randomGen::choice(_T begin, _T end, size_t _num)
 }
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+template<class _V, typename _T>
+inline _V randomGen::rvector(size_t _size, _T _disorder, _T _around)
+{
+	_V o(_size);
+	for (auto i = 0; i < _size; ++i)
+		o[i] = _around + (this->random<double>() * 2.0 - 1.0) * _disorder;
+	return o;
+}
 
 /*
 * @brief Creates a random vector based on disorder strength

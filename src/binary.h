@@ -169,7 +169,7 @@ namespace Binary
 	// ##################################### FLIP ALL #####################################
 
 	template<typename _T>
-	typename std::enable_if<std::is_arithmetic<_T>::value, bool>::type
+	typename std::enable_if<std::is_arithmetic<_T>::value, _T>::type
 	flipAll(const _T& n, const size_t L) { return BinaryPowers[L] - n - 1; };
 
 	// ##################################### ROTATE LEFT #####################################
@@ -225,7 +225,7 @@ namespace Binary
 	*/
 	template<typename _T>
 	typename std::enable_if<std::is_arithmetic<_T>::value, _T>::type
-	extract(const _T& n, const u64& _mask)
+	extract(const _T& n, u64 _mask)
 	{
 		_T _res			= 0;
 		uint _pos_mask	= 0;

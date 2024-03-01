@@ -79,6 +79,29 @@ inline std::string str_p(v_1d<std::string> v, const int n, bool scientific) {
 	return tmp;
 }
 
+namespace StrParser
+{
+	// ############################################################### C O L O R I Z E ###############################################################
+
+	struct StrColors
+	{
+		static inline std::string black		= "\033[30m";
+		static inline std::string red		= "\033[31m";
+		static inline std::string green		= "\033[32m";
+		static inline std::string yellow	= "\033[33m";
+		static inline std::string blue		= "\033[34m";
+	};
+
+	template <typename _T>
+	inline std::string colorize(const _T& v, const std::string& color) 
+	{
+		return color + v + "\033[0m";
+	}
+
+	// ###################################################################################################################################
+};
+
+
 // ############################################################### V E C T O R I Z E ###############################################################
 
 strVec splitStr(const std::string& s, std::string delimiter = "\t");
