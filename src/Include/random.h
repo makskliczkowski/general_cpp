@@ -165,10 +165,11 @@ template <typename _T, typename _T2, template <class> typename _V>
 inline _V<typename std::common_type<_T, _T2>::type> randomGen::random(_T _mn, _T2 _mx, size_t _s)
 {
 	using result_type = typename std::common_type<_T, _T2>::type;
-	_V<result_type> _out(_size);
+	_V<result_type> _out(_s);
 	// generate random numbers
-	std::generate(_out.begin(), _out.end(), [&]() { return std::uniform_real_distribution<result_type>(_min, _max - 1)(this->engine); });
-	return _out;}
+	std::generate(_out.begin(), _out.end(), [&]() { return std::uniform_real_distribution<result_type>(_mn, _mx - 1)(this->engine); });
+	return _out;
+}
 
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -409,7 +410,22 @@ inline arma::Mat<_T> randomGen::CUE(uint _x, uint _y) const
 
 	arma::Mat<std::complex<double>> Q, R;
 	arma::qr(Q, R, A);
-	return algebra::cast<_T>(Q);
+	return Q;
+	//auto _diag	= R.diag();
+	//_diag		= _diag / arma::abs(_diag);
+	//return Q * DIAG(_diag) * Q;
+}
+
+template <>
+inline arma::Mat<double> randomGen::CUE(uint _x, uint _y) const
+{
+	arma::Mat<std::complex<double>> A(_x, _y, arma::fill::zeros);
+	A.set_real(arma::Mat<double>(_x, _y, arma::fill::randn));
+	A.set_imag(arma::Mat<double>(_x, _y, arma::fill::randn));
+
+	arma::Mat<std::complex<double>> Q, R;
+	arma::qr(Q, R, A);
+	return arma::real(Q);
 	//auto _diag	= R.diag();
 	//_diag		= _diag / arma::abs(_diag);
 	//return Q * DIAG(_diag) * Q;

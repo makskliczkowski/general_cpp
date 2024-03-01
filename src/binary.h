@@ -116,7 +116,7 @@ namespace Binary
 
 	template<typename _T>
 	typename std::enable_if<!std::is_arithmetic<_T>::value, bool>::type
-	check(const _T& n, const int k)	{ return n[L] > 0; };
+	check(const _T& n, const int k)	{ return n[k] > 0; };
 	
 	template<typename _T>
 	typename std::enable_if<std::is_arithmetic<_T>::value, bool>::type
@@ -151,7 +151,7 @@ namespace Binary
 		auto _size	=	_vec.size();
 		_T val		=	0;
 		for (int k = 0; k < _size; ++k)
-			val += static_cast<_T1>((vec[size - 1 - k] / _spin + 1.0) / 2.0) * BinaryPowers[k];
+			val += static_cast<_T>((_vec[_size - 1 - k] / _spin + 1.0) / 2.0) * BinaryPowers[k];
 		return val;
 	}
 
