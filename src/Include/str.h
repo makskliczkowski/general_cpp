@@ -95,7 +95,11 @@ namespace StrParser
 	template <typename _T>
 	inline std::string colorize(const _T& v, const std::string& color) 
 	{
+#ifdef _WIN32
 		return color + v + "\033[0m";
+#else
+		return v;
+#endif
 	}
 
 	// ###################################################################################################################################

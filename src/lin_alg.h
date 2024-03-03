@@ -809,8 +809,17 @@ namespace algebra
 
 // ###################################################### S A V E R ######################################################
 
+/*
+* @brief Save the algebraic matrix to a file with a specific path. The file can be in binary, text or HDF5 format.
+* @param _path path to the file
+* @param _file name of the file
+* @param _toSave matrix to save
+* @param _db name of the database in HDF5 file
+* @param _app append to the file?
+* @returns true if the file was saved
+*/
 template <typename _T>
-inline bool saveAlgebraic(const std::string& _path, const std::string& _file, const arma::Mat<_T>& _toSave, const std::string& _db = "weights")
+inline bool saveAlgebraic(const std::string& _path, const std::string& _file, const arma::Mat<_T>& _toSave, const std::string& _db = "weights", bool _app = false)
 {
 #ifdef _DEBUG
 	LOGINFO(_path + _file, LOG_TYPES::INFO, 3);
@@ -822,7 +831,12 @@ inline bool saveAlgebraic(const std::string& _path, const std::string& _file, co
 #else
 	if (endsWith(_file, ".h5"))
 #endif
-		_isSaved	= _toSave.save(arma::hdf5_name(_path + _file, _db));
+	{
+		if(!_app)
+			_isSaved	= _toSave.save(arma::hdf5_name(_path + _file, _db));
+		else
+			_isSaved	= _toSave.save(arma::hdf5_name(_path + _file, _db, arma::hdf5_opts::append));
+	}
 #ifdef HAS_CXX20
 	else if (_file.ends_with(".bin"))
 #else
@@ -834,12 +848,22 @@ inline bool saveAlgebraic(const std::string& _path, const std::string& _file, co
 #else
 	else if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
 #endif
-		_isSaved	= _toSave.save(_path + _file, arma::arma_ascii);
+	{
+		if(!_app)
+			_isSaved	= _toSave.save(_path + _file, arma::arma_ascii);
+		else
+		{
+			std::ofstream _out;
+			_isSaved = openFile(_out, _path + _file, std::ios::app);
+			_out << _toSave;
+			_out.close();
+		}
+	}
 	return _isSaved;
 }
 
 template <typename _T>
-inline bool saveAlgebraic(const std::string& _path, const std::string& _file, const arma::Col<_T>& _toSave, const std::string& _db = "weights")
+inline bool saveAlgebraic(const std::string& _path, const std::string& _file, const arma::Col<_T>& _toSave, const std::string& _db = "weights", bool _app = false)
 {
 #ifdef _DEBUG
 	LOGINFO(_path + _file, LOG_TYPES::INFO, 3);
@@ -851,7 +875,12 @@ inline bool saveAlgebraic(const std::string& _path, const std::string& _file, co
 #else
 	if (endsWith(_file, ".h5"))
 #endif
-		_isSaved	= _toSave.save(arma::hdf5_name(_path + _file, _db));
+	{
+		if(!_app)
+			_isSaved	= _toSave.save(arma::hdf5_name(_path + _file, _db));
+		else
+			_isSaved	= _toSave.save(arma::hdf5_name(_path + _file, _db, arma::hdf5_opts::append));
+	}
 #ifdef HAS_CXX20
 	else if (_file.ends_with(".bin"))
 #else
@@ -863,7 +892,17 @@ inline bool saveAlgebraic(const std::string& _path, const std::string& _file, co
 #else
 	else if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
 #endif
-		_isSaved	= _toSave.save(_path + _file, arma::arma_ascii);
+	{
+		if(!_app)
+			_isSaved	= _toSave.save(_path + _file, arma::arma_ascii);
+		else
+		{
+			std::ofstream _out;
+			_isSaved = openFile(_out, _path + _file, std::ios::app);
+			_out << _toSave;
+			_out.close();
+		}
+	}
 	return _isSaved;
 }
 
