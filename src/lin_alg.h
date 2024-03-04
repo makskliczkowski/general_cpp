@@ -855,7 +855,15 @@ inline bool saveAlgebraic(const std::string& _path, const std::string& _file, co
 		else
 		{
 			std::ofstream _out;
-			_isSaved = openFile(_out, _path + _file, std::ios::app);
+			try
+			{
+				_out.open(_path + _file, std::ios::app);
+				_isSaved = _out.is_open();
+			}
+			catch(std::exception& e)
+			{
+				LOGINFO(e.what(), LOG_TYPES::ERROR, 2);
+			}
 			_out << _toSave;
 			_out.close();
 		}
@@ -899,7 +907,15 @@ inline bool saveAlgebraic(const std::string& _path, const std::string& _file, co
 		else
 		{
 			std::ofstream _out;
-			_isSaved = openFile(_out, _path + _file, std::ios::app);
+			try
+			{
+				_out.open(_path + _file, std::ios::app);
+				_isSaved = _out.is_open();
+			}
+			catch(std::exception& e)
+			{
+				LOGINFO(e.what(), LOG_TYPES::ERROR, 2);
+			}
 			_out << _toSave;
 			_out.close();
 		}
