@@ -104,6 +104,7 @@ using MAT											= arma::Mat<_T>;
 
 #include "./Include/random.h"
 #include "./Include/maths.h"
+#include "./Include/files.h"
 
 namespace algebra 
 {
