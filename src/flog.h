@@ -72,6 +72,11 @@ BEGIN_ENUM(LOG_TYPES)
 }
 END_ENUM(LOG_TYPES);
 #define LOG_INFO(TYP)								"[" + SSTR(getSTR_LOG_TYPES(TYP)) + "]"
+#ifdef _DEBUG
+#	define LOG_DEBUG(MSG, INFORMATION)				LOGINFO(INFORMATION, LOG_TYPES::DEBUG, 0); LOGINFO(MSG, LOG_TYPES::DEBUG, 1)
+#else
+#	define LOG_DEBUG(MSG, INFORMATION)								
+#endif
 #define LOG_ERROR(MSG)								LOGINFO(std::string(MSG) + " -- " + std::string(__func__), LOG_TYPES::ERROR, 0); throw std::runtime_error(std::string(MSG) + " -- " + std::string(__func__))
 
 // --- create log file if necessary ---
@@ -101,7 +106,7 @@ inline void SET_LOG_TIME() {
 template <typename _T>
 inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl) 
 {
-#ifdef _DEBUG
+#ifndef _DEBUG
 	if(_typ == LOG_TYPES::DEBUG)
 		return;
 #endif // _DEBUG
@@ -138,10 +143,19 @@ inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl)
 template<>
 inline void LOGINFO(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl)
 {
-#ifdef _DEBUG
+#ifndef _DEBUG
 	if(_typ == LOG_TYPES::DEBUG)
 		return;
 #endif // _DEBUG
+
+	// check if the message contains the new line characters
+	if (_msg.find("\n") != std::string::npos)
+	{
+		auto _msgs = splitStr(_msg, "\n");
+		for (auto& i : _msgs)
+			LOGINFO(i, _typ, _lvl);
+		return;
+	}
 
 #ifdef FLOGTIME
 	std::cout << "[" << prettyTime() << "]";
@@ -230,6 +244,23 @@ inline void LOGINFO(const std::string& _msg,
 // ##########################################################################################################################################
 
 /*
+* @brief Log the information stored in the vector
+* @param _msg vector with elements to be printed
+* @param _typ type of the message (one of INFO,	TIME, ERROR, TRACE, CHOICE, FINISH, WARNING)
+* @param _lvl tabulation level
+*/
+template<typename _T>
+inline void LOGINFO(const std::vector<_T>& _msg, LOG_TYPES _typ, unsigned int _lvl = 0)
+{
+	for (auto& i : _msg)
+	{
+		LOGINFO(STR(i), _typ, _lvl);
+	}
+}
+
+// ##########################################################################################################################################
+
+/*
 * @brief Breakline loginfo
 * @param _n n lines to break
 */
@@ -251,13 +282,8 @@ inline void LOGINFO(unsigned int _n)
 */
 inline void LOGINFO(const clk::time_point& _t, const std::string& funName, unsigned int _lvl = 0)
 {
-	//LOGINFO(1);
-	//LOGINFO("", LOG_TYPES::TRACE, 30, '%', std::max(int(_lvl) - 2, 0));
 	LOGINFO("Function: " + funName + " took:",	LOG_TYPES::TIME, _lvl);
 	LOGINFO(STR(t_ms(_t)) + " ms",				LOG_TYPES::TIME, _lvl + 1);
-	//LOGINFO(STR(t_s(_t)) +	" s",				LOG_TYPES::TIME, _lvl + 1);
-	//LOGINFO("", LOG_TYPES::TRACE, 30, '%', std::max(int(_lvl) - 2, 0));
-	//LOGINFO(1);
 }
 
 // ##########################################################################################################################################
