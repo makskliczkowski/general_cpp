@@ -270,184 +270,240 @@ namespace algebra
 	// #################################################################################################################################################
 	
 	// #################################################################################################################################################
+	
+	// ################################################################### PFAFFIANS ###################################################################
 
-	enum class PfaffianAlgorithms
+	// #################################################################################################################################################
+
+	namespace Pfaffian
 	{
-		ParlettReid,
-		Householder,
-		Schur,
-		Hessenberg,
-		Recursive
+		enum class PfaffianAlgorithms
+		{
+			ParlettReid,
+			Householder,
+			Schur,
+			Hessenberg,
+			Recursive
+		};
+
+		/*
+		* @brief Calculate the Pfaffian of a skew square matrix A. Use the recursive definition.
+		* @link https://s3.amazonaws.com/researchcompendia_prod/articles/2f85f444b9e340246d9991177acf9732-2013-12-23-02-19-16/a30-wimmer.pdf
+		* @param A skew-symmetric matrix
+		* @param N size of the matrix
+		* @returns the Pfaffian of a skew-symmetric matrix A
+		*/
+		template <typename _T>
+		_T pfaffian_r(const arma::Mat<_T>& A, arma::u64 N)
+		{
+			if (N == 0)
+				return _T(1.0);
+			else if (N == 1)
+				return _T(0.0);
+			else
+			{
+				_T pfa = 0.0;
+				for (arma::u64 i = 2; i <= N; i++)
+				{
+					arma::Mat<_T> temp = A;
+					_T _sign = (i % 2 == 0) ? 1. : -1.;
+					temp.shed_col(i - 1);
+					temp.shed_row(i - 1);
+					temp.shed_row(0);
+					if (N > 2)
+						temp.shed_col(0);
+					pfa += _sign * A(0, i - 1) * pfaffian_r(temp, N - 2);
+				}
+				return pfa;
+			}
+		}
+
+		// #################################################################################################################################################
+
+		/*
+		* @brief Computing the Pfaffian of a skew-symmetric matrix. Using the fact that for an arbitrary skew-symmetric matrix,
+		* the pfaffian Pf(B A B^T ) = det(B)Pf(A). This is done via Hessenberg decomposition.
+		* @param A skew-symmetric matrix
+		* @param N size of the matrix
+		* @returns the Pfaffian of a skew-symmetric matrix A
+		*/
+		template <typename _T>
+		_T pfaffian_hess(const arma::Mat<_T>& A, arma::u64 N)
+		{
+			// calculate the Upper Hessenberg decomposition. Take the upper diagonal only
+			arma::Mat<_T> H, Q;
+			arma::hess(Q, H, A);
+			return arma::det(Q) * arma::prod(arma::Col<_T>(H.diag(1)).elem(arma::regspace<arma::uvec>(0, N - 1, 2)));
+		}
+
+		// #################################################################################################################################################
+
+		/*
+		* @brief Computing the Pfaffian of a skew-symmetric matrix. Using the fact that for an arbitrary skew-symmetric matrix,
+		* the pfaffian Pf(B A B^T ) = det(B)Pf(A). This is done via Parlett-Reid algorithm.
+		* @param A skew-symmetric matrix
+		* @param N size of the matrix
+		* @returns the Pfaffian of a skew-symmetric matrix A
+		*/
+		template <typename _T>
+		_T pfaffian_p(arma::Mat<_T> A, arma::u64 N)
+		{
+			if(!(A.n_rows == A.n_cols && A.n_rows == N && N > 0))
+				throw std::runtime_error("Error: Matrix size must be even for Pfaffian calculation.");
+	#ifdef _DEBUG
+			// Check if it's skew-symmetric
+			//if(!(((A + A.st()).max()) < 1e-14))
+	#endif
+			// quick return if possible
+			if (N % 2 == 1)
+				return 0; 
+			// work on a copy of A
+
+			_T pfaffian = 1.0;
+			for (arma::u64 k = 0; k < N - 1; k += 2)
+			{
+				// First, find the largest entry in A[k + 1:, k] and
+				// permute it to A[k + 1, k]
+				auto kp = k + 1 + arma::abs(A.col(k).subvec(k + 1, N - 1)).index_max();
+
+				// Check if we need to pivot
+				if (kp != k + 1)
+				{
+					// interchange rows k + 1 and kp
+					A.swap_rows(k + 1, kp);
+
+					// Then interchange columns k + 1 and kp
+					A.swap_cols(k + 1, kp);
+
+					// every interchange corresponds to a "-" in det(P)
+					pfaffian *= -1;
+				}
+
+				// Now form the Gauss vector
+				if (A(k + 1, k) != 0.0)
+				{
+					pfaffian *=	A(k, k + 1);
+					if (k + 2 < N)
+					{
+						arma::Row<_T> tau	=	A.row(k).subvec(k + 2, N - 1) / A(k, k + 1);
+						// Update the matrix block A(k + 2:, k + 2)
+						const auto col				=	A.col(k + 1).subvec(k + 2, N - 1);
+						auto subMat 				=	A.submat(k + 2, k + 2, N - 1, N - 1);	
+						const auto col_times_row	=	outer(col, tau);
+						const auto row_times_col	=	outer(tau, col);
+						//col_times_row.print("COL * TAU");
+						//row_times_col.print("TAU * COL");
+						subMat				+=	row_times_col;
+						subMat				-=	col_times_row;
+					}
+				}
+				// if we encounter a zero on the super/subdiagonal, the Pfaffian is 0
+				else
+					return 0.0;
+			}
+			return pfaffian;
+		}
+
+		// #################################################################################################################################################
+	
+		/*
+		* @brief Computing the Pfaffian of a skew-symmetric matrix. Using the fact that for an arbitrary skew-symmetric matrix,
+		* the pfaffian Pf(B A B^T ) = det(B)Pf(A). This is done via Schur decomposition.
+		* @param A skew-symmetric matrix
+		* @param N size of the matrix
+		* @returns the Pfaffian of a skew-symmetric matrix A
+		*/
+		template <typename _T>
+		_T pfaffian_s(arma::Mat<_T> A, arma::u64 N)
+		{
+			arma::Mat<_T> U, S;
+			arma::schur(U, S, A);
+			return arma::det(U) * arma::prod(arma::Col<_T>(S.diag(1)).elem(arma::regspace<arma::uvec>(0, N - 1, 2)));
+		}
+	
+		// #################################################################################################################################################
+
+		template <typename _T>
+		_T pfaffian(const arma::Mat<_T>& A, arma::u64 N, PfaffianAlgorithms _alg = PfaffianAlgorithms::ParlettReid)
+		{
+	//#ifdef _DEBUG
+	//		A.save(arma::hdf5_name("A.h5"));
+	//#endif
+			switch (_alg)
+			{
+			case PfaffianAlgorithms::ParlettReid:
+				return pfaffian_p<_T>(A, N);
+			case PfaffianAlgorithms::Householder:
+				//LOGINFO("Householder Pfaffian algorithm not implemented yet.", LOG_TYPES::ERROR, 2);
+				return 0;
+			case PfaffianAlgorithms::Schur:
+				return pfaffian_s<_T>(A, N);
+			case PfaffianAlgorithms::Hessenberg:
+				return pfaffian_hess<_T>(A, N);
+			case PfaffianAlgorithms::Recursive:
+				return pfaffian_r(A, N);
+			default:
+				return pfaffian_p<_T>(A, N);
+			}
+		}
+		
+		// #################################################################################################################################################
+		
+		/*
+		* @brief Update the Pfaffian of a skew-symmetric matrix after a row and column update.
+		* @param _pffA current Pfaffian
+		* @param _Ainv inverse of the original matrix
+		* @returns the Pfaffian of an updated skew-symmetric matrix
+		*/
+		template <typename _Tp, typename _T>
+		_Tp pfaffian_upd_row_n_col(_Tp _pffA, const _T& _Ainv_row, const _T& _updRow)
+		{
+			return -_pffA * algebra::cast<_Tp>(arma::dot(_Ainv_row, _updRow));
+		}
+
+
 	};
 
-	/*
-	* @brief Calculate the Pfaffian of a skew square matrix A. Use the recursive definition.
-	* @link https://s3.amazonaws.com/researchcompendia_prod/articles/2f85f444b9e340246d9991177acf9732-2013-12-23-02-19-16/a30-wimmer.pdf
-	* @param A skew-symmetric matrix
-	* @param N size of the matrix
-	* @returns the Pfaffian of a skew-symmetric matrix A
-	*/
-	template <typename _T>
-	_T pfaffian_r(const arma::Mat<_T>& A, arma::u64 N)
-	{
-		if (N == 0)
-			return _T(1.0);
-		else if (N == 1)
-			return _T(0.0);
-		else
-		{
-			_T pfa = 0.0;
-			for (arma::u64 i = 2; i <= N; i++)
-			{
-				arma::Mat<_T> temp = A;
-				_T _sign = (i % 2 == 0) ? 1. : -1.;
-				temp.shed_col(i - 1);
-				temp.shed_row(i - 1);
-				temp.shed_row(0);
-				if (N > 2)
-					temp.shed_col(0);
-				pfa += _sign * A(0, i - 1) * pfaffian_r(temp, N - 2);
-			}
-			return pfa;
-		}
-	}
-
 	// #################################################################################################################################################
 
 	/*
-	* @brief Computing the Pfaffian of a skew-symmetric matrix. Using the fact that for an arbitrary skew-symmetric matrix,
-	* the pfaffian Pf(B A B^T ) = det(B)Pf(A). This is done via Hessenberg decomposition.
-	* @param A skew-symmetric matrix
-	* @param N size of the matrix
-	* @returns the Pfaffian of a skew-symmetric matrix A
+	* @brief Calculate the inverse of a skew-symmetric matrix using the Scheher-Morrison formula.
+	* @param _Ainv inverse of the matrix before the update
+	* @param _updIdx index of the updated row
+	* @param _updRow updated row
+	* @returns the inverse of the updated skew-symmetric matrix
 	*/
-	template <typename _T>
-	_T pfaffian_hess(const arma::Mat<_T>& A, arma::u64 N)
+	template<typename _T, typename _T2 = arma::subview_col<_T>>
+	arma::Mat<_T> scherman_morrison_skew(const arma::Mat<_T>& _Ainv, uint _updIdx, const _T2& _updRow)
 	{
-		// calculate the Upper Hessenberg decomposition. Take the upper diagonal only
-		arma::Mat<_T> H, Q;
-		arma::hess(Q, H, A);
-		return arma::det(Q) * arma::prod(arma::Col<_T>(H.diag(1)).elem(arma::regspace<arma::uvec>(0, N - 1, 2)));
-	}
+		auto _out					= _Ainv;
+		// precalculate all the dotproducts
+		const arma::Col<_T> _dots	= _Ainv * _updRow.as_col();
 
-	// #################################################################################################################################################
+		// precalculate the dot product inverse for updated row
+		const auto _dotProductInv	= 1.0 / _dots(_updIdx);
 
-	/*
-	* @brief Computing the Pfaffian of a skew-symmetric matrix. Using the fact that for an arbitrary skew-symmetric matrix,
-	* the pfaffian Pf(B A B^T ) = det(B)Pf(A). This is done via Parlett-Reid algorithm.
-	* @param A skew-symmetric matrix
-	* @param N size of the matrix
-	* @returns the Pfaffian of a skew-symmetric matrix A
-	*/
-	template <typename _T>
-	_T pfaffian_p(arma::Mat<_T> A, arma::u64 N)
-	{
-		if(!(A.n_rows == A.n_cols && A.n_rows == N && N > 0))
-			throw std::runtime_error("Error: Matrix size must be even for Pfaffian calculation.");
-#ifdef _DEBUG
-		// Check if it's skew-symmetric
-		//if(!(((A + A.st()).max()) < 1e-14))
-#endif
-		// quick return if possible
-		if (N % 2 == 1)
-			return 0; 
-		// work on a copy of A
-
-		_T pfaffian = 1.0;
-		for (arma::u64 k = 0; k < N - 1; k += 2)
+		// go through the update
+		for(int i = 0; i < _Ainv .n_rows; i++)
 		{
-			// First, find the largest entry in A[k + 1:, k] and
-			// permute it to A[k + 1, k]
-			auto kp = k + 1 + arma::abs(A.col(k).subvec(k + 1, N - 1)).index_max();
-
-			// Check if we need to pivot
-			if (kp != k + 1)
+			auto _d_i_alpha = (i == _updIdx) ? 1.0 : 0.0;
+			for(int j = 0; j < _Ainv.n_cols; j++)
 			{
-				// interchange rows k + 1 and kp
-				A.swap_rows(k + 1, kp);
-
-				// Then interchange columns k + 1 and kp
-				A.swap_cols(k + 1, kp);
-
-				// every interchange corresponds to a "-" in det(P)
-				pfaffian *= -1;
+				auto _d_j_alpha = (j == _updIdx) ? 1.0 : 0.0;
+				_out(i, j) += _dotProductInv * ((_d_i_alpha - _dots(i)) * _Ainv(_updIdx, j) + (_dots(j) - _d_j_alpha) * _Ainv(_updIdx, i));
+				// why????!!!!
+				if(_d_i_alpha || _d_j_alpha)
+					_out(i, j) *= -1;
 			}
-
-			// Now form the Gauss vector
-			if (A(k + 1, k) != 0.0)
-			{
-				pfaffian *=	A(k, k + 1);
-				if (k + 2 < N)
-				{
-					arma::Row<_T> tau	=	A.row(k).subvec(k + 2, N - 1) / A(k, k + 1);
-					// Update the matrix block A(k + 2:, k + 2)
-					const auto col				=	A.col(k + 1).subvec(k + 2, N - 1);
-					auto subMat 				=	A.submat(k + 2, k + 2, N - 1, N - 1);	
-					const auto col_times_row	=	outer(col, tau);
-					const auto row_times_col	=	outer(tau, col);
-					//col_times_row.print("COL * TAU");
-					//row_times_col.print("TAU * COL");
-					subMat				+=	row_times_col;
-					subMat				-=	col_times_row;
-				}
-			}
-			// if we encounter a zero on the super/subdiagonal, the Pfaffian is 0
-			else
-				return 0.0;
 		}
-		return pfaffian;
+		return _out;
 	}
 
 	// #################################################################################################################################################
 	
-	/*
-	* @brief Computing the Pfaffian of a skew-symmetric matrix. Using the fact that for an arbitrary skew-symmetric matrix,
-	* the pfaffian Pf(B A B^T ) = det(B)Pf(A). This is done via Schur decomposition.
-	* @param A skew-symmetric matrix
-	* @param N size of the matrix
-	* @returns the Pfaffian of a skew-symmetric matrix A
-	*/
-	template <typename _T>
-	_T pfaffian_s(arma::Mat<_T> A, arma::u64 N)
-	{
-		arma::Mat<_T> U, S;
-		arma::schur(U, S, A);
-		return arma::det(U) * arma::prod(arma::Col<_T>(S.diag(1)).elem(arma::regspace<arma::uvec>(0, N - 1, 2)));
-	}
-	
-	// #################################################################################################################################################
-
-	template <typename _T>
-	_T pfaffian(const arma::Mat<_T>& A, arma::u64 N, PfaffianAlgorithms _alg = PfaffianAlgorithms::ParlettReid)
-	{
-//#ifdef _DEBUG
-//		A.save(arma::hdf5_name("A.h5"));
-//#endif
-		switch (_alg)
-		{
-		case PfaffianAlgorithms::ParlettReid:
-			return pfaffian_p<_T>(A, N);
-		case PfaffianAlgorithms::Householder:
-			//LOGINFO("Householder Pfaffian algorithm not implemented yet.", LOG_TYPES::ERROR, 2);
-			return 0;
-		case PfaffianAlgorithms::Schur:
-			return pfaffian_s<_T>(A, N);
-		case PfaffianAlgorithms::Hessenberg:
-			return pfaffian_hess<_T>(A, N);
-		case PfaffianAlgorithms::Recursive:
-			return pfaffian_r(A, N);
-		default:
-			return pfaffian_p<_T>(A, N);
-		}
-	}
-
-	// #################################################################################################################################################
-	
-	// #################################################################################################################################################
 	// ############################################################# MATRIX DECOMPOSITIONS #############################################################
-	// #################################################################################################################################################
 	
-	// #################################################################################################################################################
+	// #################################################################################################################################################	
 
 	template<typename _T>
 	class UDT
