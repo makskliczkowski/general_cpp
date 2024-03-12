@@ -879,7 +879,7 @@ template <typename _T>
 inline bool saveAlgebraic(const std::string& _path, const std::string& _file, const arma::Mat<_T>& _toSave, const std::string& _db = "weights", bool _app = false)
 {
 #ifdef _DEBUG
-	LOGINFO(_path + _file, LOG_TYPES::INFO, 3);
+	//LOGINFO(_path + _file, LOG_TYPES::INFO, 3);
 #endif
 	createDir(_path);
 	bool _isSaved	= false;
@@ -918,7 +918,7 @@ inline bool saveAlgebraic(const std::string& _path, const std::string& _file, co
 			}
 			catch(std::exception& e)
 			{
-				LOGINFO(e.what(), LOG_TYPES::ERROR, 2);
+				//LOGINFO(e.what(), LOG_TYPES::ERROR, 2);
 			}
 			_out << _toSave;
 			_out.close();
@@ -931,7 +931,7 @@ template <typename _T>
 inline bool saveAlgebraic(const std::string& _path, const std::string& _file, const arma::Col<_T>& _toSave, const std::string& _db = "weights", bool _app = false)
 {
 #ifdef _DEBUG
-	LOGINFO(_path + _file, LOG_TYPES::INFO, 3);
+	//LOGINFO(_path + _file, LOG_TYPES::INFO, 3);
 #endif
 	createDir(_path);
 	bool _isSaved	= false;
@@ -970,7 +970,7 @@ inline bool saveAlgebraic(const std::string& _path, const std::string& _file, co
 			}
 			catch(std::exception& e)
 			{
-				LOGINFO(e.what(), LOG_TYPES::ERROR, 2);
+				//LOGINFO(e.what(), LOG_TYPES::ERROR, 2);
 			}
 			_out << _toSave;
 			_out.close();
@@ -983,7 +983,7 @@ template <typename _T>
 inline bool loadAlgebraic(const std::string& _path, const std::string& _file, arma::Mat<_T>& _toSet, const std::string& _db = "weights")
 {
 #ifdef _DEBUG
-	LOGINFO(LOG_TYPES::INFO, _path + _file, 3);
+	//LOGINFO(LOG_TYPES::INFO, _path + _file, 3);
 #endif
 	createDir(_path);
 	bool _isSaved = false;
@@ -1021,7 +1021,7 @@ template <typename _T>
 inline bool loadAlgebraic(const std::string& _path, const std::string& _file, arma::Col<_T>& _toSet, const std::string& _db = "weights")
 {
 #ifdef _DEBUG
-	LOGINFO(_path + _file, LOG_TYPES::INFO, 3, '#');
+	//LOGINFO(_path + _file, LOG_TYPES::INFO, 3, '#');
 #endif
 	createDir(_path);
 	bool _isSaved = false;
