@@ -100,13 +100,13 @@ public:
 	// ####################### M A T R I C E S #######################
 	
 	template <typename _T>
-	arma::Mat<_T>  GOE(uint _x, uint _y) const;
+	arma::Mat<_T>  GOE(uint _x, uint _y);
 	template <typename _T>
-	arma::Mat<_T> GOE(uint _x) const { return GOE<_T>(_x, _x); };
+	arma::Mat<_T> GOE(uint _x) { return GOE<_T>(_x, _x); };
 	template <typename _T>
-	arma::Mat<_T>  CUE(uint _x, uint _y) const;
+	arma::Mat<_T>  CUE(uint _x, uint _y);
 	template <typename _T>
-	arma::Mat<_T> CUE(uint _x) const { return CUE<_T>(_x, _x); };
+	arma::Mat<_T> CUE(uint _x) { return CUE<_T>(_x, _x); };
 
 	// ####################### E L E M E N T S #######################
 
@@ -388,10 +388,15 @@ inline arma::Col<double> randomGen::createRanState(uint _gamma)
 * @brief Creates a GOE matrix...
 */ 
 template <typename _T>
-inline arma::Mat<_T> randomGen::GOE(uint _x, uint _y) const
+inline arma::Mat<_T> randomGen::GOE(uint _x, uint _y)
 {
-	arma::Mat<_T> A(_x, _y, arma::fill::randn);
-	return 0.5 * (A + A.t());
+	arma::Mat<_T> A(_x, _y, arma::fill::zeros);
+	
+	for(uint i = 0; i < _x; ++i)
+		for(uint j = i; j < _y; ++j)
+			A(i, j) = algebra::cast<_T>(this->randomNormal(0.0, 1.0));
+
+	return  std::sqrt(0.5) * (A + A.t());
 }
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -402,7 +407,7 @@ inline arma::Mat<_T> randomGen::GOE(uint _x, uint _y) const
 * ... https://doi.org/10.48550/arXiv.math-ph/0609050 ...
 */
 template <typename _T>
-inline arma::Mat<_T> randomGen::CUE(uint _x, uint _y) const
+inline arma::Mat<_T> randomGen::CUE(uint _x, uint _y)
 {
 	arma::Mat<std::complex<double>> A(_x, _y, arma::fill::zeros);
 	A.set_real(arma::Mat<double>(_x, _y, arma::fill::randn));
@@ -417,7 +422,7 @@ inline arma::Mat<_T> randomGen::CUE(uint _x, uint _y) const
 }
 
 template <>
-inline arma::Mat<double> randomGen::CUE(uint _x, uint _y) const
+inline arma::Mat<double> randomGen::CUE(uint _x, uint _y)
 {
 	arma::Mat<std::complex<double>> A(_x, _y, arma::fill::zeros);
 	A.set_real(arma::Mat<double>(_x, _y, arma::fill::randn));
