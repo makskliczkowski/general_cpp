@@ -44,6 +44,100 @@ inline _T correlationError(const arma::Col<_T>& bins) {
 //	return std::sqrt(sq_sum / double(v.size()));
 //}
 
+namespace StatisticalMeasures
+{
+	/*
+	* @brief Calculate the gaussianity of the samples. The gaussianity is the ratio of the mean
+	* of the square of the samples to the square of the mean of the samples.
+	* @param _mean the mean of the samples
+	* @param _mean2 the mean of the square of the samples
+	* @returns the gaussianity of the samples
+	*/
+	inline double gaussianity(double _mean, double _mean2)
+	{
+		return _mean2 / _mean / _mean;
+	}
+	
+	/*
+	* @brief Calculate the gaussianity of the samples. The gaussianity is the ratio of the mean 
+	* of the square of the samples to the square of the mean of the samples.
+	* @param _samples the samples to calculate the gaussianity
+	* @returns the gaussianity of the samples
+	*/
+	inline double gaussianity(const arma::Col<double>& _samples)
+	{
+		auto _abs	= arma::abs(_samples);
+		auto _mean	= arma::mean(_abs);
+		auto _mean2 = arma::mean(arma::square(_abs));
+		return gaussianity(_mean, _mean2);
+	}
+
+	// ##########################################################################################################################################
+	
+	/*
+	* @brief Calculate the cumulant of the samples. The cumulant is the ratio of the mean of the square
+	* of the samples to the square of the mean of the samples.
+	* @param _mean2 the mean of the square of the samples
+	* @param _mean4 the mean of the fourth power of the samples
+	* @returns the cumulant of the samples
+	*/
+	inline double binder_cumulant(double _mean2, double _mean4)
+	{
+		return _mean4 / 3.0l / _mean2 / _mean2;
+	}
+
+	/*
+	* @brief Calculate the cumulant of the samples. The cumulant is the ratio of the mean of the square
+	* of the samples to the square of the mean of the samples.
+	* @param _samples the samples to calculate the cumulant
+	* @returns the cumulant of the samples
+	*/
+	inline double binder_cumulant(const arma::Col<double>& _samples)
+	{	
+		auto _square	= arma::square(_samples);
+		double _mean4	= arma::mean(arma::square(_square));
+		double _mean2	= arma::mean(_square);
+		return binder_cumulant(_mean2, _mean4);
+	}
+
+	// ##########################################################################################################################################
+
+	/*
+	* @brief Calculate the kurtosis of the samples. The kurtosis is the ratio of the mean of the cube
+	* of the samples to the cube of the mean of the samples.
+	* @param _var the variance of the samples
+	* @param _skew the skewness of the samples
+	* @param fisher whether to use the Fisher kurtosis or not
+	* @returns the kurtosis of the samples
+	*/
+	inline double kurtosis(double _var, double _skew, bool fisher = true)
+	{
+		if (fisher)
+			return _skew / _var / _var - 3.0;
+		return _skew / _var / _var;
+	}
+
+	/*
+	* @brief Calculate the kurtosis of the samples. The kurtosis is the ratio of the mean of the cube
+	* of the samples to the cube of the mean of the samples.
+	* @param _samples the samples to calculate the kurtosis
+	* @param fisher whether to use the Fisher kurtosis or not
+	* @returns the kurtosis of the samples
+	*/
+	inline double kurtosis(const arma::Col<double>& _samples, bool fisher = true)
+	{
+		auto _square_x_minus_mu = arma::square(_samples - arma::mean(_samples));
+		auto _mean2				= arma::mean(_square_x_minus_mu);
+		auto _mean4				= arma::mean(arma::square(_square_x_minus_mu));
+		return kurtosis(_mean2, _mean4, fisher);
+	}
+
+	// ##########################################################################################################################################
+};
+
+
+// ##########################################################################################################################################
+
 /*
 * @brief A histogram class that stores the bin edges and the bin counts
 */
@@ -131,14 +225,9 @@ public:
 			this->binEdges_[i] = 0;
 			this->binCounts_[i] = 0;
 		}
+		this->binCounts_[this->nBins_] = 0;
 	}
-	
-	// -------------------------
 
-	/*
-	* @brief Reset the histogram with a new number of bins and the bin edges
-	* @param _N the number of bins
-	*/
 	virtual void reset(u64 _N)
 	{
 		nBins_		=   _N;
@@ -156,13 +245,46 @@ public:
 	*/
 	void uniform(long double _max, long double _min = 0)
 	{
-		const long double binWidth = std::fabs(_max - _min) / nBins_;
+		const long double binWidth = std::fabs(_max - _min) / this->nBins_;
 
 		// create the bin edges
 		for (u64 i = 0; i < this->nBins_; i++)
 			this->binEdges_[i] = _min + i * binWidth;
 	}
 	
+	/*
+	* @brief Create a logarithmic distribution of the bins
+	* @param _max the maximum value
+	* @param _min the minimum value
+	* @param base the base of the logarithm
+	*/
+	void uniformLog(long double _max, long double _min = 1e-5, int base = 10)
+	{
+		int _maxin = _max;
+		int _minin = _min;
+
+		if (base == 10)
+		{
+			_maxin = std::ceil(std::log10(_max));
+			_minin = std::ceil(std::log10(_min));
+		}
+		else if (base == 2)
+		{
+			_maxin = std::ceil(std::log2(_max));
+			_minin = std::ceil(std::log2(_min));
+		}
+		else
+		{
+			_maxin = std::ceil(std::log(_max));
+			_minin = std::ceil(std::log(_min));
+		}
+		auto _edges = arma::logspace(_minin, _maxin, this->nBins_ + 1);
+
+		// create the bin edges
+		for (u64 i = 0; i < this->nBins_; i++)
+			this->binEdges_[i] = _edges(i);
+	}
+
 	// ######## Methods ########
 
 	/*
@@ -181,7 +303,7 @@ public:
 		else if (_value >= this->binEdges_.back()) 
 		{
 			// last bin counts values in [aN-1, +INF)
-			++binCounts_[nBins_];
+			++binCounts_[this->nBins_];
 			return nBins_;
 		}
 
@@ -284,6 +406,7 @@ public:
 		}
 		return _binIdx;
 	}
-	
+
+	// ##########################################################################################################################################
 
 };
