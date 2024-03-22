@@ -22,7 +22,7 @@ namespace FileParser
 	*/
 	inline std::string appWRandom(std::string _f, randomGen& _ran) 
 	{
-		return _f + "_R=" + STR(_ran.randomInt<int>(0, 1000));
+		return _f + "_R=" + STR(_ran.randomInt<int>(0, 10000));
 	}
 }
 
