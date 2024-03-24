@@ -266,7 +266,7 @@ public:
 		if (percentage * discreteSteps < 100 || percentageSteps == 0)
 		{
 			this->percentage	=	100 / discreteSteps;
-			percentageSteps		=	std::ceil(this->percentage * discreteSteps / 100.0);
+			percentageSteps		=	(int)std::ceil(this->percentage * discreteSteps / 100.0);
 		}
 		this->currUpdateVal		= 0;
 		this->currentProgress	= 0;

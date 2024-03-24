@@ -1,4 +1,3 @@
-#pragma once
 #ifndef RANDOM_H
 #define RANDOM_H
 
@@ -25,6 +24,13 @@ namespace rng = std::experimental::ranges;
 #	endif
 #endif
 
+// declaration
+namespace algebra
+{
+	template <typename _T, typename _Tin>
+	inline auto cast(_Tin x) -> _T;
+
+}
 
 // -------------------------------------------------------- RANDOM NUMBER CLASS --------------------------------------------------------
 
@@ -133,7 +139,7 @@ inline randomGen::randomGen(std::uint64_t seed)
 
 /*
 * @brief Creates random seed based on 64bit unsigned integer
-* @parma n 64bit unsigned integer
+* @param n 64bit unsigned integer
 * @returns new seed for Xavier256 initializer
 */
 inline uint64_t randomGen::seedInit(uint64_t n)
@@ -273,7 +279,7 @@ inline std::vector<_T, _A> randomGen::choice(const std::vector<_T, _A>& _iterabl
 // ----------------------------------------------------------------------------------------------------------------------
 
 /*
-* @brief Uses the Fisher–Yates shuffle to obtain the random choice out of a container.
+* @brief Uses the Fisherï¿½Yates shuffle to obtain the random choice out of a container.
 * @url https://stackoverflow.com/questions/9345087/choose-m-elements-randomly-from-a-vector-containing-n-elements
 * @param begin begining of the container
 * @param end end of the container

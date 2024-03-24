@@ -213,7 +213,7 @@ public:
 	static u64 freedman_diaconis_rule(u64 _nobs, double _iqr, double _max, double _min = 0)
 	{
 		double h = (2.0 * _iqr / std::pow(_nobs, 1.0 / 3.0));
-		return std::ceil((_max - _min) / h);
+		return (u64)std::ceil((_max - _min) / h);
 	}
 
 	// ######## Setters ########
@@ -260,8 +260,8 @@ public:
 	*/
 	void uniformLog(long double _max, long double _min = 1e-5, int base = 10)
 	{
-		int _maxin = _max;
-		int _minin = _min;
+		auto _maxin = _max;
+		auto _minin = _min;
 
 		if (base == 10)
 		{

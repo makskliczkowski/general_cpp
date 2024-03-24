@@ -227,7 +227,7 @@ inline void LOGINFO(const std::string& _msg,
 	std::string out	= "";
 	
 	// append first
-	for (int i = 0; i < fillSize; ++i)
+	for (auto i = 0ull; i < fillSize; ++i)
 		out			= out + fill;
 
 			// append text
@@ -235,7 +235,7 @@ inline void LOGINFO(const std::string& _msg,
 		out			= out + " " + _msg + " ";
 
 	// append last
-	for (int i = 0; i < fillSize; ++i)
+	for (auto i = 0ull; i < fillSize; ++i)
 		out			= out + fill;
 
 	LOGINFO(out, _typ, _lvl);
@@ -267,7 +267,7 @@ inline void LOGINFO(const std::vector<_T>& _msg, LOG_TYPES _typ, unsigned int _l
 inline void LOGINFO(unsigned int _n)
 {
 	std::string _out	=	"";
-	for (auto i = 0; i < _n; ++i)
+	for (unsigned int i = 0; i < _n; ++i)
 		_out			+=	"\n";
 	LOGINFO(_out, LOG_TYPES::TRACE, 0, '#');
 }

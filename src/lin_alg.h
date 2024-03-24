@@ -16,6 +16,10 @@
 using uint = unsigned int;
 // ############################################## INCLUDE FROM ARMADILLO #############################################
 
+#ifdef _WIN32
+//#define H5_BUILT_AS_DYNAMIC_LIB 
+#endif
+
 #define ARMA_WARN_LEVEL 1
 #define ARMA_USE_LAPACK             
 #define ARMA_PRINT_EXCEPTIONS
@@ -102,7 +106,6 @@ using MAT											= arma::Mat<_T>;
 
 // #######################################################################################################################
 
-#include "./Include/random.h"
 #include "./Include/maths.h"
 #include "./Include/files.h"
 
@@ -137,6 +140,8 @@ namespace algebra
 	
 	// ###################################################################### CAST #####################################################################
 
+	template <typename _T, typename _Tin>
+	inline auto cast(_Tin x)														-> _T								{ return static_cast<_T>(x); };
 	template <typename _T>
 	inline auto cast(std::complex<double> x)										-> _T								{ return x; };
 	template <>
@@ -274,6 +279,7 @@ namespace algebra
 	// ################################################################### PFAFFIANS ###################################################################
 
 	// #################################################################################################################################################
+
 
 	namespace Pfaffian
 	{
