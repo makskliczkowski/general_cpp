@@ -5,6 +5,9 @@
 #include <cmath>
 #include <complex>
 
+#define BETWEXT(val, lower, upper)	val >= lower && val <= upper
+#define BETWEEN(val, lower, upper)	val > lower && val < upper
+
 #ifdef __has_include
 // matrix base class concepts
 #	if __has_include(<concepts>)
