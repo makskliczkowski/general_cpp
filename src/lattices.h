@@ -44,26 +44,29 @@ protected:
 	// ----------------------- LATTICE PARAMETERS
 	BoundaryConditions _BC	= BoundaryConditions::PBC;		// boundary conditions 0 = PBC, 1 = OBC, 2 = MBC [PBC->x;OBC->y, OBC->z], 3 = SBC [OBC->x, PBC->y, OBC->z],
 	LatticeTypes type_		= LatticeTypes::SQ;				// enum type of the lattice
-	std::string type			= "";									// type of the lattice
+	std::string type		= "";							// type of the lattice
 	
-	unsigned int dim			= 1;									// the dimensionality of the lattice 1,2,3
-	unsigned int Ns			= 1;									// number of lattice sites
+	unsigned int dim		= 1;							// the dimensionality of the lattice 1,2,3
+	unsigned int Ns			= 1;							// number of lattice sites
 	
 	// --- nn --- 
-	v_2d<int> nn;														// vector of the nearest neighbors
-	v_1d<uint> nnForward;											// number of nearest neighbors forward
+	v_2d<int> nn;											// vector of the nearest neighbors
+	v_1d<uint> nnForward;									// number of nearest neighbors forward
 	
 	// --- nnn --- 
-	v_2d<int> nnn;														// vector of the next nearest neighbors
-	v_1d<uint> nnnForward;											// number of nearest neighbors forward
+	v_2d<int> nnn;											// vector of the next nearest neighbors
+	v_1d<uint> nnnForward;									// number of nearest neighbors forward
 	
 	// --- coords ---
-	v_2d<int> coord;													// vector of real coordiates allowing to get the distance between lattice points
-	v_3d<int> spatialNorm;											// norm for averaging over all spatial sites
+	v_2d<int> coord;										// vector of real coordiates allowing to get the distance between lattice points
+	v_3d<int> spatialNorm;									// norm for averaging over all spatial sites
 
 	// reciprocal vectors
-	arma::vec a1, a2, a3;											// base vectors of the lattice
-	arma::mat kVec;													// allowed values of k - to be used in the lattice
+	arma::vec a1, a2, a3;									// base vectors of the lattice
+	arma::vec b1, b2, b3;									// reciprocal vectors of the lattice
+	arma::mat kVec;											// allowed values of k - to be used in the lattice
+	arma::mat rVec;											// allowed values of r - to be used in the lattice
+	arma::Mat<cpx> dft_;									// DFT matrix
 public:
 	enum direction 
 	{
@@ -75,46 +78,52 @@ public:
 		LOGINFOG("General lattice is destroyed.", LOG_TYPES::INFO, 3);
 	};
 
-	// ----------------------- VIRTUAL GETTERS -----------------------
-	virtual int get_Lx()													const = 0;
-	virtual int get_Ly()													const = 0;
-	virtual int get_Lz()													const = 0;
-	auto getSiteDifference(t_3d<int> i, uint j)					const ->t_3d<int>;
+	// ---------------------- VIRTUAL GETTERS ----------------------
+	virtual int get_Lx()											const = 0;
+	virtual int get_Ly()											const = 0;
+	virtual int get_Lz()											const = 0;
+	auto getSiteDifference(t_3d<int> i, uint j)						const ->t_3d<int>;
 	auto getSiteDifference(uint i, uint j)							const ->t_3d<int>;
 	auto getSiteDistance(uint i, uint j)							const -> double;
 
-	// ----------------------- GETTERS -----------------------
-	virtual arma::vec getRealVec(int x, int y, int z)			const = 0;
+	// -------------------------- GETTERS --------------------------
+	virtual arma::vec getRealVec(int x, int y, int z)				const = 0;
 	virtual int getNorm(int x, int y, int z)						const = 0;
 
-	// ----------------------- FORWARD
-	virtual uint get_nn_ForwardNum(int site, int num)			const = 0;
-	virtual uint get_nnn_ForwardNum(int site, int num)			const = 0;
-	virtual v_1d<uint> get_nn_ForwardNum(int, v_1d<uint>)		const = 0;																	// with placeholder returns vector of nn
-	virtual v_1d<uint> get_nnn_ForwardNum(int, v_1d<uint>)	const = 0;																	// with placeholder returns vector of nnn
-	virtual int get_nn(int site, direction d)						const = 0;																	// retruns nn in a given direction x 
+	// -------------------------- FORWARD
+	virtual uint get_nn_ForwardNum(int site, int num)				const = 0;
+	virtual uint get_nnn_ForwardNum(int site, int num)				const = 0;
+	virtual v_1d<uint> get_nn_ForwardNum(int, v_1d<uint>)			const = 0;														// with placeholder returns vector of nn
+	virtual v_1d<uint> get_nnn_ForwardNum(int, v_1d<uint>)			const = 0;														// with placeholder returns vector of nnn
+	virtual int get_nn(int site, direction d)						const = 0;														// retruns nn in a given direction x 
 	
-	// ----------------------- GETTERS NEI -----------------------
-	auto get_nn_ForwardNum(int site)									const -> uint	{ return (uint)this->nnForward.size(); };		// with no placeholder returns number of nn
-	auto get_nnn_ForwardNum(int site)								const -> uint	{ return (uint)this->nnnForward.size(); };	// with no placeholder returns number of nnn
+	// ------------------------ GETTERS NEI ------------------------
+	auto get_nn_ForwardNum(int site)								const -> uint	{ return (uint)this->nnForward.size(); };		// with no placeholder returns number of nn
+	auto get_nnn_ForwardNum(int site)								const -> uint	{ return (uint)this->nnnForward.size(); };		// with no placeholder returns number of nnn
 	auto get_nn(int site, int nei_num)								const -> int	{ return this->nn[site][nei_num]; };			// returns given nearest nei at given lat site
 	auto get_nnn(int site, int nei_num)								const -> int	{ return this->nnn[site][nei_num]; };			// returns given next nearest nei at given lat site
-	auto get_nn(int site)												const -> uint	{ return (uint)this->nn[site].size(); };		// returns the number of nn
-	auto get_nnn(int site)												const -> uint  { return (uint)this->nnn[site].size(); };		// returns the number of nnn
+	auto get_nn(int site)											const -> uint	{ return (uint)this->nn[site].size(); };		// returns the number of nn
+	auto get_nnn(int site)											const -> uint  { return (uint)this->nnn[site].size(); };		// returns the number of nnn
 	auto get_nei(int lat_site, int corr_len)						const -> int;
 
 	// ----------------------- GETTERS OTHER -----------------------
-	BoundaryConditions get_BC()										const	{ return this->_BC; };											// returns the boundary conditions
-	LatticeTypes get_Type()												const	{ return this->type_; };										// returns the type of the lattice as a string
-	std::string get_type()												const	{ return this->type; };											// returns the type of the lattice as a string
-	arma::mat get_kVec()													const	{ return this->kVec; };											// returns all k vectors in the RBZ
-	arma::subview_row<double> get_kVec(uint row)							{ return this->kVec.row(row); };								// returns the given k vector row
-	v_3d<int> get_spatial_norm()										const	{ return this->spatialNorm; };								// returns the spatial norm
-	auto get_spatial_norm(int x, int y, int z)					const -> int { return this->spatialNorm[x][y][z]; };			// returns the spatial norm at x,y,z
-	auto get_coordinates(int site, direction axis)				const -> int { return this->coord[site][axis]; };				// returns the given coordinate
-	auto get_Ns()															const -> uint { return this->Ns; };									// returns the number of sites
-	auto get_Dim()															const -> uint { return this->dim; };								// returns dimension of the lattice
-	auto get_info()														const -> std::string 
+	const arma::Mat<cpx>& get_DFT()									const	{ return this->dft_; };									// returns the DFT matrix
+	BoundaryConditions get_BC()										const	{ return this->_BC; };									// returns the boundary conditions
+	LatticeTypes get_Type()											const	{ return this->type_; };								// returns the type of the lattice as a string
+	std::string get_type()											const	{ return this->type; };									// returns the type of the lattice as a string
+	
+	arma::mat get_kVec()											const	{ return this->kVec; };									// returns all k vectors in the RBZ
+	arma::subview_row<double> get_kVec(uint row)							{ return this->kVec.row(row); };						// returns the given k vector row
+	
+	arma::mat get_rVec()											const	{ return this->rVec; };									// returns all r vectors in the RBZ
+	arma::subview_row<double> get_rVec(uint row)							{ return this->rVec.row(row); };						// returns the given r vector row
+	
+	v_3d<int> get_spatial_norm()									const	{ return this->spatialNorm; };							// returns the spatial norm
+	auto get_spatial_norm(int x, int y, int z)						const -> int { return this->spatialNorm[x][y][z]; };			// returns the spatial norm at x,y,z
+	auto get_coordinates(int site, direction axis)					const -> int { return this->coord[site][axis]; };				// returns the given coordinate
+	auto get_Ns()													const -> uint { return this->Ns; };								// returns the number of sites
+	auto get_Dim()													const -> uint { return this->dim; };							// returns dimension of the lattice
+	auto get_info()													const -> std::string 
 	{
 		std::string _inf;
 		strSeparatedP(_inf, 
@@ -149,6 +158,9 @@ public:
 	// ------ coords ------ 
 	virtual void calculate_coordinates() = 0;
 
+	// ------ others ------
+	virtual void calculate_dft_matrix(bool phase = true);
+
 	// ----------------------- SYMMETRY -----------------------
 	virtual t_3d<int> getNumElems() = 0;																							// returns the number of elements if the symmetry is possible
 	virtual t_3d<int> getSymPosInv(int x, int y, int z) = 0;																		// from symmetrised form return coordinates
@@ -157,6 +169,7 @@ public:
 
 private:
 	virtual void calculate_kVec() = 0;
+	virtual void calculate_rVec() = 0;
 };
 
 /*
@@ -288,6 +301,48 @@ inline double Lattice::getSiteDistance(uint i, uint j) const
 	auto [x, y, z] = this->getSiteDifference(i, j);
 	auto r			= this->getRealVec(x, y, z);
 	return std::sqrt(arma::dot(r, r));
+}
+
+// --------------------------------------------------------------------------
+
+/*
+* @brief Calculates the DFT matrix for the lattice
+* @param phase If true, the phase is included in the calculation
+* @note The DFT matrix is calculated only once
+* @note Can be faster with using FFT -> to think about
+* @url https://en.wikipedia.org/wiki/DFT_matrix
+*/
+inline void Lattice::calculate_dft_matrix(bool phase)
+{
+	this->dft_	= arma::Mat<cpx>(this->Ns, this->Ns, arma::fill::zeros);
+	cpx omega_x	= std::exp(-I * cpx(TWOPI / this->get_Lx()));
+	cpx omega_y	= std::exp(-I * cpx(TWOPI / this->get_Ly()));
+	cpx omega_z	= std::exp(-I * cpx(TWOPI / this->get_Lz()));
+
+	cpx e_min_pi = std::exp(I * cpx(PI));
+	// do double loop - not perfect solution
+
+	// rvectors
+	for (int row = 0; row < this->Ns; ++row)
+	{
+		const auto x_row		= this->get_coordinates(row, direction::X);
+		const auto y_row		= this->get_coordinates(row, direction::Y);
+		const auto z_row		= this->get_coordinates(row, direction::Z);
+		// kvectors
+		for (int col = 0; col < this->Ns; ++col)
+		{
+			const auto x_col	= this->get_coordinates(col, direction::X);
+			const auto y_col	= this->get_coordinates(col, direction::Y);
+			const auto z_col	= this->get_coordinates(col, direction::Z);
+
+			// to shift by -PI
+			cpx phase_x			= phase ? (x_col % 2 == 0 ? e_min_pi : 1.0) : 1.0;
+			cpx phase_y			= phase ? (y_col % 2 == 0 ? e_min_pi : 1.0) : 1.0;
+			cpx phase_z			= phase ? (z_col % 2 == 0 ? e_min_pi : 1.0) : 1.0;
+			// set the omegas - not optimal powers, but is calculated once
+			this->dft_(row, col) = std::pow(omega_x, x_row * x_col) * std::pow(omega_y, y_row * y_col) * std::pow(omega_z, z_row * z_col) * phase_x * phase_y * phase_z;
+		}
+	}
 }
 
 #endif // !LATTICE_H

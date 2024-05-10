@@ -76,6 +76,7 @@ public:
 	};
 private:
 	void calculate_kVec() override;
+	void calculate_rVec() override;
 };
 
 

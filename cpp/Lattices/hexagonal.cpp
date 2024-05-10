@@ -46,9 +46,11 @@ HexagonalLattice::HexagonalLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 	this->a3 = arma::vec({ 0, 0, this->c });
 
 	this->kVec = arma::mat(this->Lx * this->Ly * this->Lz, 3, arma::fill::zeros);
-
+	this->rVec = arma::mat(this->Lx * this->Ly * this->Lz, 3, arma::fill::zeros);
+	
 	//! make vectors
 	this->calculate_kVec();
+	this->calculate_rVec();
 }
 
 // ------------------------------------------------------------- Getters -------------------------------------------------------------
@@ -533,7 +535,6 @@ void HexagonalLattice::calculate_kVec()
 	const arma::vec b2 = { -1. / sqrt(3), 1. / 3., 0 };
 	const arma::vec b3 = { 0, 0, 1 };
 
-
 	for (int qx = 0; qx < Lx; qx++) {
 		double kx = -PI + two_pi_over_Lx * qx;
 		for (int qy = 0; qy < Ly; qy++) {
@@ -546,4 +547,19 @@ void HexagonalLattice::calculate_kVec()
 		}
 	}
 
+}
+
+void HexagonalLattice::calculate_rVec()
+{
+	for (int x = 0; x < this->Lx; x++)
+	{
+		for (int y = 0; y < this->Ly; y++)
+		{
+			for (int z = 0; z < this->Lz; z++)
+			{
+				const auto _iter = z * (this->Lx * this->Ly) + y * this->Lx + x;
+				this->rVec.row(_iter) = this->getRealVec(x, y, z).st();
+			}
+		}
+	}
 }
