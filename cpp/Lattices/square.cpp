@@ -366,7 +366,7 @@ void SquareLattice::calculate_coordinates()
 */
 void SquareLattice::calculate_kVec()
 {
-	const auto _V				= a * b * c;
+	//const auto _V 				= a * b * c;
 	const auto two_pi_over_Lx	= TWOPI / a / Lx;
 	const auto two_pi_over_Ly	= TWOPI / b / Ly;
 	const auto two_pi_over_Lz	= TWOPI / c / Lz;

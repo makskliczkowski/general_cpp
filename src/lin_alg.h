@@ -42,6 +42,11 @@ using uint = unsigned int;
 #define DH5_USE_110_API
 #define D_HDF5USEDLL_ 
 
+template<class T>
+using v_mat_1d = std::vector<arma::Mat<T>>;							// 1d matrix vector
+template<class T>
+using v_mat = v_mat_1d<T>;											// 1d matrix vector
+
 // matrix base class concepts
 
 #ifdef __has_include
@@ -97,6 +102,156 @@ template <typename _T>
 using COL											= arma::Col<_T>;
 template <typename _T>
 using MAT											= arma::Mat<_T>;
+
+// #######################################################################################################################
+
+template<typename _T, typename MatType = arma::Mat<_T>>
+class VMAT
+{
+private:
+	std::vector<MatType> mats_;
+
+public:
+	// Constructor
+	VMAT() = default;
+
+	template <typename _ft>
+	VMAT(const arma::uword in_z, const arma::uword in_n_rows, const arma::uword in_n_cols, const arma::fill::fill_class<_ft>& f)	
+	{
+		this->mats_ = std::vector <arma::Mat<_T>>(in_z, arma::Mat<_T>(in_n_rows, in_n_cols, f));
+	};
+
+	template <typename _ft>
+	VMAT(const arma::uword in_z, const arma::uword in_n_rows, const arma::uword in_n_cols, const arma::fill::fill_class<_ft>& f, _T _mult)	
+	{
+		this->mats_ = std::vector<arma::Mat<_T>>(in_z, _mult * arma::Mat<_T>(in_n_rows, in_n_cols, f));
+	};
+
+	// Constructor taking a vector of matrices
+	VMAT(const std::vector<MatType>& _mats) : mats_(_mats) {}
+
+	// Copy constructor
+	VMAT(const VMAT<_T>& other) : mats_(other.mats_) {}
+
+	// Move constructor
+	VMAT(VMAT<_T>&& other) noexcept : mats_(std::move(other.mats_)) {}
+
+	// Destructor
+	~VMAT() = default;
+
+	// #######################################################################################################################
+
+	// Copy assignment operator
+	template<typename _T2, typename _MatType2>
+	VMAT<typename std::common_type<_T, _T2>>& operator=(const VMAT<_T2, _MatType2>& other) {
+		if (this != &other) {
+			this->mats_ = other.mats_;
+		}
+		return *this;
+	}
+
+	// Move assignment operator
+	template<typename _T2, typename _MatType2>
+	VMAT<typename std::common_type<_T, _T2>>& operator=(VMAT<_T2, _MatType2>&& other) noexcept {
+		if (this != &other) 
+		{
+			this->mats_ = std::move(other.mats_);
+		}
+		return *this;
+	}
+
+	// #######################################################################################################################
+
+	// ############ GETTERS ############
+	
+	// Get the matrix at index i
+	const MatType& matrix(const arma::uword index) const 
+	{
+		if (index < 0 || index >= mats_.size()) 
+		{
+			// Handle index out of range
+			throw std::out_of_range("Index out of range");
+		}
+		return mats_[index];
+	}
+
+	// Get the number of matrices in the container
+	size_t size() const 
+	{
+		return mats_.size();
+	}
+
+	auto row(const arma::uword in_z, const arma::uword in_n_rows)
+	{
+		return this->mats_[in_z].row(in_n_rows);
+	}
+
+	auto col(const arma::uword in_z, const arma::uword in_n_cols)
+	{
+		return this->mats_[in_z].col(in_n_cols);
+	}
+
+	// ############# SETTERS #############
+
+	// Add a matrix to the container
+	void add(const MatType& matrix) 
+	{
+		mats_.push_back(matrix);
+	}
+
+	void set(const arma::uword in_z, const arma::uword in_n_rows, const arma::uword in_n_cols, const _T val)
+	{
+		this->mats_[in_z](in_n_rows, in_n_cols) = val;
+	}
+	
+	// ############ OPERATORS ############
+
+	// Get the matrix at index i
+	MatType& operator[](size_t index) {
+		return mats_[index];
+	}
+
+	const MatType& operator[](size_t index) const {
+		return mats_[index];
+	}
+
+	_T& operator()(const arma::uword in_z, const arma::uword in_n_rows, const arma::uword in_n_cols)
+	{
+		return this->mats_[in_z](in_n_rows, in_n_cols);
+	}
+
+	const _T& operator()(const arma::uword in_z, const arma::uword in_n_rows, const arma::uword in_n_cols) const
+	{
+		return this->mats_[in_z](in_n_rows, in_n_cols);
+	}
+
+	// ############ ITERATORS ############
+
+	// Iterator support
+	using iterator			= typename std::vector<MatType>::iterator;
+	using const_iterator	= typename std::vector<MatType>::const_iterator;
+
+	iterator begin() 
+	{
+		return mats_.begin();
+	}
+
+	iterator end() 
+	{
+		return mats_.end();
+	}
+
+	const_iterator begin() const 
+	{
+		return mats_.begin();
+	}
+
+	const_iterator end() const 
+	{
+		return mats_.end();
+	}
+
+};
 
 // #######################################################################################################################
 

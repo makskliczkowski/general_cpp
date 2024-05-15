@@ -77,6 +77,9 @@ public:
 	template<typename _T, typename _T2 = _T>
 	auto randomNormal(_T _m = 0, _T2 _s = 1)	-> typename std::common_type<_T, _T2>::type;
 
+	template <typename _T, typename _T2, template <class> typename _V>
+	auto randomNormal(_T _m, _T2 _ss, size_t _s)-> _V<typename std::common_type<_T, _T2>::type>;
+
 	template <typename T>
 	auto xavier(T in, T out, float xav = 6)		-> T;
 
@@ -106,11 +109,11 @@ public:
 	// ####################### M A T R I C E S #######################
 	
 	template <typename _T>
-	arma::Mat<_T>  GOE(uint _x, uint _y);
+	arma::Mat<_T> GOE(uint _x, uint _y);
 	template <typename _T>
 	arma::Mat<_T> GOE(uint _x) { return GOE<_T>(_x, _x); };
 	template <typename _T>
-	arma::Mat<_T>  CUE(uint _x, uint _y);
+	arma::Mat<_T> CUE(uint _x, uint _y);
 	template <typename _T>
 	arma::Mat<_T> CUE(uint _x) { return CUE<_T>(_x, _x); };
 
@@ -190,6 +193,17 @@ inline typename std::common_type<_T, _T2>::type randomGen::randomNormal(_T _m, _
 {
 	using result_type = typename std::common_type<_T, _T2>::type;
 	return std::normal_distribution<result_type>(_m, _s)(this->engine);
+}
+
+template<typename _T, typename _T2, template <class> typename _V>
+inline _V<typename std::common_type<_T, _T2>::type> randomGen::randomNormal(_T _m, _T2 _ss, size_t _s)
+{
+	using result_type = typename std::common_type<_T, _T2>::type;
+	_V<result_type> _out(_s);
+
+	// generate random numbers
+	std::generate(_out.begin(), _out.end(), [&]() { return std::normal_distribution<result_type>(_m, _ss)(this->engine); });
+	return _out;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
