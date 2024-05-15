@@ -434,7 +434,7 @@ inline arma::Mat<_T> randomGen::GUE(uint _x, uint _y)
 	arma::Mat<_T> A(_x, _y, arma::fill::zeros);
 	for(uint i = 0; i < _x; ++i)
 		for(uint j = i; j < _y; ++j)
-			A(i, j) = this->randomNormal(0.0, 0.5) + I * this->randomNormal(0.0, 0.5);
+			A(i, j) = this->randomNormal(0.0, 0.5) + std::complex<double>(0, 1) * this->randomNormal(0.0, 0.5);
 
 	return std::sqrt(0.5) * (A + A.t());
 }
