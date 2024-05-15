@@ -64,12 +64,13 @@ namespace StatisticalMeasures
 	* @param _samples the samples to calculate the gaussianity
 	* @returns the gaussianity of the samples
 	*/
-	inline double gaussianity(const arma::Col<double>& _samples)
+	template<typename _T>
+	inline double gaussianity(const arma::Col<_T>& _samples)
 	{
 		auto _abs	= arma::abs(_samples);
 		auto _mean	= arma::mean(_abs);
 		auto _mean2 = arma::mean(arma::square(_abs));
-		return gaussianity(_mean, _mean2);
+		return gaussianity(algebra::cast<double>(_mean), algebra::cast<double>(_mean2));
 	}
 
 	// ##########################################################################################################################################
@@ -92,12 +93,13 @@ namespace StatisticalMeasures
 	* @param _samples the samples to calculate the cumulant
 	* @returns the cumulant of the samples
 	*/
-	inline double binder_cumulant(const arma::Col<double>& _samples)
+	template<typename _T>
+	inline double binder_cumulant(const arma::Col<_T>& _samples)
 	{	
 		auto _square	= arma::square(_samples);
-		double _mean4	= arma::mean(arma::square(_square));
-		double _mean2	= arma::mean(_square);
-		return binder_cumulant(_mean2, _mean4);
+		auto _mean4		= arma::mean(arma::square(_square));
+		auto _mean2		= arma::mean(_square);
+		return binder_cumulant(algebra::cast<double>(_mean2), algebra::cast<double>(_mean4));
 	}
 
 	// ##########################################################################################################################################
@@ -124,12 +126,13 @@ namespace StatisticalMeasures
 	* @param fisher whether to use the Fisher kurtosis or not
 	* @returns the kurtosis of the samples
 	*/
-	inline double kurtosis(const arma::Col<double>& _samples, bool fisher = true)
+	template<typename _T>
+	inline double kurtosis(const arma::Col<_T>& _samples, bool fisher = true)
 	{
 		auto _square_x_minus_mu = arma::square(_samples - arma::mean(_samples));
 		auto _mean2				= arma::mean(_square_x_minus_mu);
 		auto _mean4				= arma::mean(arma::square(_square_x_minus_mu));
-		return kurtosis(_mean2, _mean4, fisher);
+		return kurtosis(algebra::cast<double>(_mean2), algebra::cast<double>(_mean4), fisher);
 	}
 
 	// ##########################################################################################################################################

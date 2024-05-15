@@ -51,9 +51,9 @@ class ExceptionHandler
 public:
 	static void printException(const std::string& _what, const std::string& _msg, EXCEPTIONENUM::EXCEPTIONS _ex = EXCEPTIONENUM::EXCEPTIONS::UNDEFINED) {
 		auto exIDX = EXCEPTIONENUM::getSTR_EXCEPTIONS(_ex);
-		std::cout << LOG_LVL0 << "Exception: " << exIDX << std::endl;
-		std::cout << LOG_LVL1 << _what << std::endl;
-		std::cout << LOG_LVL2 << _msg << std::endl;
+		std::cout << LOG_LVL0 << _msg << std::endl;
+		std::cout << LOG_LVL1 << "Exception: " << exIDX << std::endl;
+		std::cout << LOG_LVL2 << _what << std::endl;
 		exit(static_cast<int>(_ex));
 	};
 	static void handleExceptions(std::exception_ptr _ePtr, const std::string& _msg);

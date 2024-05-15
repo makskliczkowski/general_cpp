@@ -113,6 +113,10 @@ public:
 	template <typename _T>
 	arma::Mat<_T> GOE(uint _x) { return GOE<_T>(_x, _x); };
 	template <typename _T>
+	arma::Mat<_T> GUE(uint _x, uint _y);
+	template <typename _T>
+	arma::Mat<_T> GUE(uint _x) { return GUE<_T>(_x, _x); };
+	template <typename _T>
 	arma::Mat<_T> CUE(uint _x, uint _y);
 	template <typename _T>
 	arma::Mat<_T> CUE(uint _x) { return CUE<_T>(_x, _x); };
@@ -416,7 +420,29 @@ inline arma::Mat<_T> randomGen::GOE(uint _x, uint _y)
 		for(uint j = i; j < _y; ++j)
 			A(i, j) = algebra::cast<_T>(this->randomNormal(0.0, 1.0));
 
-	return  std::sqrt(0.5) * (A + A.t());
+	return std::sqrt(0.5) * (A + A.t());
+}
+
+// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+/*
+* @brief Creates a GUE matrix...
+*/
+template<typename _T>
+inline arma::Mat<_T> randomGen::GUE(uint _x, uint _y)
+{
+	arma::Mat<_T> A(_x, _y, arma::fill::zeros);
+	for(uint i = 0; i < _x; ++i)
+		for(uint j = i; j < _y; ++j)
+			A(i, j) = this->randomNormal(0.0, 0.5) + I * this->randomNormal(0.0, 0.5);
+
+	return std::sqrt(0.5) * (A + A.t());
+}
+
+template<>
+inline arma::Mat<double> randomGen::GUE(uint _x, uint _y)
+{
+	return this->GOE<double>(_x, _y);
 }
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

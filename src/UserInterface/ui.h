@@ -278,7 +278,7 @@ inline std::pair<_Tin, _Tin> UserInterface::setOption(std::vector<_Tin>& value, 
 			else if (setVal = option.find(UI_VECTOR_SEPARATOR) != std::string::npos; setVal)
 			{
 				optionVec	=	splitStr(option, ";");
-				if (setVal	=	(option.size() == value.size()); setVal)
+				if (setVal	=	(optionVec.size() == value.size()); setVal)
 					for (auto i = 0; i < value.size(); ++i)
 						value[i]	=	static_cast<_Tin>(stod(optionVec[i]));
 				else
