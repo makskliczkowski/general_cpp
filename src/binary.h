@@ -112,6 +112,14 @@ const v_1d<ull> BinaryPowers = { ULLPOW(0) , ULLPOW(1) , ULLPOW(2) , ULLPOW(3),
 
 namespace Binary
 {
+	// ######################################################################################
+
+	template<typename _T>
+	static inline bool isPowOf2(_T x)
+	{
+		return (x != 0) && ((x & (x - 1)) == 0);
+	}
+
 	// ###################################### CHECK BIT ######################################
 
 	template<typename _T>
