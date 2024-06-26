@@ -76,6 +76,9 @@ struct inner_type<T, std::void_t<typename T::value_type>>
 	: inner_type<typename T::value_type> {};
 
 template<class T>
+using inner_elem_type_t = typename T::elem_type;
+
+template<class T>
 using inner_type_t = typename inner_type<T>::type;
 
 
@@ -251,6 +254,18 @@ public:
 		return mats_.end();
 	}
 
+	// ############# PROPERTIES #############
+
+	size_t n_rows(size_t i) const
+	{
+		return mats_[i].n_rows;
+	}
+
+	size_t n_cols(size_t i) const
+	{
+		return mats_[i].n_cols;
+	}
+
 };
 
 // #######################################################################################################################
@@ -421,6 +436,42 @@ namespace algebra
 			UPDATEV(m2Set, SUBM(mSet, row, col, row + nrow - 1, col + ncol - 1), !minus)
 		else
 			m2Set = SUBM(mSet, row, col, row + nrow - 1, col + ncol - 1);
+	}
+
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	/*
+	* @brief Calculates the multiplication of two matrices. One is a diagonal matrix (right).
+	* @param _A left matrix
+	* @param _D right diagonal matrix
+	*/
+	template<typename _MatType, typename _T>
+	inline _MatType matTimesDiagMat(const _MatType& _A, const arma::Col<_T>& _D)
+	{
+		return _A.each_row() % _D.t();
+	}
+
+	/*
+	* @brief Calculates the diagonal being the result of matrix multiplication
+	*/
+	template<typename _MatType, typename _MatType2>
+	inline arma::Col<typename std::common_type<inner_elem_type_t<_MatType>, inner_elem_type_t<_MatType2>>::type>
+		matDiagProduct(const _MatType& _L, const _MatType2& _R)
+	{
+		using _type = typename std::common_type<inner_elem_type_t<_MatType>, inner_elem_type_t<_MatType2>>::type;
+		arma::Col<_type> diagonal(_L.n_rows, arma::fill::zeros);
+
+		// assert(_L.n_cols == _R.n_rows && "Matrix dimensions must be compatible for multiplication");
+
+		// calculate the diagonal
+		for (std::size_t i = 0; i < _L.n_rows; ++i)
+		{
+			for (std::size_t k = 0; k < _L.n_cols; ++k)
+			{
+				diagonal(i) += algebra::cast<_type>(_L(i, k)) * algebra::cast<_type>(_R(k, i));
+			}
+		}
+		return diagonal;
 	}
 
 	// #################################################################################################################################################

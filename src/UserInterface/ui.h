@@ -13,6 +13,7 @@
 #define SETOPTIONDIRECT(n, S)					this->setOption(n, S)
 #define SETOPTIONV(n, S, v)						this->setOption(this->n.S##_, argv, SSTR(v)	)
 #define SETOPTIONVECTOR(n, S)					std::tie(this->n.S##_ra_, this->n.S##_r_) = this->setOption(this->n.S##_, argv, SSTR(#S))
+#define SETOPTIONVECTORRESIZE(n, S, D)				std::tie(this->n.S##_ra_, this->n.S##_r_) = this->setOption(this->n.S##_, argv, SSTR(#S), D, true)
 // sets the option with steps etc.
 #define SETOPTION_STEP(x, S)					SETOPTION(x, S);							\
 												SETOPTION(x, S##0);							\
@@ -111,7 +112,7 @@ protected:
 	template <typename _T, typename _Y>
 	bool setOption(_T& valueToSet, const _Y& valueSet);
 	template <class _Tin>
-	std::pair<_Tin, _Tin> setOption(std::vector<_Tin>& value, cmdArg& argv, std::string choice, _Tin _default = 0.0);
+	std::pair<_Tin, _Tin> setOption(std::vector<_Tin>& value, cmdArg& argv, std::string choice, _Tin _default = 0.0, bool _resize = false);
 
 
 	// -------------------------- INIT -------------------------
@@ -253,7 +254,7 @@ inline bool UserInterface::setOption(_T& valueToSet, const _Y& valueSet)
 * @returns the value of the option randomness
 */
 template<class _Tin>
-inline std::pair<_Tin, _Tin> UserInterface::setOption(std::vector<_Tin>& value, cmdArg& argv, std::string choice, _Tin _default)
+inline std::pair<_Tin, _Tin> UserInterface::setOption(std::vector<_Tin>& value, cmdArg& argv, std::string choice, _Tin _default, bool _resize)
 {
 	bool setVal			=	false;
 	double _rVal        =	0.0;
@@ -272,12 +273,18 @@ inline std::pair<_Tin, _Tin> UserInterface::setOption(std::vector<_Tin>& value, 
 				_val				=	stod(optionVec[1]);
 				_rVal				=	stod(optionVec[2]);
 				v_1d<double> _ranV	=	ran_.rvector<v_1d<double>>(value.size(), _rVal, _val);
-				value				=	_ranV;
+				for (auto i = 0; i < value.size(); ++i)
+					value[i] = static_cast<_Tin>(_ranV[i]);
 			}
 			// check whether the value containts our special vector separating value
 			else if (setVal = option.find(UI_VECTOR_SEPARATOR) != std::string::npos; setVal)
 			{
 				optionVec	=	splitStr(option, ";");
+
+				// check if one should resize it!
+				if (_resize)
+					value.resize(optionVec.size());
+
 				if (setVal	=	(optionVec.size() == value.size()); setVal)
 					for (auto i = 0; i < value.size(); ++i)
 						value[i]	=	static_cast<_Tin>(stod(optionVec[i]));
@@ -288,6 +295,9 @@ inline std::pair<_Tin, _Tin> UserInterface::setOption(std::vector<_Tin>& value, 
 			// if the value is not a vector, we set the value to the same value
 			else
 			{
+				// check if one should resize it!
+				if (_resize)
+					value.resize(1);
 				_val	=	static_cast<_Tin>(stod(option));
 				if(setVal = !option.empty(); setVal)
 					for (auto i = 0; i < value.size(); ++i)

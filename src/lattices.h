@@ -160,6 +160,7 @@ public:
 
 	// ------ others ------
 	virtual void calculate_dft_matrix(bool phase = true);
+	virtual arma::Mat<cpx> calculate_dft_vectors(bool phase = true);
 
 	// ----------------------- SYMMETRY -----------------------
 	virtual t_3d<int> getNumElems() = 0;																							// returns the number of elements if the symmetry is possible
@@ -319,7 +320,7 @@ inline void Lattice::calculate_dft_matrix(bool phase)
 	cpx omega_y	= std::exp(-I * cpx(TWOPI / this->get_Ly()));
 	cpx omega_z	= std::exp(-I * cpx(TWOPI / this->get_Lz()));
 
-	cpx e_min_pi = std::exp(I * cpx(PI));
+	cpx e_min_pi = std::exp(-I * cpx(PI));
 	// do double loop - not perfect solution
 
 	// rvectors
@@ -336,13 +337,36 @@ inline void Lattice::calculate_dft_matrix(bool phase)
 			const auto z_col	= this->get_coordinates(col, direction::Z);
 
 			// to shift by -PI
-			cpx phase_x			= phase ? (x_col % 2 == 0 ? e_min_pi : 1.0) : 1.0;
-			cpx phase_y			= phase ? (y_col % 2 == 0 ? e_min_pi : 1.0) : 1.0;
-			cpx phase_z			= phase ? (z_col % 2 == 0 ? e_min_pi : 1.0) : 1.0;
+			cpx phase_x			= phase ? ((x_col % 2) != 0 ? e_min_pi : 1.0) : 1.0;
+			cpx phase_y			= phase ? ((y_col % 2) != 0 ? e_min_pi : 1.0) : 1.0;
+			cpx phase_z			= phase ? ((z_col % 2) != 0 ? e_min_pi : 1.0) : 1.0;
 			// set the omegas - not optimal powers, but is calculated once
 			this->dft_(row, col) = std::pow(omega_x, x_row * x_col) * std::pow(omega_y, y_row * y_col) * std::pow(omega_z, z_row * z_col) * phase_x * phase_y * phase_z;
 		}
 	}
+	this->dft_ = this->dft_.t();
+}
+
+inline arma::Mat<cpx> Lattice::calculate_dft_vectors(bool phase)
+{
+	const uint k_num	= this->get_Ns();
+	arma::Mat<cpx> _vc(this->Ns, this->Ns, arma::fill::zeros);
+
+	cpx e_min_pi		= std::exp(-I * cpx(PI));
+
+	// calculate the DFT matrix
+	for (int k = 0; k < k_num; k++)
+	{
+		const auto _k = this->get_kVec(k);
+
+		for (int r = 0; r < k_num; r++)
+		{
+			const auto _r	= this->get_rVec(r);
+			// rows are exponents for given k!
+			_vc(k, r)		= (phase ? e_min_pi : 1.0) * std::exp(-I * arma::dot(_k, _r));
+		}
+	}
+	return _vc;
 }
 
 #endif // !LATTICE_H

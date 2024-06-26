@@ -150,7 +150,8 @@ class Histogram
 protected:
 	u64 nBins_		= 1;
 
-	std::vector<long double> binEdges_;
+	arma::vec binEdgesArma_;
+	std::vector<double> binEdges_;
 	std::vector<u64> binCounts_;
 
 public:
@@ -158,25 +159,86 @@ public:
 	virtual ~Histogram() = default;
 	Histogram()
 	{
-		binEdges_	=	std::vector<long double>(this->nBins_, 0);
+		binEdges_	=	std::vector<double>(this->nBins_, 0);
 		binCounts_	=	std::vector<u64>(this->nBins_ + 1, 0);
 	}
 	Histogram(u64 _N)
 		: nBins_(_N)
 	{
-		binEdges_	=	std::vector<long double>(_N, 0);
+		binEdges_	=	std::vector<double>(_N, 0);
 		binCounts_	=	std::vector<u64>(_N + 1, 0);
 	}
+
+	// ######## Setters ########
 	
+	// -------------------------
+
+	/*
+	* @brief For specified values, set the histogram counts
+	* @param _values the values to set the histogram counts
+	*/
+	template<typename _T>
+	void setHistogramCounts(const arma::Col<_T>& _values, bool _setBins = true)
+
+	{
+		// get the bin edges - those are determined by the minimum and maximum values
+		if (_setBins)
+		{
+			double _min			= _values.min();
+			double _max			= _values.max();
+			this->binEdgesArma_	= arma::linspace(_min, _max, (const arma::uword)this->nBins_);
+			this->binEdges_		= arma::conv_to<v_1d<double>>::from(binEdgesArma_);
+		}
+
+		// get the histogram of counts
+		auto _binCounts		= arma::hist(_values, this->binEdgesArma_);
+		this->binCounts_	= arma::conv_to<v_1d<u64>>::from(_binCounts);
+	}
+
+	template<typename _T>
+	void setHistogramCounts(const arma::subview_col<_T>& _values, bool _setBins = true)
+
+	{
+		// get the bin edges - those are determined by the minimum and maximum values
+		if (_setBins)
+		{
+			double _min			= _values.min();
+			double _max			= _values.max();
+			this->binEdgesArma_	= arma::linspace(_min, _max, (const arma::uword)this->nBins_);
+			this->binEdges_		= arma::conv_to<v_1d<double>>::from(binEdgesArma_);
+		}
+
+		// get the histogram of counts
+		auto _binCounts		= arma::hist(_values, this->binEdgesArma_);
+		this->binCounts_	= arma::conv_to<v_1d<u64>>::from(_binCounts);
+	}
+
+	template<>
+	void setHistogramCounts(const arma::Col<std::complex<double>>& _values, bool _setBins)
+	{
+		// get the bin edges - those are determined by the minimum and maximum values
+		arma::Col<double> _valuesr = arma::real(_values);
+		this->setHistogramCounts(_valuesr, _setBins);
+	}
+
+	template<>
+	void setHistogramCounts(const arma::subview_col<std::complex<double>>& _values, bool _setBins)
+	{
+		// get the bin edges - those are determined by the minimum and maximum values
+		arma::Col<double> _valuesr = arma::real(_values);
+		this->setHistogramCounts(_valuesr, _setBins);
+	}
+
 	// ######## Getters ########
 
-	const std::vector<long double>& edges()	const { return this->binEdges_;											}
+	const std::vector<double>& edges()		const { return this->binEdges_;											}
 	arma::Col<double> edgesCol()			const { return arma::conv_to<arma::Col<double>>::from(this->binEdges_); }
 
 	// -------------------------
 
 	u64 counts(u64 i)						const { return this->binCounts_[i];										}
-	
+
+
 	// -------------------------
 
 	arma::Col<u64> countsCol()
@@ -234,7 +296,7 @@ public:
 	virtual void reset(u64 _N)
 	{
 		nBins_		=   _N;
-		binEdges_	=	std::vector<long double>(_N, 0);
+		binEdges_	=	std::vector<double>(_N, 0);
 		binCounts_	=	std::vector<u64>(_N + 1, 0);
 	}
 	
@@ -268,18 +330,18 @@ public:
 
 		if (base == 10)
 		{
-			_maxin = std::ceil(std::log10(_max));
-			_minin = std::ceil(std::log10(_min));
+			_maxin = _max >= 1 ? std::ceil(std::log10(_max)) : std::floor(std::log10(_max));
+			_minin = _min >= 1 ? std::ceil(std::log10(_min)) : std::floor(std::log10(_min));
 		}
 		else if (base == 2)
 		{
-			_maxin = std::ceil(std::log2(_max));
-			_minin = std::ceil(std::log2(_min));
+			_maxin = _max >= 1 ? std::ceil(std::log2(_max)) : std::floor(std::log2(_max));
+			_minin = _min >= 1 ? std::ceil(std::log2(_min)) : std::floor(std::log2(_min));
 		}
 		else
 		{
-			_maxin = std::ceil(std::log(_max));
-			_minin = std::ceil(std::log(_min));
+			_maxin = _max >= 1 ? std::ceil(std::log(_max)) : std::floor(std::log(_max));
+			_minin = _min >= 1 ? std::ceil(std::log(_min)) : std::floor(std::log(_min));
 		}
 		auto _edges = arma::logspace(_minin, _maxin, this->nBins_ + 1);
 
