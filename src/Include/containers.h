@@ -193,6 +193,12 @@ namespace Vectors
 		return _freq;
 	}
 
+	/*
+	* @brief Create frequency map that allows one to see the repetition of elements in a vector
+	* @param _container check this container
+	* @param _cut remove number of occurences less (or equal) than this (if bigger than 0, of course)
+	* @tparam _Trunc truncation value (truncates the number of specific bits to get the degeneracies)
+	*/
 	template<uint _Trunc, typename _T, typename _B = std::allocator<_T>>
 	inline std::unordered_map<_T, size_t> freq(const std::vector<_T, _B>& _container, uint _cut = 0)
 	{
@@ -439,6 +445,15 @@ namespace States
 	inline arma::Col<double> transformIdxToState(uint _Ns, const _T& _state)
 	{
 		arma::Col<double> _out(_Ns, arma::fill::zeros);
+		for (auto& i : _state)
+			_out(i) = 1;
+		return _out;
+	}
+
+	template <typename _T>
+	inline arma::Row<double> transformIdxToStateR(uint _Ns, const _T& _state)
+	{
+		arma::Row<double> _out(_Ns, arma::fill::zeros);
 		for (auto& i : _state)
 			_out(i) = 1;
 		return _out;
