@@ -42,6 +42,8 @@ using uint = unsigned int;
 #define DH5_USE_110_API
 #define D_HDF5USEDLL_ 
 
+using u64 = arma::u64;
+
 template<class T>
 using v_mat_1d = std::vector<arma::Mat<T>>;							// 1d matrix vector
 template<class T>
@@ -54,10 +56,10 @@ using v_mat = v_mat_1d<T>;											// 1d matrix vector
 #		include <concepts>
 #		include <type_traits>
 		template<typename _T>
-		concept HasMatrixType = std::is_base_of<arma::Mat<double>, _T>::value						|| 
-								std::is_base_of<arma::Mat<std::complex<double>>, _T>::value			||
-								std::is_base_of<arma::SpMat<double>, _T>::value						||
-								std::is_base_of<arma::SpMat<std::complex<double>>, _T>::value;
+		concept HasMatrixType = std::is_same_v<_T, arma::Mat<double>>               || 
+			std::is_same_v<_T, arma::Mat<std::complex<double>>>						||
+			std::is_same_v<_T, arma::SpMat<double>>									||
+			std::is_same_v<_T, arma::SpMat<std::complex<double>>>;
 #	endif
 #else
 #	pragma message ("--> Skipping concepts")

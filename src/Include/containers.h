@@ -8,7 +8,7 @@
 #include <tuple>
 
 #include "../Dynamic/dynamic_bitset.hpp"
-#include "../lin_alg.h"
+#include "linalg/generalized_matrix.h"
 #include "maths.h"
 
 // #################################################### G E N E R A L ####################################################
