@@ -144,12 +144,19 @@ public:
 		return this->H_dense_(row, col);
 	}
 
-	const _T& operator()(u64 row, u64 col) const
+	_T operator()(u64 row, u64 col) const
 	{
 		if (this->isSparse_)
 			return this->H_sparse_(row, col);
 		return this->H_dense_(row, col);
 	}
+
+	//const _T& operator()(u64 row, u64 col) const
+	//{
+	//	if (this->isSparse_)
+	//		return this->H_sparse_(row, col);
+	//	return this->H_dense_(row, col);
+	//}
 
 	_T get(size_t _row, size_t _col) const 
 	{
@@ -354,8 +361,8 @@ public:
 	{
 		using ResultType = typename std::common_type<_T, typename _OtherType::elem_type>::type;
 		if (this->isSparse_)
-			return arma::Col<ResultType>(algebra::cast<ResultType>(this->H_sparse_) * algebra::cast<ResultType>(other));
-		return arma::Col<ResultType>(algebra::cast<ResultType>(this->H_dense_) * algebra::cast<ResultType>(other));
+			return arma::Col<ResultType>(this->H_sparse_ * other);
+		return arma::Col<ResultType>(algebra::cast<ResultType>(this->H_dense_) * other);
 	}
 
 	template<typename _OtherType>
@@ -529,6 +536,9 @@ public:
 
 // ############################################################################################################
 
+/*
+* @brief Method to get the mean level spacing of the matrix. 
+*/
 template<typename _T>
 inline double GeneralizedMatrix<_T>::meanLevelSpacing() const
 {
@@ -547,6 +557,9 @@ inline double GeneralizedMatrix<_T>::meanLevelSpacing() const
 
 // ############################################################################################################
 
+/*
+* @brief Method to get the diagonal of the matrix.
+*/
 template<typename _T>
 inline arma::Col<_T> GeneralizedMatrix<_T>::diag() const
 {
@@ -557,6 +570,10 @@ inline arma::Col<_T> GeneralizedMatrix<_T>::diag() const
 
 // ############################################################################################################
 
+/*
+* @brief Method to get the diagonal of the matrix.
+* @param _k: The diagonal index.
+*/
 template<typename _T>
 inline arma::Col<_T> GeneralizedMatrix<_T>::diag(size_t _k) const
 {
@@ -597,13 +614,17 @@ inline void GeneralizedMatrix<_T>::standarize()
 	{
 		this->H_sparse_.diag() -= arma::trace(this->H_sparse_) / (double)this->n_rows;
 		auto _Hs				= arma::trace(arma::square(this->H_sparse_)) / (double)this->n_rows;
+		if(_Hs == 0.0)
+			return;
 		this->H_sparse_			= this->H_sparse_ / std::sqrt(_Hs);
 	}
 	else
 	{
 		this->H_dense_.diag() -= arma::trace(this->H_dense_) / (double)this->n_rows;
-		auto _Hd				= arma::trace(arma::square(this->H_dense_)) / (double)this->n_rows;
-		this->H_dense_			= this->H_dense_ / std::sqrt(_Hd);
+		auto _Hs				= arma::trace(arma::square(this->H_dense_)) / (double)this->n_rows;
+		if(_Hs == 0.0)
+			return;
+		this->H_dense_			= this->H_dense_ / std::sqrt(_Hs);
 	}
 }
 

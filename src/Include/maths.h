@@ -59,6 +59,7 @@ inline _T toType(double _r, double _i = 0) {
 	return _T(_r, _i);
 }
 template <>
+
 inline double toType(double _r, double _i) {
 	return _r;
 }
