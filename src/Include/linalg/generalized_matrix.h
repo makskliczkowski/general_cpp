@@ -6,14 +6,6 @@
 * MAKSYMILIAN KLICZKOWSKI, WUST, POLAND
 ***************************************/
 
-//#ifndef SYMMETRIES_H
-//#	include "algebra/operators.h"
-//#endif // !SYMMETRIES_H
-
-//#ifndef SYSTEM_PROPERTIES_H
-//#	include "quantities/statistics.h"
-//#endif // !SYSTEM_PROPERTIES_H
-
 #include "../../lin_alg.h"
 
 // ############################################################################################################
