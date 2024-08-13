@@ -168,6 +168,13 @@ public:
 		binEdges_	=	std::vector<double>(_N, 0);
 		binCounts_	=	std::vector<u64>(_N + 1, 0);
 	}
+	Histogram(const std::vector<double>& _edges)
+		: nBins_(_edges.size())
+	{
+		binEdges_	=	_edges;
+		binCounts_	=	std::vector<u64>(_edges.size() + 1, 0);
+	}
+
 
 	// ######## Setters ########
 	
@@ -227,6 +234,14 @@ public:
 		// get the bin edges - those are determined by the minimum and maximum values
 		arma::Col<double> _valuesr = arma::real(_values);
 		this->setHistogramCounts(_valuesr, _setBins);
+	}
+
+	// -------------------------
+
+	void setEdges(const arma::Col<double>& _edges)
+	{
+		this->binEdges_ = arma::conv_to<v_1d<double>>::from(_edges);
+		this->nBins_	= _edges.n_elem - 1;
 	}
 
 	// ######## Getters ########
@@ -377,6 +392,36 @@ public:
 		++this->binCounts_[_binIdx];
 		return _binIdx;
 	}
+
+	// -------------------------
+	
+	/*
+	* @brief Merge two histograms together. The histograms must have the same bin sizes
+	* @param _hist the histogram to merge
+	*/
+	void merge(const Histogram& _hist)
+	{
+		if (this->nBins_ != _hist.nBins_)
+			throw std::invalid_argument("Cannot merge histograms of different bin sizes");
+
+
+		// merge the bin counts
+		for (u64 i = 0; i <= this->nBins_; i++)
+			this->binCounts_[i] += _hist.binCounts_[i];
+	}
+
+	// -------------------------
+
+	void merge( Histogram& _hist)
+	{
+		if (this->nBins_ != _hist.nBins_)
+			throw std::invalid_argument("Cannot merge histograms of different bin sizes");
+
+		// merge the bin counts
+		for (u64 i = 0; i <= this->nBins_; i++)
+			this->binCounts_[i] += _hist.counts(i);
+	}
+
 };
 
 /*
@@ -398,6 +443,8 @@ public:
 	HistogramAverage()						{ binAverages_ = arma::Col<_T>(this->nBins_ + 1, arma::fill::zeros); }
 	HistogramAverage(u64 _N)
 		: Histogram(_N)						{ binAverages_ = arma::Col<_T>(_N + 1, arma::fill::zeros); }
+	HistogramAverage(const std::vector<double>& _edges)
+		: Histogram(_edges)					{ binAverages_ = arma::Col<_T>(_edges.size() + 1, arma::fill::zeros); }
 
 	// ######## Getters ########
 
@@ -459,9 +506,6 @@ public:
 	u64 append(long double _value, const _T _element)
 	{
 		auto _binIdx = 0;
-#ifndef _DEBUG
-#pragma omp critical
-#endif // !_DEBUG
 		{
 			// get the index of the bin
 			_binIdx = Histogram::append(_value);
@@ -473,5 +517,15 @@ public:
 	}
 
 	// ##########################################################################################################################################
+
+	/*
+	* @brief Merge two histograms together. The histograms must have the same bin sizes
+	* @param _hist the histogram to merge
+	*/
+	void merge (const HistogramAverage<_T>& _hist)
+	{
+		Histogram::merge(_hist);
+		this->binAverages_ += _hist.binAverages_;
+	}
 
 };

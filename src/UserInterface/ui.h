@@ -83,6 +83,8 @@ inline	HANDLE_FUN_TYPE	FHANDLE_PARAM_BETWEEN	(double _low = -1.0, double _high =
 class UserInterface 
 {
 protected:
+	std::mutex mtx_;																						// mutex for the UI
+protected:
 	randomGen ran_;																							// random generator
 	Timer _timer;
 	typedef v_1d<std::string> cmdArg;

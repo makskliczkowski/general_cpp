@@ -40,7 +40,7 @@ public:
 	// Destructor
 	~GeneralizedMatrix()
 	{
-		DESTRUCTOR_CALL;
+		//DESTRUCTOR_CALL;
 	}
 
 	// Default constructor
@@ -162,7 +162,9 @@ public:
 	// Getters
 	auto t()				const -> GeneralizedMatrix<_T>		{ return this->isSparse_ ? GeneralizedMatrix<_T>(this->H_sparse_.t()) : GeneralizedMatrix<_T>(this->H_dense_.t()); }
 	auto st()				const -> GeneralizedMatrix<_T>		{ return this->isSparse_ ? GeneralizedMatrix<_T>(this->H_sparse_.st()) : GeneralizedMatrix<_T>(this->H_dense_.st()); }
+	auto getEnergyWidth()	const -> _T							{ return this->isSparse_ ? arma::trace(this->H_sparse_ * this->H_sparse_) : arma::trace(this->H_dense_ * this->H_dense_); }
 	auto meanLevelSpacing()	const -> double;
+	// diagonal
 	auto diag()				const -> arma::Col<_T>;
 	auto diag(size_t _k)	const -> arma::Col<_T>;
 	auto diagD()			-> arma::diagview<_T>				{ return this->H_dense_.diag();				}
@@ -499,6 +501,14 @@ public:
 		return arma::norm(this->H_dense_, method);
 	}
 
+	_T hsnorm() const
+	{
+		if (this->isSparse_)
+			return arma::trace(this->H_sparse_ * this->H_sparse_) / (double)this->n_rows;
+		return arma::trace(this->H_dense_ * this->H_dense_) / (double)this->n_rows;
+	
+	}
+
 	// Maximum element of the matrix
 	_T max() const {
 		if (this->isSparse_) {
@@ -605,7 +615,7 @@ inline void GeneralizedMatrix<_T>::standarize()
 	if(this->isSparse_)
 	{
 		this->H_sparse_.diag() -= arma::trace(this->H_sparse_) / (double)this->n_rows;
-		auto _Hs				= arma::trace(arma::square(this->H_sparse_)) / (double)this->n_rows;
+		auto _Hs				= arma::trace(this->H_sparse_ * this->H_sparse_) / (double)this->n_rows;
 		if(_Hs == 0.0)
 			return;
 		this->H_sparse_			= this->H_sparse_ / std::sqrt(_Hs);
@@ -613,7 +623,7 @@ inline void GeneralizedMatrix<_T>::standarize()
 	else
 	{
 		this->H_dense_.diag() -= arma::trace(this->H_dense_) / (double)this->n_rows;
-		auto _Hs				= arma::trace(arma::square(this->H_dense_)) / (double)this->n_rows;
+		auto _Hs				= arma::trace(this->H_dense_ * this->H_dense_) / (double)this->n_rows;
 		if(_Hs == 0.0)
 			return;
 		this->H_dense_			= this->H_dense_ / std::sqrt(_Hs);
