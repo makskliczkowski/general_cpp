@@ -4,6 +4,7 @@
 #include <iostream> 
 #include <complex>
 #include <utility>
+#include <cstdint>
 
 template<class T>
 using v_3d = std::vector<std::vector<std::vector<T>>>;				// 3d vector
