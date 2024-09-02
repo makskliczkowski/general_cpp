@@ -40,3 +40,96 @@ strVec fromPtr(int argc, char** argv, unsigned int offset)
 		tmp[i] = argv[i + offset];
 	return tmp;
 };
+
+// ###################################################################################################################################
+
+/*
+* @brief Checks if the string is a alphanumeric
+* @param s a string to check
+* @returns true if the string is a alphanumeric
+*/
+bool StrParser::isAlphanum(const std::string &s)
+{
+	for (auto& c : s)
+		if (!std::isalnum(c))
+			return false;
+	return true;
+}
+
+// ###################################################################################################################################
+
+/*
+* @brief Checks if the string is a number
+* @param s a string to check
+* @returns true if the string is a number
+*/
+bool StrParser::isNumber(const std::string &s)
+{
+	for (auto& c : s)
+		if (!std::isdigit(c))
+			return false;
+	return true;
+}
+
+// ###################################################################################################################################
+
+/*
+* @brief Checks if the string contains a substring
+* @param s a string to check
+* @param sub a substring to check
+* @returns true if the string contains a substring
+*/
+bool StrParser::contanins(const std::string &s, const std::string &sub)
+{
+	return s.find(sub) != std::string::npos;
+}
+
+// ###################################################################################################################################
+
+/*
+* @brief Splits string according to the delimiter
+* @param s a string to be split
+* @param delimiter a delimiter. Default = '\\t'
+* @returns split string
+*/
+strVec StrParser::split(const std::string &s, char delimiter)
+{
+	unsigned long long pos_start	= 0;
+	unsigned long long pos_end		= 0;
+	unsigned long long delim_len	= 1;
+	std::string token				= "";
+	strVec res						= {};
+
+	while ((pos_end = s.find(delimiter, pos_start)) != std::string::npos) {
+		token		= s.substr(pos_start, pos_end - pos_start);
+		pos_start	= pos_end + delim_len;
+		res.push_back(token);
+	}
+	res.push_back(s.substr(pos_start));
+	return res;
+}
+
+/*
+* @brief Splits string according to the delimiter
+* @param s a string to be split
+* @param delimiter a delimiter. Default = '\\t'
+* @returns split string
+*/
+strVec StrParser::split(const std::string &s, const std::string &delimiter)
+{
+	unsigned long long pos_start	= 0;
+	unsigned long long pos_end		= 0;
+	unsigned long long delim_len	= delimiter.size();
+	std::string token				= "";
+	strVec res						= {};
+
+	while ((pos_end = s.find(delimiter, pos_start)) != std::string::npos) {
+		token		= s.substr(pos_start, pos_end - pos_start);
+		pos_start	= pos_end + delim_len;
+		res.push_back(token);
+	}
+	res.push_back(s.substr(pos_start));
+	return res;
+}
+
+// ###################################################################################################################################

@@ -19,7 +19,9 @@ using t_2d = std::pair<T, T>;										// 2d tuple - pair
 
 #define SSTR std::string
 #define STR std::to_string
+#define STRS(str) str_p(str, 2, true)
 #define STRP(str,prec) str_p(str, prec)
+#define STRPS(str, prec) str_p(str, prec, true)
 typedef v_1d<std::string> strVec;
 
 
@@ -104,6 +106,16 @@ namespace StrParser
 	}
 
 	// ###################################################################################################################################
+
+	bool isNumber(const std::string& s);
+	bool isAlphanum(const std::string& s);
+	bool contanins(const std::string& s, const std::string& sub);
+
+	// ###################################################################################################################################
+
+	strVec split(const std::string& s, char delimiter = '\t');
+	strVec split(const std::string& s, const std::string& delimiter = "\t");
+	strVec fromPtr(int argc, char** argv, unsigned int offset = 1);
 };
 
 
@@ -111,6 +123,9 @@ namespace StrParser
 
 strVec splitStr(const std::string& s, std::string delimiter = "\t");
 strVec fromPtr(int argc, char** argv, unsigned int offset = 1);
+
+// 
+
 
 // ############################################################### S E P A R A T E D   S T R I N G ###############################################################
 

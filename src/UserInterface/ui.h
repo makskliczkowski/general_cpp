@@ -313,6 +313,55 @@ inline std::pair<_Tin, _Tin> UserInterface::setOption(std::vector<_Tin>& value, 
 	return std::make_pair(_val, _rVal);
 }
 
+// string specialization
+template<>
+inline std::pair<std::string, std::string> UserInterface::setOption(std::vector<std::string>& value, cmdArg& argv, std::string choice, std::string _default, bool _resize)
+{
+	bool setVal			=	false;
+	std::string _rVal   =	"";
+	std::string _val	=	"";
+	std::string option	=	this->getCmdOption(argv, "-" + choice);
+	strVec optionVec	=	{};
+
+	if (option != "")
+	{
+		BEGIN_CATCH_HANDLER
+		{
+			// check whether the value containts our special vector separating value
+			if (setVal = option.find(UI_VECTOR_SEPARATOR) != std::string::npos; setVal)
+			{
+				optionVec	=	splitStr(option, ";");
+
+				// check if one should resize it!
+				if (_resize)
+					value.resize(optionVec.size());
+
+				if (setVal	=	(optionVec.size() == value.size()); setVal)
+					for (auto i = 0; i < value.size(); ++i)
+						value[i]	=	optionVec[i];
+				else
+					for (auto i = 0; i < value.size(); ++i)
+						value[i]	=	optionVec[0];
+			}
+			// if the value is not a vector, we set the value to the same value
+			else
+			{
+				// check if one should resize it!
+				if (_resize)
+					value.resize(1);
+				_val	=	option;
+				if(setVal = !option.empty(); setVal)
+					for (auto i = 0; i < value.size(); ++i)
+						value[i]	=	_val;
+			}
+			return std::make_pair(_val, _rVal);
+		}
+		END_CATCH_HANDLER("Couldn't set the vector value...", ;);
+	}
+	value = { _default };
+	return std::make_pair(_val, _rVal);
+}
+
 // ######################################################################################################################
 
 /*

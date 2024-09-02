@@ -7,6 +7,7 @@
 #include <ctime>
 #include <numeric>
 #include <type_traits>
+#include <vector>
 
 // --- RANGES ---
 #ifdef __has_include
@@ -63,6 +64,9 @@ public:
 
 	template <typename _T, typename _T2, template <class> typename _V>
 	auto random(_T _mn, _T2 _mx, size_t _s)		-> _V<typename std::common_type<_T, _T2>::type>;
+
+	template <typename _T, typename _T2 = _T>
+	auto random(_T _mn, _T2 _mx, size_t _s)		-> std::vector<typename std::common_type<_T, _T2>::type>;
 
 	// ---------------------
 
@@ -180,7 +184,17 @@ inline _V<typename std::common_type<_T, _T2>::type> randomGen::random(_T _mn, _T
 	using result_type = typename std::common_type<_T, _T2>::type;
 	_V<result_type> _out(_s);
 	// generate random numbers
-	std::generate(_out.begin(), _out.end(), [&]() { return std::uniform_real_distribution<result_type>(_mn, _mx - 1)(this->engine); });
+	std::generate(_out.begin(), _out.end(), [&]() { return std::uniform_real_distribution<result_type>(_mn, _mx)(this->engine); });
+	return _out;
+}
+
+template <typename _T, typename _T2>
+inline std::vector<typename std::common_type<_T, _T2>::type> randomGen::random(_T _mn, _T2 _mx, size_t _s)
+{
+	using result_type = typename std::common_type<_T, _T2>::type;
+	std::vector<result_type> _out(_s);
+	// generate random numbers
+	std::generate(_out.begin(), _out.end(), [&]() { return std::uniform_real_distribution<result_type>(_mn, _mx)(this->engine); });
 	return _out;
 }
 

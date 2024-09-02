@@ -614,18 +614,45 @@ inline void GeneralizedMatrix<_T>::standarize()
 {
 	if(this->isSparse_)
 	{
-		this->H_sparse_.diag() -= arma::trace(this->H_sparse_) / (double)this->n_rows;
+		auto _trace 			= arma::trace(this->H_sparse_) / (double)this->n_rows;
+		this->H_sparse_.diag() 	-= _trace;
 		auto _Hs				= arma::trace(this->H_sparse_ * this->H_sparse_) / (double)this->n_rows;
+
+		// check if the Hilbert-Schmidt norm is zero - then return the trace back!
 		if(_Hs == 0.0)
-			return;
+		{
+			this->H_sparse_.diag() += _trace;
+			_Hs 				= arma::trace(this->H_sparse_ * this->H_sparse_) / (double)this->n_rows;
+			#ifdef _DEBUG
+				std::cout << "The Hilbert-Schmidt norm is zero. Returning trace back." << std::endl;
+			#endif
+		}
+
+		// check if the Hilbert-Schmidt norm is zero
+		if (_Hs == 0.0)
+			throw std::runtime_error("The Hilbert-Schmidt norm is zero.");
+
 		this->H_sparse_			= this->H_sparse_ / std::sqrt(_Hs);
 	}
 	else
 	{
-		this->H_dense_.diag() -= arma::trace(this->H_dense_) / (double)this->n_rows;
+		auto _trace 			= arma::trace(this->H_dense_) / (double)this->n_rows;
+		this->H_dense_.diag() 	-= _trace;
 		auto _Hs				= arma::trace(this->H_dense_ * this->H_dense_) / (double)this->n_rows;
+
+		// check if the Hilbert-Schmidt norm is zero - then return the trace back!
 		if(_Hs == 0.0)
-			return;
+		{
+			this->H_dense_.diag() += _trace;
+			_Hs 				= arma::trace(this->H_dense_ * this->H_dense_) / (double)this->n_rows;
+			#ifdef _DEBUG
+				std::cout << "The Hilbert-Schmidt norm is zero. Returning trace back." << std::endl;
+			#endif
+		}
+
+		if(_Hs == 0.0)
+			throw std::runtime_error("The Hilbert-Schmidt norm is zero.");
+		
 		this->H_dense_			= this->H_dense_ / std::sqrt(_Hs);
 	}
 }

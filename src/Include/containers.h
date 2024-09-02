@@ -92,6 +92,49 @@ struct is_vector<std::vector<T>> : std::true_type {};
 
 namespace Vectors
 {
+	// ########################## C O N V E R S I O N ##########################
+
+	/*
+	* @brief Convert vector of one type to another
+	* @param _v vector to convert
+	* @returns converted vector
+	*/
+	template <typename _T, typename _T2 = double>
+	inline v_1d<_T> convert(const v_1d<_T2>& _v)
+	{
+		v_1d<_T> _out;
+		_out.resize(_v.size());
+		std::transform(_v.begin(), _v.end(), _out.begin(), [](const _T& _elem) { return static_cast<_T2>(_elem); });
+		return _out;
+	}
+
+	template <typename _T>
+	inline v_1d<_T> convert(const v_1d<_T>& _v)
+	{
+		return _v;
+	}
+
+	template <typename _T>
+	inline v_1d<_T> convert(const v_1d<std::string>& _v)
+	{
+		v_1d<_T> _out;
+		_out.resize(_v.size());
+		std::transform(_v.begin(), _v.end(), _out.begin(), [](const std::string& _elem) { return static_cast<_T>(std::stold(_elem)); });
+		return _out;
+	}
+
+	// -------------------------------------------------------------------------
+
+	template <>
+	inline v_1d<size_t> convert(const v_1d<std::string>& _v)
+	{
+		v_1d<size_t> _out;
+		_out.resize(_v.size());
+		std::transform(_v.begin(), _v.end(), _out.begin(), [](const std::string& _elem) { return static_cast<size_t>(std::stoull(_elem)); });
+		return _out;
+	}
+
+
 	// ######################### S T A T I S T I C A L #########################
 	
 	/*

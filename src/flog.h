@@ -132,6 +132,35 @@ inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl)
 #endif
 }
 
+template<typename _T>
+inline void LOGINFOT(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl, bool _time)
+{
+#ifndef _DEBUG
+	if(_typ == LOG_TYPES::DEBUG)
+		return;
+#endif // _DEBUG
+	if (_time)
+		return LOGINFO(_msg, _typ, _lvl);
+	else
+	{
+		// std::cout << "[" << getSTR_LOG_TYPES(_typ) << "]";
+		logLvl(_lvl);
+		std::cout << _msg << std::endl;
+#ifdef LOG_FILE
+		std::ofstream _file;
+		openFile(_file, LOG_FILENAME, std::ios::app);
+		// check level of log
+		if (_lvl > 0)
+			_file << "->";
+		while (_lvl--)
+			_file << "\t";
+		// write to the file
+		_file << "[" << getSTR_LOG_TYPES(_typ) << "]" << _msg << std::endl;
+		_file.close();
+#endif
+	};
+};
+
 // ##########################################################################################################################################
 
 /*
@@ -254,7 +283,16 @@ inline void LOGINFO(const std::vector<_T>& _msg, LOG_TYPES _typ, unsigned int _l
 {
 	for (auto& i : _msg)
 	{
-		LOGINFO(STR(i), _typ, _lvl);
+		LOGINFOT(STR(i), _typ, _lvl, false);
+	}
+}
+
+template <>
+inline void LOGINFO(const std::vector<std::string>& _msg, LOG_TYPES _typ, unsigned int _lvl)
+{
+	for (auto& i : _msg)
+	{
+		LOGINFOT(i, _typ, _lvl, false);
 	}
 }
 
