@@ -2,7 +2,9 @@
 #include <chrono>
 #include <iostream>
 #include <algorithm>
+#include <string>
 #include <time.h>
+#include <type_traits>
 #include "exceptions.h"
 
 /*
@@ -94,7 +96,9 @@ class Timer
 {
 	enum class TimePrecision { MICROSECONDS = 0, MILLISECONDS = 1, SECONDS = 2 };
 protected:
-	const static inline std::string _startName = "start";
+	const static inline std::string _startName 	= "start";
+	std::string _last 							= "start";
+	size_t _iter 								= 0;
 	clk::time_point	_start;
 	std::vector<clk::time_point> _timestamps;
 	std::map<std::string, size_t> _timestampNames;
@@ -119,10 +123,12 @@ public:
 		_start = _t;
 		_timestampNames.clear();
 		_timestamps.clear();
+		_iter = 0;
 
 		// set the starting point
 		_timestampNames[_startName] = 0;
 		_timestamps.push_back(_start);
+		_iter++;
 	}
 
 	// ############# S E T T E R S #############
@@ -134,6 +140,8 @@ public:
 	{
 		_timestampNames[_name] = _timestamps.size();
 		_timestamps.push_back(NOW);
+		_last = _name;
+		_iter++;
 	}
 
 	// ############# G E T T E R S #############
@@ -215,6 +223,25 @@ public:
 			break;
 		}
 	}
+	template<typename _T1, typename = typename std::enable_if<std::is_arithmetic<_T1>::value, _T1>::type>
+	std::string elapsed(_T1 _point, TimePrecision _prec = TimePrecision::MICROSECONDS)
+	{
+		switch (_prec)
+		{
+		case TimePrecision::MICROSECONDS:
+			return TMUS(NOW, this->_timestamps[_point]);
+			break;
+		case TimePrecision::MILLISECONDS:
+			return TMS(NOW, this->_timestamps[_point]);
+			break;
+		case TimePrecision::SECONDS:
+			return TS(NOW, this->_timestamps[_point]);
+			break;
+		default:
+			return TMUS(NOW, this->_timestamps[_point]);
+			break;
+		}
+	}
 
 	/*
 	* @brief Get the elapsed time at given names
@@ -240,6 +267,25 @@ public:
 			break;
 		default:
 			return TMUS(this->_timestamps[this->_timestampNames[_point]], this->_timestamps[this->_timestampNames[_since]]);
+			break;
+		}
+	}
+
+	std::string elapsed(const std::string& _point, TimePrecision _prec)
+	{
+		switch (_prec) 
+		{
+		case TimePrecision::MICROSECONDS:
+			return TMUS(NOW, this->_timestamps[this->_timestampNames[_point]]);
+			break;
+		case TimePrecision::MILLISECONDS:
+			return TMS(NOW, this->_timestamps[this->_timestampNames[_point]]);
+			break;
+		case TimePrecision::SECONDS:
+			return TS(NOW, this->_timestamps[this->_timestampNames[_point]]);
+			break;
+		default:
+			return TMUS(NOW, this->_timestamps[this->_timestampNames[_point]]);
 			break;
 		}
 	}
@@ -276,3 +322,17 @@ static std::string prettyTime()
 {
 	return prettyTime(std::time(0));
 }
+
+// ##################################################################################################################################
+
+#ifdef _DEBUG
+	#define TIMER_CREATE(TIMER) Timer TIMER;
+	#define TIMER_START_MEASURE(IF, TIMER, NAME, FUN) 	{ 		std::string tmp = "";																		\
+																if(IF) TIMER.checkpoint(NAME);																\
+															   	FUN; if(IF) std::cout << "\t\t\t" << #FUN << " took: " << TIMER.elapsed(NAME) << std::endl;	\
+														} 
+#else
+	#define TIMER_CREATE(TIMER)
+	#define TIMER_START_MEASURE(IF, TIMER, NAME)
+	#define TIMER_ELAPSED_MEASURE(IF, TIMER, SINCE)
+#endif

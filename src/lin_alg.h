@@ -53,7 +53,7 @@ using v_mat = v_mat_1d<T>;											// 1d matrix vector
 
 #ifdef __has_include
 #	if __has_include(<concepts>)
-#		include <concepts>
+// #		include <concepts>
 #		include <type_traits>
 		template<typename _T>
 		concept HasMatrixType = std::is_same_v<_T, arma::Mat<double>>               || 
@@ -72,7 +72,7 @@ using v_mat = v_mat_1d<T>;											// 1d matrix vector
 		template<typename _T>
 		concept HasArmaVectorType = std::is_same_v<_T, arma::Col<double>>			||
 			std::is_same_v<_T, arma::Col<std::complex<double>>>						||
-			std::is_same_v< _T, arma::Col<u64>>										||
+			std::is_same_v<_T, arma::Col<u64>>										||
 			std::is_same_v<_T, arma::subview_col<double>>							||
 			std::is_same_v<_T, arma::subview_col<std::complex<double>>>				||
 			std::is_same_v<_T, arma::subview_col<u64>>								||
@@ -395,9 +395,7 @@ namespace algebra
 
 	// #################################################################################################################################################
 	
-	// #################################################################################################################################################
 	// ############################################################# MATRIX MULTIPLICATION #############################################################
-	// #################################################################################################################################################
 	
 	// #################################################################################################################################################
 
@@ -523,10 +521,339 @@ namespace algebra
 
 	// #################################################################################################################################################
 	
-	// #################################################################################################################################################
 	// ############################################################### MATRIX PROPERTIES ###############################################################
+	
 	// #################################################################################################################################################
 	
+
+	// *************************************************************************************************************************************************
+
+	namespace Solvers
+	{	
+		// !TODO:
+		// - Implement the MKL Conjugate Gradient solver
+		// - Implement the ARMA solver for the matrix-vector multiplication
+		// - Add various methods for sparse matrices, non-symmetric matrices, etc.
+		// - Add the option to use the solver without explicitly forming the matrix A
+		// - Add checkers for the matrix properties (symmetric, positive definite, etc.)
+
+#ifdef __has_include
+#	if __has_include(<mkl_rci.h>) and __has_include(<mkl_spblas.h>) and __has_include(<mkl_blas.h>)
+// #		define MKL_SOLVER_AVAILABLE
+#	endif
+# 	ifdef MKL_SOLVER_AVAILABLE
+#		include <mkl_rci.h>
+#		include <mkl_spblas.h>
+#		include <mkl_blas.h>
+#	else
+// #		pragma message ("--> MKL solver is not available or not using it. Check file lin_alg.h.")
+#	endif
+#endif
+		enum class SolverType
+		{
+			ARMA,
+			// symmetric
+			MKL_CONJ_GRAD,
+			MY_CONJ_GRAD
+			// non-symmetric
+
+			// sparse
+		};
+
+		// #################################################################################################################################################
+
+		// ------------ ARMA SOLVER ------------
+		template <typename _T>
+		void solve_arma(const arma::Mat<_T>& A, 
+						const arma::Col<_T>& b, 
+						arma::Col<_T>& x, 
+						auto _opts = arma::solve_opts::likely_sympd)
+		{
+			arma::solve(A, b, _opts);
+		}
+
+
+#ifdef MKL_SOLVER_AVAILABLE
+		// --- MKL CONJUGATE GRADIENT SOLVER (symmetric matrices) ---
+		template <typename _T>
+		void solve_mkl_conj_grad(const arma::Mat<_T>& A, 
+								 const arma::Col<_T>& b, 
+								 arma::Col<_T>& x,
+								 double eps = 1.0e-6)
+		{
+			// TODO
+		}
+
+		template <typename _T>
+		void solve_mkl_conj_grad(const arma::Col<_T>& b,
+								 std::function<void(const _T* x, _T* y, size_t n)> _matvecmul,
+								 arma::Col<_T>& x,
+								 double eps = 1.0e-6)
+		{
+			const size_t n 		= b.n_elem;
+
+			// get the pointer to the memory
+			const _T* b_ptr 	= b.memptr();
+			_T* x_ptr 			= x.memptr();
+
+			// the vectors must have the same size
+			assert(b.n_elem == x.n_elem && "The vectors must have the same size.");
+
+			// MKL solver parameters
+			// MKL_LONG n_ 		= static_cast<MKL_LONG>(n);
+			int* ipar 			= new int[128];
+			double* dpar 		= new double[128];
+			_T* tmp 			= new _T[4 * n];
+			int rci_request = 0, itercount = 0;
+
+			// Initialize solver based on type of _T (double or complex)
+			if constexpr (std::is_same_v<_T, double>) {
+				dcg_init(&n, x_ptr, const_cast<_T*>(b_ptr),
+						&rci_request, ipar, dpar, reinterpret_cast<double*>(tmp));
+			} 
+			else if constexpr (std::is_same_v<_T, std::complex<double>>) {
+				// Complex version initialization
+				// Note: MKL does not provide complex CG directly; this is an example
+				throw std::runtime_error("MKL does not provide complex CG directly.");
+			}
+			// TODO!: finish the implementation
+		}
+#endif
+
+		// ---- MY CONJUGATE GRADIENT SOLVER (symmetric matrices) ----
+		
+		template<typename _T1, typename _T2>
+		bool solve_my_conj_grad(const arma::Mat<_T1>& A, 
+								const arma::Col<_T2>& b, 
+								arma::Col<typename std::common_type<_T1, _T2>>& x,
+								double eps = 1.0e-6)
+		{
+			using _type = typename std::common_type<_T1, _T2>::type;
+
+			const size_t n = b.n_elem;
+			arma::Col<_type> r = b;			// initial residual r = b - A*x (x = 0, r = b)
+			arma::Col<_type> p = r;			// initial search direction p = r
+			arma::Col<_type> Ap(n);			// matrix-vector multiplication result Ap = A*p
+
+			// initial values
+			_type rs_old = arma::cdot(r, r);	// r^T * r - dot product of residuals
+
+			// iterate until convergence
+			for (size_t i = 0; i < n; ++i)
+			{
+				Ap = A * p;								// calculate the matrix-vector multiplication
+				
+				_type alpha = rs_old / arma::cdot(p, Ap); 	// calculate the step size
+				x += alpha * p;							// update the solution - in the direction of the search
+				r -= alpha * Ap;						// update the residual - orthogonal to the search direction
+				
+				_type rs_new = arma::cdot(r, r);		// calculate the new dot product of residuals
+
+				if (std::abs(std::sqrt(rs_new)) < eps)	// check for convergence (if the residual is small enough)
+					return true;
+
+				p = r + (rs_new / rs_old) * p;			// calculate the new search direction
+				rs_old = rs_new;						// update the old residual
+			}
+			return false;
+		}
+
+		/*
+		* @brief Solve the linear system of equations Ax = b using my conjugate gradient solver.
+		* This is used when the matrix A is symmetric and positive definite. Not explicitly forming the matrix A.
+		* @param b right-hand side vector
+		* @param _matvecmul function that performs the matrix-vector multiplication y = A*x
+		* @param x solution vector - output
+		* @param eps tolerance for the solver
+		* @returns true if the solver converged, false otherwise
+		*/
+		template <typename _T>
+		bool solve_my_conj_grad(const arma::Col<_T>& b,
+								std::function<void(const _T* x, _T* y, size_t n)> _matvecmul,
+								arma::Col<_T>& x,
+								double eps = 1.0e-6)
+		{
+			const size_t n = b.n_elem;
+			arma::Col<_T> r = b;	// initial residual r = b - A*x (x = 0, r = b)
+			arma::Col<_T> p = r;	// initial search direction p = r
+			arma::Col<_T> Ap(n);	// matrix-vector multiplication result Ap = A*p
+
+			// initial values
+			double rs_old = algebra::real(arma::cdot(r, r)); // r^T * r - dot product of residuals
+			const double eps_2 = eps * eps;
+			// iterate until convergence
+			for (size_t i = 0; i < n; ++i)
+			{
+				_matvecmul(p, Ap, n); 					// calculate the matrix-vector multiplication
+				
+				_T pAp = arma::cdot(p, Ap);      	 	// dot product p^T * Ap
+				if (std::abs(pAp) == 0)                 // avoid division by zero (degenerate case)
+					return false;
+
+				_T alpha = rs_old / pAp; 				// calculate the step size
+				x += alpha * p;							// update the solution - in the direction of the search
+				r -= alpha * Ap;						// update the residual - orthogonal to the search direction
+				
+				double rs_new = algebra::real(arma::cdot(r, r)); // calculate the new dot product of residuals
+
+				if (rs_new < eps_2)						// check for convergence (if the residual is small enough)
+					return true;
+
+				p = r + (rs_new / rs_old) * p;			// calculate the new search direction
+				rs_old = rs_new;						// update the old residual
+			}
+			return false;
+		}
+
+		/*
+		* @brief Solve the linear system of equations Ax = b using my conjugate gradient solver.
+		* This is used when the matrix A is symmetric and positive definite. Not explicitly forming the matrix A.
+		* @param b right-hand side vector
+		* @param _matvecmul function that performs the matrix-vector multiplication y = A*x
+		* @param x solution vector - output
+		* @param eps tolerance for the solver
+		* @returns true if the solver converged, false otherwise
+		*/
+		template <typename _T>
+		bool solve_my_conj_grad(const arma::Col<_T>& b,
+								std::function<void(const arma::Col<_T>& x, arma::Col<_T>& y, size_t n)> _matvecmul,
+								arma::Col<_T>& x,
+								double eps = 1.0e-6)
+		{
+			const size_t n = b.n_elem;
+			arma::Col<_T> r = b;	// initial residual r = b - A*x (x = 0, r = b)
+			arma::Col<_T> p = r;	// initial search direction p = r
+			arma::Col<_T> Ap(n);	// matrix-vector multiplication result Ap = A*p
+
+			// initial values
+			double rs_old = algebra::real(arma::cdot(r, r)); // r^T * r - dot product of residuals
+			const double eps_2 = eps * eps;
+			// iterate until convergence
+			for (size_t i = 0; i < n; ++i)
+			{
+				_matvecmul(p, Ap, n); 					// calculate the matrix-vector multiplication
+				
+				_T pAp = arma::cdot(p, Ap);      	 	// dot product p^T * Ap
+				if (std::abs(pAp) == 0)                 // avoid division by zero (degenerate case)
+					return false;
+
+				_T alpha = rs_old / pAp; 				// calculate the step size
+				x += alpha * p;							// update the solution - in the direction of the search
+				r -= alpha * Ap;						// update the residual - orthogonal to the search direction
+				
+				double rs_new = algebra::real(arma::cdot(r, r)); // calculate the new dot product of residuals
+
+				if (rs_new < eps_2)						// check for convergence (if the residual is small enough)
+					return true;
+
+				p = r + (rs_new / rs_old) * p;			// calculate the new search direction
+				rs_old = rs_new;						// update the old residual
+			}
+			return false;
+		}
+
+		// #################################################################################################################################################
+
+
+		/*
+		* @brief Solve the linear system of equations Ax = b using the specified solver.
+		* @param A matrix
+		* @param b right-hand side vector
+		* @param x solution vector - output
+		* @param solver solver type
+		* @param _opts options for the solver - default for ARMA only
+		*/
+		template <typename _T>
+		void solve(	const arma::Mat<_T>& A, 
+					const arma::Col<_T>& b, 
+					arma::Col<_T>& x, 
+					SolverType solver 	= SolverType::ARMA, 
+					auto _opts 			= arma::solve_opts::likely_sympd,
+					double eps 			= 1.0e-6)
+		{
+			switch (solver)
+			{
+			case SolverType::ARMA:
+				solve_arma(A, b, x, _opts);
+				break;
+#ifdef MKL_SOLVER_AVAILABLE
+			case SolverType::MKL_CONJ_GRAD:
+				solve_mkl_conj_grad(A, b, x);
+				break;
+#endif
+			case SolverType::MY_CONJ_GRAD:
+				solve_my_conj_grad(A, b, x, eps);
+				break;
+			default:
+				solve_arma(A, b, x, _opts);
+				break;
+			}
+		}
+
+		/*
+		* @brief Solve the linear system of equations Ax = b without explicitly forming the matrix A.
+		* @param b right-hand side vector
+		* @param _matvecmul function that performs the matrix-vector multiplication y = A*x
+		* @param x solution vector - output
+		*/
+		template <typename _T>
+		void solve(const arma::Col<_T>& b,
+					std::function<void(const _T* x, _T* y, size_t n)> _matvecmul,
+					arma::Col<_T>& x,
+					SolverType solver = SolverType::ARMA,
+					double eps = 1.0e-6)
+		{
+			switch (solver)
+			{
+			case SolverType::ARMA:
+				throw std::invalid_argument("ARMA solver cannot be used without the matrix A.");
+				break;
+#ifdef MKL_SOLVER_AVAILABLE
+			case SolverType::MKL_CONJ_GRAD:
+				break;
+#endif
+			case SolverType::MY_CONJ_GRAD:
+				solve_my_conj_grad(b, _matvecmul, x, eps);
+				break;
+			default:
+				break;
+			}
+		}
+
+		/*
+		* @brief Solve the linear system of equations Ax = b without explicitly forming the matrix A.
+		* @param b right-hand side vector
+		* @param _matvecmul function that performs the matrix-vector multiplication y = A*x
+		* @param x solution vector - output
+		* @param solver solver type
+		* @param eps tolerance for the solver
+		*/
+		template <typename _T>
+		void solve(const arma::Col<_T>& b,
+					std::function<void(const arma::Col<_T>& x, arma::Col<_T>& y, size_t n)> _matvecmul,
+					arma::Col<_T>& x,
+					SolverType solver = SolverType::ARMA,
+					double eps = 1.0e-6)
+		{
+			switch (solver)
+			{
+			case SolverType::ARMA:
+				throw std::invalid_argument("ARMA solver cannot be used without the matrix A.");
+				break;
+#ifdef MKL_SOLVER_AVAILABLE
+			case SolverType::MKL_CONJ_GRAD:
+				break;
+#endif
+			case SolverType::MY_CONJ_GRAD:
+				solve_my_conj_grad(b, _matvecmul, x, eps);
+				break;
+			default:
+				break;			
+			}
+		}
+	};
+
+
 	// #################################################################################################################################################
 	
 	// ################################################################### PFAFFIANS ###################################################################
