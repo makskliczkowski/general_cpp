@@ -8,6 +8,13 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#if defined DEBUG and not defined _DEBUG
+#	define _DEBUG
+#endif
+// #if defined _DEBUG and not defined DEBUG
+// #	define DEBUG
+// #endif 
+
 // ########################################################				  ARMA					########################################################
 
 #include "Include/statistical.h"

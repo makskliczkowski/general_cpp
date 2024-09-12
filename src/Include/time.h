@@ -6,6 +6,7 @@
 #include <time.h>
 #include <type_traits>
 #include "exceptions.h"
+#include "str.h"
 
 /*
 * Define function signatures to use in debug scenarios
@@ -251,41 +252,41 @@ public:
 	* @returns string with a timestamp
 	*/
 	std::string elapsed(const std::string& _point, 
-						const std::string& _since	= _startName, 
+						const std::string& _since, 
 						TimePrecision _prec			= TimePrecision::MICROSECONDS)
 	{
 		switch (_prec) 
 		{
 		case TimePrecision::MICROSECONDS:
-			return TMUS(this->_timestamps[this->_timestampNames[_point]], this->_timestamps[this->_timestampNames[_since]]);
+			return StrParser::colorize(TMUS(this->_timestamps[this->_timestampNames[_since]], this->_timestamps[this->_timestampNames[_point]]), "red");
 			break;
 		case TimePrecision::MILLISECONDS:
-			return TMS(this->_timestamps[this->_timestampNames[_point]], this->_timestamps[this->_timestampNames[_since]]);
+			return StrParser::colorize(TMS(this->_timestamps[this->_timestampNames[_since]], this->_timestamps[this->_timestampNames[_point]]), "red");
 			break;
 		case TimePrecision::SECONDS:
-			return TS(this->_timestamps[this->_timestampNames[_point]], this->_timestamps[this->_timestampNames[_since]]);
+			return StrParser::colorize(TS(this->_timestamps[this->_timestampNames[_since]], this->_timestamps[this->_timestampNames[_point]]), "red");
 			break;
 		default:
-			return TMUS(this->_timestamps[this->_timestampNames[_point]], this->_timestamps[this->_timestampNames[_since]]);
+			return StrParser::colorize(TMUS(this->_timestamps[this->_timestampNames[_since]], this->_timestamps[this->_timestampNames[_point]]), "red");
 			break;
 		}
 	}
 
-	std::string elapsed(const std::string& _point, TimePrecision _prec)
+	std::string elapsed(const std::string& _point, TimePrecision _prec = TimePrecision::MICROSECONDS)
 	{
 		switch (_prec) 
 		{
 		case TimePrecision::MICROSECONDS:
-			return TMUS(NOW, this->_timestamps[this->_timestampNames[_point]]);
+			return StrParser::colorize(TMUS(this->_timestamps[this->_timestampNames[_point]], NOW), "red");
 			break;
 		case TimePrecision::MILLISECONDS:
-			return TMS(NOW, this->_timestamps[this->_timestampNames[_point]]);
+			return StrParser::colorize(TMS(this->_timestamps[this->_timestampNames[_point]], NOW), "red");
 			break;
 		case TimePrecision::SECONDS:
-			return TS(NOW, this->_timestamps[this->_timestampNames[_point]]);
+			return StrParser::colorize(TS(this->_timestamps[this->_timestampNames[_point]], NOW), "red");
 			break;
 		default:
-			return TMUS(NOW, this->_timestamps[this->_timestampNames[_point]]);
+			return StrParser::colorize(TMUS(this->_timestamps[this->_timestampNames[_point]], NOW), "red");
 			break;
 		}
 	}
@@ -327,12 +328,12 @@ static std::string prettyTime()
 
 #ifdef _DEBUG
 	#define TIMER_CREATE(TIMER) Timer TIMER;
-	#define TIMER_START_MEASURE(IF, TIMER, NAME, FUN) 	{ 		std::string tmp = "";																		\
+	#define TIMER_START_MEASURE(FUN, IF, TIMER, NAME) 	{ 		std::string tmp = "";																		\
 																if(IF) TIMER.checkpoint(NAME);																\
-															   	FUN; if(IF) std::cout << "\t\t\t" << #FUN << " took: " << TIMER.elapsed(NAME) << std::endl;	\
+															   	FUN; 																						\
+																if(IF) std::cout << "\t\t\t\t\t->" << #FUN << " took: " << TIMER.elapsed(NAME) << std::endl;\
 														} 
 #else
 	#define TIMER_CREATE(TIMER)
-	#define TIMER_START_MEASURE(IF, TIMER, NAME)
-	#define TIMER_ELAPSED_MEASURE(IF, TIMER, SINCE)
+	#define TIMER_START_MEASURE(IF, TIMER, NAME) FUN;
 #endif

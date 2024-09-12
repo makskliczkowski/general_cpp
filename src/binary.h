@@ -125,6 +125,9 @@ namespace Binary
 	template<typename _T>
 	typename std::enable_if<!std::is_arithmetic<_T>::value, bool>::type
 	check(const _T& n, const int k)	{ return n[k] > 0; };
+
+	template <typename _T>
+	bool check(const arma::Col<_T>& n, const int k) { return n(k) > 0; };
 	
 	template<typename _T>
 	typename std::enable_if<std::is_arithmetic<_T>::value, bool>::type
@@ -185,6 +188,10 @@ namespace Binary
 
 
 	// ##################################### FLIP SINGLE BIT #####################################
+
+	template<typename _T>
+	typename std::enable_if<std::is_arithmetic<_T>::value, _T>::type
+	flip(const _T& n, const int k) { return Binary::check(n, k) ? (_T(n) - (_T)BinaryPowers[k]) : (n + BinaryPowers[k]); };
 
 	// ################################## REVERSE ALL BITS ###################################
 

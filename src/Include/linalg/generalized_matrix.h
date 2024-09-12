@@ -7,6 +7,7 @@
 ***************************************/
 
 #include "../../lin_alg.h"
+#include <complex>
 
 // ############################################################################################################
 
@@ -238,6 +239,29 @@ public:
 	// Overloaded operators
 	
 	// Copy assignment operator
+
+	template<typename _T2>
+	GeneralizedMatrix<_T>& operator=(const GeneralizedMatrix<_T2>& other)
+	{
+		// Check for self-assignment
+		if (this != &other)
+		{
+			this->isSparse_ = other.isSparse_;
+			this->Nh_ = other.Nh_;
+			if (isSparse_)
+			{
+				this->H_dense_.clear();
+				this->H_sparse_ = algebra::cast<_T>(other.H_sparse_);
+			}
+			else
+			{
+				this->H_sparse_.clear();
+				this->H_dense_ = algebra::cast<_T>(other.H_dense_);
+			}
+		}
+		return *this;
+	}
+
 	GeneralizedMatrix<_T>& operator=(const GeneralizedMatrix<_T>& other) 
 	{
 		// Check for self-assignment
@@ -260,6 +284,29 @@ public:
 	}
 
 	// Move assignment operator
+
+	template<typename _T2>
+	GeneralizedMatrix<_T>& operator=(GeneralizedMatrix<_T2>&& other) noexcept
+	{
+		// Check for self-assignment
+		if (this != &other)
+		{
+			this->isSparse_ = other.isSparse_;
+			this->Nh_ = other.Nh_;
+			if (isSparse_)
+			{
+				this->H_dense_.clear();
+				this->H_sparse_ = std::move(other.H_sparse_);
+			}
+			else
+			{
+				this->H_sparse_.clear();
+				this->H_dense_ = std::move(other.H_dense_);
+			}
+		}
+		return *this;
+	}
+
 	GeneralizedMatrix<_T>& operator=(GeneralizedMatrix<_T>&& other) noexcept 
 	{
 		// Check for self-assignment
@@ -407,18 +454,50 @@ public:
 		return result;
 	}
 
-	// Addition operator overload to add HamiltonianMatrix with arma::Mat
 	template<typename _T2>
-	friend GeneralizedMatrix<typename std::common_type<_T, _T2>> operator+(const GeneralizedMatrix<_T2>& lhs, const arma::Mat<_T2>& rhs)
+	GeneralizedMatrix<_T>& operator+=(const GeneralizedMatrix<_T2>& other) 
+	{
+		if (this->isSparse_ && other.isSparse_)
+			this->H_sparse_ += algebra::cast<_T>(other.H_sparse_);
+		else if (!this->isSparse_ && !other.isSparse_)
+			this->H_dense_ += algebra::cast<_T>(other.H_dense_);
+		else 
+		{
+			// Convert sparse to dense or dense to sparse for addition
+			this->H_dense_ = arma::Mat<_T>(algebra::cast<_T>(H_sparse_)) + algebra::cast<_T>(other.H_dense_);
+			this->isSparse_ = false;
+		}
+		return *this;
+	}
+
+	template<typename _T2>
+	friend GeneralizedMatrix<typename std::common_type<_T, _T2>> operator+(const GeneralizedMatrix<_T2>& lhs, const GeneralizedMatrix<_T2>& rhs)
 	{
 		using _common = typename std::common_type<_T, _T2>;
 		GeneralizedMatrix<_common> result(lhs);
-		if (lhs.isSparse_)
-			result.H_sparse_ += algebra::cast<_common>(rhs);
+		if (lhs.isSparse_ && rhs.isSparse_)
+		{
+			result.H_sparse_ += algebra::cast<_common>(rhs.getSparse());
+		}
+		else if(lhs.isSparse_ && !rhs.isSparse_)
+		{
+			result.H_dense_ = algebra::cast<_common>(lhs.getSparse()) + algebra::cast<_common>(rhs.getDense());
+			result.isSparse_ = false;
+		}
+		else if (!lhs.isSparse_ && rhs.isSparse_)
+		{
+			result.H_dense_ = algebra::cast<_common>(lhs.getDense()) + algebra::cast<_common>(rhs.getSparse());
+			result.isSparse_ = false;
+		}
 		else
-			result.H_dense_ += algebra::cast<_common>(rhs);
+		{
+			result.H_dense_ += algebra::cast<_common>(rhs.getDense());
+		}
+
 		return result;
 	}
+
+	// Addition operator overload to add HamiltonianMatrix with arma::Mat
 
 	GeneralizedMatrix<_T>& operator+=(const arma::Mat<_T>& rhs)
 	{
@@ -612,7 +691,8 @@ inline void GeneralizedMatrix<_T>::symmetrize()
 template<typename _T>
 inline void GeneralizedMatrix<_T>::standarize()
 {
-	if(this->isSparse_)
+	if
+	(this->isSparse_)
 	{
 		auto _trace 			= arma::trace(this->H_sparse_) / (double)this->n_rows;
 		this->H_sparse_.diag() 	-= _trace;
@@ -661,3 +741,38 @@ inline void GeneralizedMatrix<_T>::standarize()
 
 template<typename _T>
 using GeneralizedMatrixFunction = std::function<GeneralizedMatrix<_T>(size_t _Ns)>;
+
+// ############################################################################################################
+
+// for the cast
+
+namespace algebra{
+
+	template <typename _T>
+	inline auto cast(const GeneralizedMatrix<_T>& x) -> GeneralizedMatrix<_T> 
+	{ 
+		return x; 
+	};
+
+	template <typename _T>
+	inline auto cast(const GeneralizedMatrix<std::complex<double>>& x) -> GeneralizedMatrix<_T> 
+	{ 
+		GeneralizedMatrix<_T> _result(x.size(), x.isSparse());
+		if (x.isSparse())
+			_result.setSparse(arma::conv_to<arma::SpMat<_T>>::from(x.getSparse()));
+		else
+			_result.setDense(arma::conv_to<arma::Mat<_T>>::from(x.getDense()));
+		return _result;
+	};
+
+	template <>
+	inline auto cast(const GeneralizedMatrix<std::complex<double>>& x) -> GeneralizedMatrix<double> 
+	{ 
+		GeneralizedMatrix<double> _result(x.size(), x.isSparse());
+		if (x.isSparse())
+			_result.setSparse(arma::conv_to<arma::SpMat<double>>::from(x.getSparse()));
+		else
+			_result.setDense(arma::conv_to<arma::Mat<double>>::from(x.getDense()));
+		return _result;
+	};
+};

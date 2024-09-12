@@ -20,7 +20,7 @@ using uint = unsigned int;
 //#define H5_BUILT_AS_DYNAMIC_LIB 
 #endif
 
-#define ARMA_WARN_LEVEL 1
+// #define ARMA_WARN_LEVEL 1
 #define ARMA_USE_LAPACK             
 #define ARMA_PRINT_EXCEPTIONS
 //#define ARMA_BLAS_LONG_LONG                                                                 // using long long inside LAPACK call
@@ -620,137 +620,202 @@ namespace algebra
 		}
 #endif
 
-		// ---- MY CONJUGATE GRADIENT SOLVER (symmetric matrices) ----
-		
-		template<typename _T1, typename _T2>
-		bool solve_my_conj_grad(const arma::Mat<_T1>& A, 
-								const arma::Col<_T2>& b, 
-								arma::Col<typename std::common_type<_T1, _T2>>& x,
-								double eps = 1.0e-6)
+		namespace ConjugateGradient
 		{
-			using _type = typename std::common_type<_T1, _T2>::type;
 
-			const size_t n = b.n_elem;
-			arma::Col<_type> r = b;			// initial residual r = b - A*x (x = 0, r = b)
-			arma::Col<_type> p = r;			// initial search direction p = r
-			arma::Col<_type> Ap(n);			// matrix-vector multiplication result Ap = A*p
-
-			// initial values
-			_type rs_old = arma::cdot(r, r);	// r^T * r - dot product of residuals
-
-			// iterate until convergence
-			for (size_t i = 0; i < n; ++i)
+			template<typename _T>
+			struct ConjugateGradientParams
 			{
-				Ap = A * p;								// calculate the matrix-vector multiplication
-				
-				_type alpha = rs_old / arma::cdot(p, Ap); 	// calculate the step size
-				x += alpha * p;							// update the solution - in the direction of the search
-				r -= alpha * Ap;						// update the residual - orthogonal to the search direction
-				
-				_type rs_new = arma::cdot(r, r);		// calculate the new dot product of residuals
+				double eps	 	= 	1.0e-6;
+				size_t max_iter = 	1000;
+				size_t n		= 	0;
+				arma::Col<_T> b;	// right-hand side
+				arma::Col<_T> x;	// solution
+				arma::Col<_T> r;	// residual
+				arma::Mat<_T> Ap;	// matrix-vector multiplication result
+			};
 
-				if (std::abs(std::sqrt(rs_new)) < eps)	// check for convergence (if the residual is small enough)
-					return true;
 
-				p = r + (rs_new / rs_old) * p;			// calculate the new search direction
-				rs_old = rs_new;						// update the old residual
-			}
-			return false;
-		}
-
-		/*
-		* @brief Solve the linear system of equations Ax = b using my conjugate gradient solver.
-		* This is used when the matrix A is symmetric and positive definite. Not explicitly forming the matrix A.
-		* @param b right-hand side vector
-		* @param _matvecmul function that performs the matrix-vector multiplication y = A*x
-		* @param x solution vector - output
-		* @param eps tolerance for the solver
-		* @returns true if the solver converged, false otherwise
-		*/
-		template <typename _T>
-		bool solve_my_conj_grad(const arma::Col<_T>& b,
-								std::function<void(const _T* x, _T* y, size_t n)> _matvecmul,
-								arma::Col<_T>& x,
-								double eps = 1.0e-6)
-		{
-			const size_t n = b.n_elem;
-			arma::Col<_T> r = b;	// initial residual r = b - A*x (x = 0, r = b)
-			arma::Col<_T> p = r;	// initial search direction p = r
-			arma::Col<_T> Ap(n);	// matrix-vector multiplication result Ap = A*p
-
-			// initial values
-			double rs_old = algebra::real(arma::cdot(r, r)); // r^T * r - dot product of residuals
-			const double eps_2 = eps * eps;
-			// iterate until convergence
-			for (size_t i = 0; i < n; ++i)
+			// ---- MY CONJUGATE GRADIENT SOLVER (symmetric matrices) ----
+			
+			template<typename _T1, typename _T2>
+			inline bool solve_my_conj_grad(const arma::Mat<_T1>& A, 
+									const arma::Col<_T2>& b, 
+									arma::Col<typename std::common_type<_T1, _T2>>& x,
+									double eps = 1.0e-6)
 			{
-				_matvecmul(p, Ap, n); 					// calculate the matrix-vector multiplication
-				
-				_T pAp = arma::cdot(p, Ap);      	 	// dot product p^T * Ap
-				if (std::abs(pAp) == 0)                 // avoid division by zero (degenerate case)
-					return false;
+				using _type = typename std::common_type<_T1, _T2>::type;
 
-				_T alpha = rs_old / pAp; 				// calculate the step size
-				x += alpha * p;							// update the solution - in the direction of the search
-				r -= alpha * Ap;						// update the residual - orthogonal to the search direction
-				
-				double rs_new = algebra::real(arma::cdot(r, r)); // calculate the new dot product of residuals
+				const size_t n = b.n_elem;
+				arma::Col<_type> r = b;			// initial residual r = b - A*x (x = 0, r = b)
+				arma::Col<_type> p = r;			// initial search direction p = r
+				arma::Col<_type> Ap(n);			// matrix-vector multiplication result Ap = A*p
 
-				if (rs_new < eps_2)						// check for convergence (if the residual is small enough)
-					return true;
+				// initial values
+				_type rs_old = arma::cdot(r, r);	// r^T * r - dot product of residuals
 
-				p = r + (rs_new / rs_old) * p;			// calculate the new search direction
-				rs_old = rs_new;						// update the old residual
+				// iterate until convergence
+				for (size_t i = 0; i < n; ++i)
+				{
+					Ap = A * p;								// calculate the matrix-vector multiplication
+					
+					_type alpha = rs_old / arma::cdot(p, Ap); 	// calculate the step size
+					x += alpha * p;							// update the solution - in the direction of the search
+					r -= alpha * Ap;						// update the residual - orthogonal to the search direction
+					
+					_type rs_new = arma::cdot(r, r);		// calculate the new dot product of residuals
+
+					if (std::abs(std::sqrt(rs_new)) < eps)	// check for convergence (if the residual is small enough)
+						return true;
+
+					p = r + (rs_new / rs_old) * p;			// calculate the new search direction
+					rs_old = rs_new;						// update the old residual
+				}
+				return false;
 			}
-			return false;
-		}
 
-		/*
-		* @brief Solve the linear system of equations Ax = b using my conjugate gradient solver.
-		* This is used when the matrix A is symmetric and positive definite. Not explicitly forming the matrix A.
-		* @param b right-hand side vector
-		* @param _matvecmul function that performs the matrix-vector multiplication y = A*x
-		* @param x solution vector - output
-		* @param eps tolerance for the solver
-		* @returns true if the solver converged, false otherwise
-		*/
-		template <typename _T>
-		bool solve_my_conj_grad(const arma::Col<_T>& b,
-								std::function<void(const arma::Col<_T>& x, arma::Col<_T>& y, size_t n)> _matvecmul,
-								arma::Col<_T>& x,
-								double eps = 1.0e-6)
-		{
-			const size_t n = b.n_elem;
-			arma::Col<_T> r = b;	// initial residual r = b - A*x (x = 0, r = b)
-			arma::Col<_T> p = r;	// initial search direction p = r
-			arma::Col<_T> Ap(n);	// matrix-vector multiplication result Ap = A*p
-
-			// initial values
-			double rs_old = algebra::real(arma::cdot(r, r)); // r^T * r - dot product of residuals
-			const double eps_2 = eps * eps;
-			// iterate until convergence
-			for (size_t i = 0; i < n; ++i)
+			/*
+			* @brief Solve the linear system of equations Ax = b using my conjugate gradient solver.
+			* This is used when the matrix A is symmetric and positive definite. Not explicitly forming the matrix A.
+			* @param b right-hand side vector
+			* @param _matvecmul function that performs the matrix-vector multiplication y = A*x
+			* @param x solution vector - output
+			* @param eps tolerance for the solver
+			* @returns true if the solver converged, false otherwise
+			*/
+			template <typename _T>
+			inline bool solve_my_conj_grad(const arma::Col<_T>& b,
+									std::function<void(const _T* x, _T* y, size_t n)> _matvecmul,
+									arma::Col<_T>& x,
+									double eps = 1.0e-6)
 			{
-				_matvecmul(p, Ap, n); 					// calculate the matrix-vector multiplication
-				
-				_T pAp = arma::cdot(p, Ap);      	 	// dot product p^T * Ap
-				if (std::abs(pAp) == 0)                 // avoid division by zero (degenerate case)
-					return false;
+				const size_t n = b.n_elem;
+				arma::Col<_T> r = b;	// initial residual r = b - A*x (x = 0, r = b)
+				arma::Col<_T> p = r;	// initial search direction p = r
+				arma::Col<_T> Ap(n);	// matrix-vector multiplication result Ap = A*p
 
-				_T alpha = rs_old / pAp; 				// calculate the step size
-				x += alpha * p;							// update the solution - in the direction of the search
-				r -= alpha * Ap;						// update the residual - orthogonal to the search direction
-				
-				double rs_new = algebra::real(arma::cdot(r, r)); // calculate the new dot product of residuals
+				// initial values
+				double rs_old = algebra::real(arma::cdot(r, r)); // r^T * r - dot product of residuals
+				const double eps_2 = eps * eps;
+				// iterate until convergence
+				for (size_t i = 0; i < n; ++i)
+				{
+					_matvecmul(p, Ap, n); 					// calculate the matrix-vector multiplication
+					
+					_T pAp = arma::cdot(p, Ap);      	 	// dot product p^T * Ap
+					if (std::abs(pAp) == 0)                 // avoid division by zero (degenerate case)
+						return false;
 
-				if (rs_new < eps_2)						// check for convergence (if the residual is small enough)
-					return true;
+					_T alpha = rs_old / pAp; 				// calculate the step size
+					x += alpha * p;							// update the solution - in the direction of the search
+					r -= alpha * Ap;						// update the residual - orthogonal to the search direction
+					
+					double rs_new = algebra::real(arma::cdot(r, r)); // calculate the new dot product of residuals
 
-				p = r + (rs_new / rs_old) * p;			// calculate the new search direction
-				rs_old = rs_new;						// update the old residual
+					if (rs_new < eps_2)						// check for convergence (if the residual is small enough)
+						return true;
+
+					p = r + (rs_new / rs_old) * p;			// calculate the new search direction
+					rs_old = rs_new;						// update the old residual
+				}
+				return false;
 			}
-			return false;
-		}
+
+			/*
+			* @brief Solve the linear system of equations Ax = b using my conjugate gradient solver.
+			* This is used when the matrix A is symmetric and positive definite. Not explicitly forming the matrix A.
+			* @param b right-hand side vector
+			* @param _matvecmul function that performs the matrix-vector multiplication y = A*x
+			* @param x solution vector - output
+			* @param eps tolerance for the solver
+			* @returns true if the solver converged, false otherwise
+			*/
+			template <typename _T>
+			inline bool solve_my_conj_grad(const arma::Col<_T>& b,
+									std::function<void(const arma::Col<_T>& x, arma::Col<_T>& y, size_t n)> _matvecmul,
+									arma::Col<_T>& x,
+									double eps = 1.0e-6)
+			{
+				const size_t n 	= b.n_elem;
+				arma::Col<_T> r = b;	// initial residual r = b - A*x (x = 0, r = b)
+				arma::Col<_T> p = r;	// initial search direction p = r
+				arma::Col<_T> Ap(n);	// matrix-vector multiplication result Ap = A*p
+
+				// initial values
+				x.zeros();									// initial solution x = 0
+    			_T rs_old = arma::cdot(r, r);  			 	// r^T * r - initial dot product of residuals
+
+				// iterate until convergence
+				for (size_t i = 0; i < n; ++i)
+				{
+					_matvecmul(p, Ap, n); 					// calculate the matrix-vector multiplication
+					
+					_T pAp = arma::cdot(p, Ap);      	 	// dot product p^T * Ap
+					if (std::abs(pAp) == 0)                 // avoid division by zero (degenerate case)
+						return false;
+
+					_T alpha = rs_old / pAp;          		// step size
+					x += alpha * p;							// update the solution - in the direction of the search
+					r -= alpha * Ap;						// update the residual - orthogonal to the search direction
+					
+					_T rs_new = arma::cdot(r, r); 			// calculate the new dot product of residuals
+
+					if (std::abs(std::sqrt(rs_new)) < eps)	// check for convergence (if the residual is small enough)
+						return true;
+
+					p = r + (rs_new / rs_old) * p;			// calculate the new search direction - r + (rs_new / rs_old) * p
+					rs_old = rs_new;						// update the old residual
+				}
+				
+				return false;
+			}
+
+			// -------------------- PREALLOCATED MEMORY --------------------
+
+			template <typename _T1, typename _T2 = _T1>
+			inline bool solve_my_conj_grad(const arma::Col<_T1>& b,
+										std::function<void(const arma::Col<typename std::common_type<_T1, _T2>::type>& x,
+															arma::Col<typename std::common_type<_T1, _T2>::type>& y, size_t n)> _matvecmul,
+										arma::Col<_T2>& x,
+										arma::Col<typename std::common_type<_T1, _T2>::type>& r,  // preallocated residual
+										arma::Col<typename std::common_type<_T1, _T2>::type>& p,  // preallocated search direction
+										arma::Col<typename std::common_type<_T1, _T2>::type>& Ap, // preallocated matrix-vector multiplication result
+										double eps = 1.0e-6)
+			{
+				using _type 	= typename std::common_type<_T1, _T2>::type;
+				const size_t n 	= b.n_elem;
+
+				// preallocate memory if not provided
+				const double eps_2 = eps * eps;				 	// square of the tolerance
+
+				// initial values
+				double rs_old = algebra::real(arma::cdot(r, r)); // r^T * r - dot product of residuals
+				double rs_new = 0;
+
+				// iterate until convergence
+				for (size_t i = 0; i < n; ++i)
+				{
+					_matvecmul(p, Ap, n);                       // calculate the matrix-vector multiplication
+						
+					_type pAp = arma::cdot(p, Ap);              // dot product p^T * Ap
+					if (std::abs(pAp) == 0)                    	// avoid division by zero (degenerate case)
+						return false;	
+	
+					_type alpha = rs_old / pAp;                	// calculate the step size
+					x += alpha * (p);                           // update the solution - in the direction of the search
+					r -= alpha * (Ap);                          // update the residual - orthogonal to the search direction
+	
+					rs_new = algebra::real(arma::cdot(r, r));   // calculate the new dot product of residuals
+	
+					if (rs_new < eps_2)                        	// check for convergence (if the residual is small enough)
+						return true;	
+	
+					p = r + (rs_new / rs_old) * p;        	 	// calculate the new search direction
+					rs_old = rs_new;                           	// update the old residual
+				}
+				return true;
+			}
+		};
 
 		// #################################################################################################################################################
 
@@ -764,7 +829,7 @@ namespace algebra
 		* @param _opts options for the solver - default for ARMA only
 		*/
 		template <typename _T>
-		void solve(	const arma::Mat<_T>& A, 
+		inline bool solve(	const arma::Mat<_T>& A, 
 					const arma::Col<_T>& b, 
 					arma::Col<_T>& x, 
 					SolverType solver 	= SolverType::ARMA, 
@@ -774,7 +839,7 @@ namespace algebra
 			switch (solver)
 			{
 			case SolverType::ARMA:
-				solve_arma(A, b, x, _opts);
+				return solve_arma(A, b, x, _opts);
 				break;
 #ifdef MKL_SOLVER_AVAILABLE
 			case SolverType::MKL_CONJ_GRAD:
@@ -782,12 +847,13 @@ namespace algebra
 				break;
 #endif
 			case SolverType::MY_CONJ_GRAD:
-				solve_my_conj_grad(A, b, x, eps);
+				return Solvers::ConjugateGradient::solve_my_conj_grad(A, b, x, eps);
 				break;
 			default:
 				solve_arma(A, b, x, _opts);
 				break;
 			}
+			return false;
 		}
 
 		/*
@@ -797,7 +863,7 @@ namespace algebra
 		* @param x solution vector - output
 		*/
 		template <typename _T>
-		void solve(const arma::Col<_T>& b,
+		inline bool solve(const arma::Col<_T>& b,
 					std::function<void(const _T* x, _T* y, size_t n)> _matvecmul,
 					arma::Col<_T>& x,
 					SolverType solver = SolverType::ARMA,
@@ -813,11 +879,12 @@ namespace algebra
 				break;
 #endif
 			case SolverType::MY_CONJ_GRAD:
-				solve_my_conj_grad(b, _matvecmul, x, eps);
+				return Solvers::ConjugateGradient::solve_my_conj_grad(b, _matvecmul, x, eps);
 				break;
 			default:
 				break;
 			}
+			return false;
 		}
 
 		/*
@@ -829,7 +896,7 @@ namespace algebra
 		* @param eps tolerance for the solver
 		*/
 		template <typename _T>
-		void solve(const arma::Col<_T>& b,
+		inline bool solve(const arma::Col<_T>& b,
 					std::function<void(const arma::Col<_T>& x, arma::Col<_T>& y, size_t n)> _matvecmul,
 					arma::Col<_T>& x,
 					SolverType solver = SolverType::ARMA,
@@ -845,12 +912,17 @@ namespace algebra
 				break;
 #endif
 			case SolverType::MY_CONJ_GRAD:
-				solve_my_conj_grad(b, _matvecmul, x, eps);
+				return Solvers::ConjugateGradient::solve_my_conj_grad(b, _matvecmul, x, eps);
 				break;
 			default:
 				break;			
 			}
+			return false;
 		}
+
+		// ---------- PREALLOCATED MEMORY ----------
+
+
 	};
 
 

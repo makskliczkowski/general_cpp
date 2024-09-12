@@ -10,6 +10,7 @@
 #include "../containers.h"
 #include "../random.h"
 #include <complex>
+#include <string>
 
 // #####################################################################################################################
 // #####################################################################################################################
@@ -399,7 +400,7 @@ template<typename _T>
 inline arma::Col<_T> LanczosMethod<_T>::trueState(const arma::Mat<_T>& _eigenVectors, const arma::Mat<_T>& _krylovVectors, uint _state)
 {
 	if (_state < 0.0 || _state >= _eigenVectors.n_cols || _krylovVectors.n_cols != _eigenVectors.n_cols)
-		throw std::runtime_error("Bounds for the number of Lanczos states are not satisfied: " + VEQ(_state) +
+		throw std::runtime_error("Bounds for the number of Lanczos states are not satisfied: " + std::to_string(_state) +
 			" is out of bounds for " + VEQ(_eigenVectors.n_cols));
 
 	auto& stateFromLanczos			= _eigenVectors.col(_state);
