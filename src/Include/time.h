@@ -335,5 +335,5 @@ static std::string prettyTime()
 														} 
 #else
 	#define TIMER_CREATE(TIMER)
-	#define TIMER_START_MEASURE(IF, TIMER, NAME) FUN;
+	#define TIMER_START_MEASURE(FUN, IF, TIMER, NAME) FUN;
 #endif
