@@ -237,6 +237,12 @@ namespace Binary
 
 	/*
 	* @brief Extracts the bits from the number n according to the mask. Then it creates an integer out of it.
+	* The mask gives the positions of the bits to be extracted. The bits are extracted from the right to the left.
+	* This looks at the integer state and extracts the bits according to the mask. After that, it creates a new integer
+	* out of the extracted bits (2^0 * bit_0 + 2^1 * bit_1 + ... + 2^(size - 1) * bit_(size - 1)).
+	* @param n Number from which the bits shall be extracted
+	* @param _mask Mask for the extraction
+	* @returns The extracted number
 	*/
 	template<typename _T>
 	typename std::enable_if<std::is_arithmetic<_T>::value, _T>::type
@@ -264,7 +270,7 @@ namespace Binary
 	/*
 	* @brief Prepare the mask for the extraction of bits
 	* @param _vec Vector of bit positions to extract. Positions are counted from 0 to maximal value (should be 63). 
-	* Indices are count from 0. 
+	* Indices are counted from 0. 
 	* @returns The mask for the extraction
 	*/
 	template<typename _T, class _VectorType, bool _Inv = false>
