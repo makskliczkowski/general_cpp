@@ -746,6 +746,7 @@ using GeneralizedMatrixFunction = std::function<GeneralizedMatrix<_T>(size_t _Ns
 
 // for the cast
 
+#define CAST algebra::cast
 namespace algebra{
 
 	template <typename _T>
