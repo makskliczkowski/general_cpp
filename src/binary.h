@@ -316,7 +316,7 @@ inline bool checkBit(ull n, int k, int base) {
 	ull val = 0;
 	ull exp = 1;
 	for (auto i = 0; i < base / 2; i++) {
-		val += checkBit(n, k + i) * exp;
+		val += checkBit(n, k + i) * exp;	
 		exp *= 2;
 	}
 	return val;
