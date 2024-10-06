@@ -157,7 +157,7 @@ namespace Binary
 
 	template<typename _T, class _VectorType, bool _customSpin = true>
 	typename std::enable_if<std::is_arithmetic<_T>::value, _T>::type
-	base2int(_VectorType& _vec, double _spin = 1.0)
+	base2int(const _VectorType& _vec, double _spin = 1.0)
 	{
 		auto _size	=	_vec.size();
 		_T val		=	0;
@@ -168,7 +168,7 @@ namespace Binary
 
 	template<typename _T, class _VectorType>
 	typename std::enable_if<std::is_arithmetic<_T>::value, _T>::type
-	base2int(_VectorType& _vec, double _spin)
+	base2int(const _VectorType& _vec, double _spin)
 	{
 		auto _size	=	_vec.size();
 		_T val		=	0;
