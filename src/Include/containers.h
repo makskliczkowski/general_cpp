@@ -1,5 +1,3 @@
-#pragma once
-
 #ifndef CONTAINERS_H
 #define CONTAINERS_H
 
@@ -85,9 +83,9 @@ namespace Containers
 // ################# I S   V E C T O R #################
 template<typename T>
 struct is_vector : std::false_type {};
-
 template<typename T>
 struct is_vector<std::vector<T>> : std::true_type {};
+
 // #####################################################
 
 namespace Vectors
@@ -155,7 +153,7 @@ namespace Vectors
 	{
 		if (_v.empty())
 			return arma::Mat<_T>(1, 1, arma::fill::zeros);
-		arma::Mat<_T> _out = arma::Mat<_T>(_v[0].n_rows, _v[1].n_cols, arma::fill::zeros);
+		arma::Mat<_T> _out = arma::Mat<_T>(_v[0].n_rows, _v[0].n_cols, arma::fill::zeros);
 		for (uint i = 0; i < _v.size(); i++)
 			_out += _v[i];
 		return _out / _v.size();

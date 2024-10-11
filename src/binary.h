@@ -126,7 +126,7 @@ namespace Binary
 	typename std::enable_if<!std::is_arithmetic<_T>::value, bool>::type
 	check(const _T& n, const int k)	{ return n[k] > 0; };
 
-	template <typename _T>
+	template <typename _T = double>
 	bool check(const arma::Col<_T>& n, const int k) { return n(k) > 0; };
 	
 	template<typename _T>
