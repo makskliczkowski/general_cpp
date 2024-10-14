@@ -13,7 +13,8 @@
 #define SETOPTIONDIRECT(n, S)					this->setOption(n, S)
 #define SETOPTIONV(n, S, v)						this->setOption(this->n.S##_, argv, SSTR(v)	)
 #define SETOPTIONVECTOR(n, S)					std::tie(this->n.S##_ra_, this->n.S##_r_) = this->setOption(this->n.S##_, argv, SSTR(#S))
-#define SETOPTIONVECTORRESIZE(n, S, D)				std::tie(this->n.S##_ra_, this->n.S##_r_) = this->setOption(this->n.S##_, argv, SSTR(#S), D, true)
+#define SETOPTIONVECTORRESIZE(n, S, D)			std::tie(this->n.S##_ra_, this->n.S##_r_) = this->setOption(this->n.S##_, argv, SSTR(#S), D, true)
+#define SETOPTIONVECTORRESIZET(n, S, D, T)		std::tie(this->n.S##_ra_, this->n.S##_r_) = this->setOption<T>(this->n.S##_, argv, SSTR(#S), D, true)
 // sets the option with steps etc.
 #define SETOPTION_STEP(x, S)					SETOPTION(x, S);							\
 												SETOPTION(x, S##0);							\

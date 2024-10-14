@@ -180,10 +180,10 @@ public:
 
 	// Move assignment operator
 	template<typename _T2, typename _MatType2>
-	VMAT<typename std::common_type<_T, _T2>>& operator=(VMAT<_T2, _MatType2>&& other) noexcept {
-		if (this != &other) 
-		{
-			this->mats_ = std::move(other.mats_);
+	VMAT<typename std::common_type<_T, _T2>::type, arma::Mat<typename std::common_type<_T, _T2>::type>>&
+	operator=(VMAT<_T2, _MatType2>&& other) noexcept { // No const here, as we are moving
+		if (this != &other) {
+			this->mats_ = std::move(other.mats_); // Move the internal mats_ from other
 		}
 		return *this;
 	}
