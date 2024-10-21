@@ -30,8 +30,34 @@ namespace algebra
 {
 	template <typename _T, typename _Tin>
 	inline auto cast(_Tin x) -> _T;
-
 }
+
+// ------------------------------------------------------- MONTE CARLO SAMPLING --------------------------------------------------------
+
+namespace MonteCarlo {
+
+	/*
+	@brief Block mean calculation - when the data is correlated in the Monte Carlo sampling 
+	we need to calculate the mean and the standard deviation in blocks to get the correct values
+	@param _data data to be analyzed
+	@param _blockSize size of the block
+	@param _mean mean value
+	@param _std standard deviation
+	*/
+	template <typename _T>
+	inline void blockmean(const arma::Col<_T>& _data, size_t _blockSize, _T* _mean, _T* _std = nullptr)
+	{
+		// calculate the number of blocks
+		size_t _nBlocks = _data.n_elem / _blockSize;
+
+		// calculate the mean and the standard deviation
+		*_mean 	= arma::mean(arma::mean(arma::reshape(_data.head(_nBlocks * _blockSize), _blockSize, _nBlocks), 0));
+		if (_std)
+			*_std 	= arma::stddev(arma::mean(arma::reshape(_data.head(_nBlocks * _blockSize), _blockSize, _nBlocks), 0));
+	}
+
+};
+
 
 // -------------------------------------------------------- RANDOM NUMBER CLASS --------------------------------------------------------
 
