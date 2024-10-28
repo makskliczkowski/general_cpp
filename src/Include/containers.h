@@ -117,7 +117,12 @@ namespace Vectors
 	{
 		v_1d<_T> _out;
 		_out.resize(_v.size());
-		std::transform(_v.begin(), _v.end(), _out.begin(), [](const std::string& _elem) { return static_cast<_T>(std::stold(_elem)); });
+		try {
+	 		std::transform(_v.begin(), _v.end(), _out.begin(), [](const std::string& _elem) { return static_cast<_T>(std::stod(_elem)); });
+		} catch (std::exception& e) {
+			std::cerr << e.what() << std::endl;
+			throw std::runtime_error("WTF");
+		}
 		return _out;
 	}
 
