@@ -119,6 +119,47 @@ namespace Math
 	{
 		return std::real(std::exp(std::complex<double>(0, 1) * _val));
 	}
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	
+	/*
+	* @brief Calculates a safe exponential function for the given value - checks if the value is too large
+	* @param _val value to be exponentiated
+	* @returns exponential of the value
+	*/
+	template <typename _T>
+	inline _T expS(_T _val)
+	{
+    	constexpr double max_exp = 50; // Limit for the exponent to avoid overflow
+		if constexpr (std::is_same<_T, std::complex<double>>::value) {
+			// Separate real and imaginary parts
+			double real_part = std::real(_val);
+			double imag_part = std::imag(_val);
+
+			// Cap the real part to avoid overflow
+			if (real_part > max_exp) {
+				real_part = max_exp;
+#ifdef _DEBUG
+				std::cerr << "Warning: Exponential overflow, capping real part to " << max_exp << std::endl;
+#endif
+			}
+			else if (real_part < -max_exp) {
+				real_part = -max_exp;
+#ifdef _DEBUG
+				std::cerr << "Warning: Exponential overflow, capping real part to " << -max_exp << std::endl;
+#endif
+			}
+				
+			return std::exp(real_part) * std::polar(1.0, imag_part);
+		} else {
+			// For non-complex types, cap the value
+			if (_val > max_exp) 
+				return std::exp(max_exp);
+			else if (_val < -max_exp)
+				return std::exp(-max_exp);
+			
+			return std::exp(_val);
+		}
+	}
 
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -141,6 +182,15 @@ namespace Math
 #include <vector>
 #include <atomic>
 #include <functional>
+
+#ifdef _DEBUG
+    #define PRAG_PARALLEL_FOR
+    #define PRAG_PARALLEL_FOR_TH(_thNum)
+#else
+    #define PRAG_PARALLEL_FOR _Pragma("omp parallel for")
+    #define PRAG_PARALLEL_FOR_TH(_thNum) _Pragma("omp parallel for num_threads(" #_thNum ")")
+#endif
+
 namespace Threading
 {
 	/*

@@ -127,7 +127,9 @@ public:
 						size_t					N_Krylov,
 						arma::Col<_T>&			_psi0,
 						arma::Mat<_T>&			_psiMat,
-						arma::Mat<_T>&			_krylovVec
+						arma::Mat<_T>&			_krylovVec,
+						double 					_tol = 1e-12
+
 					);
 
 	// ______________ W I T H O U T  V E C T O R S ______________
@@ -159,7 +161,8 @@ public:
 						const _MatType<_TM>&	_M,
 						size_t					N_Krylov,
 						randomGen*				_r,
-						arma::Mat<_T>&			_krylovMat
+						arma::Mat<_T>&			_krylovMat,
+						double 					_tol = 1e-10
 					);
 
 	// ______ R A N D O M   S T A R T   W   V E C T O R S _______
@@ -167,7 +170,31 @@ public:
 									const arma::Mat<_T>& _krylovVectors,
 									uint _state	= 0);
 
+	// --------- R E O R T H O N O R M A L I Z A T I O N --------
+	template <class _TC> 
+	static void reorthogonalize(arma::Col<_T>& v, const _TC& _krylovVec, double _tol = 1e-10);
+
 };
+
+// #####################################################################################################################
+
+/*
+* @brief Use the existing Krylov vectors to reorthogonalize them. This is done to ensure that the vector v to previous ones
+*/
+template<class _T>
+template<class _TC>
+inline void LanczosMethod<_T>::reorthogonalize(arma::Col<_T>& v, const _TC& _krylovVec, double _tol)
+{
+	const size_t N_Krylov = _krylovVec.n_cols;
+	for (auto i = 0; i < N_Krylov; ++i)
+	{
+		_T dotProduct = arma::cdot(_krylovVec.col(i), v);
+		if (std::abs(dotProduct) > _tol)
+			v -= dotProduct * _krylovVec.col(i);
+	}
+	// normalize the vector
+	v = arma::normalise(v);
+}
 
 // ################################################# S Y M M E T R I C #################################################
 
@@ -190,7 +217,8 @@ inline void LanczosMethod<_T>::diagS(
 										size_t					N_Krylov, 
 										arma::Col<_T>&			_psi0,
 										arma::Mat<_T>&			_psiMat,
-										arma::Mat<_T>&			_krylovVec
+										arma::Mat<_T>&			_krylovVec,
+										double 					_tol
 									)
 {
 	LOGINFO("Starting Lanczos' Diagonalization", LOG_TYPES::TRACE, 1);
@@ -224,14 +252,19 @@ inline void LanczosMethod<_T>::diagS(
 	if (bip1 == 0.0) {
 		LOGINFO("Early termination in Lanczos due to zero bip1", LOG_TYPES::TRACE, 1);
 		return;
+	} else if (std::abs(bip1) < 1e-12) {
+		LOGINFO("Small bip1 detected; applying regularization.", LOG_TYPES::DEBUG, 1);
+		bip1 = 1e-12;
 	}
-
 	// loop other states
 	for (auto i = 1; i < (N_Krylov - 1); ++i)
 	{
 		// create new i'th vector (q := r/beta_{i-1})
 		carryVec0			= carryVec1 / bip1;
 		
+		// reorthogonalize
+		LanczosMethod<_T>::reorthogonalize(carryVec0, _krylovVec.cols(0, i - 1));
+
 		// add vector to matrix at i'th position
 		_krylovVec.col(i)	= carryVec0;
 
@@ -246,8 +279,10 @@ inline void LanczosMethod<_T>::diagS(
 		if (bip1 == 0.0) {
 			LOGINFO("Early termination in Lanczos due to zero bip1", LOG_TYPES::TRACE, 1);
 			break;
+		} else if (std::abs(bip1) < 1e-12) {
+			LOGINFO("Small bip1 detected; applying regularization.", LOG_TYPES::DEBUG, 1);
+			bip1 = 1e-12;
 		}
-
 		// set matrix
 		_psiMat(i, i - 1)	= bi;
 		_psiMat(i, i)		= ai;
@@ -257,6 +292,9 @@ inline void LanczosMethod<_T>::diagS(
 	}
 	// last conditions
 	carryVec0									= carryVec1 / bip1;
+    // Reorthogonalize one last time against previous vectors
+	LanczosMethod<_T>::reorthogonalize(carryVec0, _krylovVec.cols(0, N_Krylov - 2));
+
 	_krylovVec.col(N_Krylov - 1)				= carryVec0;
 	carryVec1									= _M * carryVec0;
 	ai											= arma::cdot(carryVec0, carryVec1);
@@ -318,6 +356,9 @@ inline void LanczosMethod<_T>::diagS(
 	if (bip1 == 0.0) {
 		LOGINFO("Early termination in Lanczos due to zero bip1", LOG_TYPES::TRACE, 1);
 		return;
+	} else if (std::abs(bip1) < 1e-12) {
+		LOGINFO("Small bip1 detected; applying regularization.", LOG_TYPES::DEBUG, 1);
+		bip1 = 1e-12;
 	}
 
 	// loop other states
@@ -337,6 +378,9 @@ inline void LanczosMethod<_T>::diagS(
 		if (bip1 == 0.0) {
 			LOGINFO("Early termination in Lanczos due to zero bip1", LOG_TYPES::TRACE, 1);
 			break;
+		} else if (std::abs(bip1) < 1e-12) {
+			LOGINFO("Small bip1 detected; applying regularization.", LOG_TYPES::DEBUG, 1);
+			bip1 = 1e-12;
 		}
 		// set matrix
 		_psiMat(i, i - 1)	= bi;
@@ -406,13 +450,14 @@ inline void LanczosMethod<_T>::diagS(
 									const _MatType<_TM>&	_M,
 									size_t					N_Krylov,
 									randomGen*				_r,
-									arma::Mat<_T>&			_krylovVec
+									arma::Mat<_T>&			_krylovVec,
+									double 					_tol
 								)
 {
 	// define random vectors
 	arma::Mat<_T> _psiMat(N_Krylov, N_Krylov, arma::fill::zeros);
 	arma::Col<_T> _psi0 = arma::Col<_T>(_M.n_rows, arma::fill::randu) - 0.5;
-	LanczosMethod<_T>::diagS(_eigVal, _eigVec, _M, N_Krylov, _psi0, _psiMat, _krylovVec);
+	LanczosMethod<_T>::diagS(_eigVal, _eigVec, _M, N_Krylov, _psi0, _psiMat, _krylovVec, _tol);
 }
 
 // ######################################################################################################################
