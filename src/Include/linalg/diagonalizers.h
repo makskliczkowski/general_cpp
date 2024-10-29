@@ -221,6 +221,11 @@ inline void LanczosMethod<_T>::diagS(
 	_psiMat(0, 0)				= ai;
 	_psiMat(0, 1)				= bip1;
 
+	if (bip1 == 0.0) {
+		LOGINFO("Early termination in Lanczos due to zero bip1", LOG_TYPES::TRACE, 1);
+		return;
+	}
+
 	// loop other states
 	for (auto i = 1; i < (N_Krylov - 1); ++i)
 	{
@@ -238,6 +243,11 @@ inline void LanczosMethod<_T>::diagS(
 		// new carry
 		carryVec1			= carryVec1 - (ai * carryVec0) - (bi * _psi0);
 		bip1				= (_T)arma::norm(carryVec1);
+		if (bip1 == 0.0) {
+			LOGINFO("Early termination in Lanczos due to zero bip1", LOG_TYPES::TRACE, 1);
+			break;
+		}
+
 		// set matrix
 		_psiMat(i, i - 1)	= bi;
 		_psiMat(i, i)		= ai;
@@ -252,6 +262,10 @@ inline void LanczosMethod<_T>::diagS(
 	ai											= arma::cdot(carryVec0, carryVec1);
 	_psiMat(N_Krylov - 1, N_Krylov - 2)			= bip1;
 	_psiMat(N_Krylov - 1, N_Krylov - 1)			= ai;
+
+	if (!arma::approx_equal(_psiMat, _psiMat.t(), "absdiff", 1e-12)) {
+        LOGINFO("Matrix is not symmetric; check orthogonalization.", LOG_TYPES::ERROR, 1);
+    }
 
 	// diagonalize
 	Diagonalizer<_T>::diagS(_eigVal, _eigVec, _psiMat);
@@ -288,7 +302,7 @@ inline void LanczosMethod<_T>::diagS(
 	_psiMat.zeros(N_Krylov, N_Krylov);
 
 	// normalize state
-	_psi0						= _psi0 / (_T)arma::norm(_psi0);
+	_psi0						= arma::normalise(_psi0);
 
 	// start with first step of Hamiltonian multiplication
 	arma::Col<_T> carryVec0		= _M * _psi0;
@@ -300,6 +314,11 @@ inline void LanczosMethod<_T>::diagS(
 	_T bip1						= (_T)arma::norm(carryVec1);
 	_psiMat(0, 0)				= ai;
 	_psiMat(0, 1)				= bip1;
+
+	if (bip1 == 0.0) {
+		LOGINFO("Early termination in Lanczos due to zero bip1", LOG_TYPES::TRACE, 1);
+		return;
+	}
 
 	// loop other states
 	for (auto i = 1; i < (N_Krylov - 1); ++i)
@@ -315,6 +334,10 @@ inline void LanczosMethod<_T>::diagS(
 		// new carry
 		carryVec1			= carryVec1 - (ai * carryVec0) - (bi * _psi0);
 		bip1				= (_T)arma::norm(carryVec1);
+		if (bip1 == 0.0) {
+			LOGINFO("Early termination in Lanczos due to zero bip1", LOG_TYPES::TRACE, 1);
+			break;
+		}
 		// set matrix
 		_psiMat(i, i - 1)	= bi;
 		_psiMat(i, i)		= ai;
@@ -328,6 +351,10 @@ inline void LanczosMethod<_T>::diagS(
 	ai						= arma::cdot(carryVec0, carryVec1);
 	_psiMat(N_Krylov - 1, N_Krylov - 2)			= bip1;
 	_psiMat(N_Krylov - 1, N_Krylov - 1)			= ai;
+
+	if (!arma::approx_equal(_psiMat, _psiMat.t(), "absdiff", 1e-12)) {
+        LOGINFO("Matrix is not symmetric; check orthogonalization.", LOG_TYPES::ERROR, 1);
+    }
 
 	// diagonalize
 	Diagonalizer<_T>::diagS(_eigVal, _eigVec, _psiMat);
