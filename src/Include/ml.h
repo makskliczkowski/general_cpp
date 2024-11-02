@@ -41,7 +41,7 @@ namespace MachineLearning {
                     return false;
 
                 // Check if current_metric has improved
-                if (_metric < this->best_metric_) {
+                if (_metric < this->best_metric_ - this->minDelta_) {
                     this->best_metric_              = _metric;
                     this->epoch_since_best_         = 0;
                 } else {

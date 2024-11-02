@@ -635,6 +635,124 @@ namespace algebra
 				arma::Mat<_T> Ap;	// matrix-vector multiplication result
 			};
 
+			namespace FisherMatrix {
+				
+				/*
+				* @brief In case we know that the matrix S that shall be inverted is a Fisher matrix, 
+				* we may use the knowledge that S_{ij} = <\Delta O^*_i \Delta O_j>, where \Delta O is the
+				* derivative of the observable with respect to the parametes. (rows are samples, columns are parameters)
+				* and the mean over the samples is taken and then taken out of the matrix afterwards.
+				* @note The matrix S is symmetric and positive definite, so we can use the conjugate gradient method.
+				* @note The matrix S is not explicitly formed, but the matrix-vector multiplication is used.
+				* @note The matrix S is just a covariance matrix of the derivatives of the observable.
+				*/
+				template <typename _T>
+				inline arma::Col<_T> matrixFreeMultiplication(const arma::Mat<_T>& _DeltaO, const arma::Col<_T>& _x)
+				{
+    				const size_t _N = _DeltaO.n_rows;               				// Number of samples (rows)
+					arma::Col<_T> _intermediate = _DeltaO * _x;     				// Calculate \Delta O * x
+					return (_DeltaO.t() * _intermediate) / static_cast<_T>(_N);     // Calculate \Delta O^* * (\Delta O * v) / N				}
+				}
+
+				template <typename _T>
+				inline arma::Col<_T> matrixFreeMultiplication(const arma::Mat<_T>& _DeltaO, const arma::Mat<_T>& _DeltaOConjT, const arma::Col<_T>& x)
+				{
+					const size_t _N = _DeltaO.n_rows;               				// Number of samples (rows)
+					arma::Col<_T> _intermediate = _DeltaO * x;     					// Calculate \Delta O * x
+					return (_DeltaOConjT * _intermediate) / static_cast<_T>(_N);    // Calculate \Delta O^* * (\Delta O * v) / N
+				}
+
+				// ---- MY CONJUGATE GRADIENT SOLVER (symmetric matrices) and Gram Matrix ----
+
+				template<typename _T1>
+				inline arma::Col<_T1> conjugate_gradient(const arma::Mat<_T1>& _DeltaO,
+														const arma::Mat<_T1>& _DeltaOConjT,
+														const arma::Col<_T1>& _F, 
+														arma::Col<_T1>* _x0,
+														const arma::Col<_T1>& _preconditioner,
+														double _eps 			= 1.0e-6,
+														size_t _max_iter 		= 1000,
+														bool* _converged 		= nullptr
+														)
+				{
+					// set the initial values for the solver
+					arma::Col<_T1> x 	= (_x0 == nullptr) ? arma::Col<_T1>(_F.n_elem, arma::fill::zeros) : *_x0;
+					arma::Col<_T1> r 	= _F - matrixFreeMultiplication(_DeltaO, _DeltaOConjT, x);
+					arma::Col<_T1> z 	= r / _preconditioner;
+					arma::Col<_T1> p 	= z;
+					_T1 rs_old 			= arma::cdot(z, r);
+
+					// iterate until convergence
+					for (size_t i = 0; i < _max_iter; ++i)
+					{
+						arma::Col<_T1> Ap 		= matrixFreeMultiplication(_DeltaO, _DeltaOConjT, p);
+						_T1 alpha 				= rs_old / arma::cdot(p, Ap);
+						x 						+= alpha * p;
+						r 						-= alpha * Ap;
+						z 						= r / _preconditioner;
+						_T1 rs_new 				= arma::cdot(z, r);
+
+						// Check for convergence
+						if (std::abs(rs_new) < _eps) {
+							if (_converged != nullptr)
+								*_converged = true;
+							return x;
+						}
+
+						p 						= z + (rs_new / rs_old) * p;
+						rs_old 					= rs_new;
+					}
+
+					std::cerr << "\t\t\tConjugate gradient solver did not converge." << std::endl;
+					if (_converged != nullptr)
+						*_converged = false;
+					return x;
+				}
+
+				// without preconditioner
+				template<typename _T1>
+				inline arma::Col<_T1> conjugate_gradient(const arma::Mat<_T1>& _DeltaO,
+										const arma::Mat<_T1>& _DeltaOConjT,
+										const arma::Col<_T1>& _F,
+										arma::Col<_T1>* _x0,
+										double _eps 				= 1.0e-6,
+										size_t _max_iter 			= 1000,
+										bool* _converged 			= nullptr)
+				{
+					// set the initial values for the solver
+					arma::Col<_T1> x 	= (_x0 == nullptr) ? arma::Col<_T1>(_F.n_elem, arma::fill::zeros) : *_x0;
+					arma::Col<_T1> r 	= _F - matrixFreeMultiplication(_DeltaO, _DeltaOConjT, x);
+					arma::Col<_T1> p 	= r;
+					_T1 rs_old 			= arma::cdot(r, r);
+
+					// iterate until convergence
+					for (size_t i = 0; i < _max_iter; ++i)
+					{
+						arma::Col<_T1> Ap 	= matrixFreeMultiplication(_DeltaO, _DeltaOConjT, p);
+						_T1 alpha 			= rs_old / arma::cdot(p, Ap);
+						x 					+= alpha * p;
+						r 					-= alpha * Ap;
+						_T1 rs_new 			= arma::cdot(r, r);
+
+						// Check for convergence
+						if (std::abs(rs_new) < _eps) {
+							if (_converged != nullptr)
+								*_converged = true;
+							return x;
+						}
+						
+						// update the search direction
+						p 					= r + (rs_new / rs_old) * p;
+						rs_old 				= rs_new;
+					}
+
+					std::cerr << "\t\t\tConjugate gradient solver did not converge." << std::endl;
+					if (_converged != nullptr)
+						*_converged = false;
+					return x;
+				}
+
+			};
 
 			// ---- MY CONJUGATE GRADIENT SOLVER (symmetric matrices) ----
 			
@@ -646,9 +764,9 @@ namespace algebra
 			{
 				using _type = typename std::common_type<_T1, _T2>::type;
 
-				const size_t n = b.n_elem;
-				arma::Col<_type> r = b;			// initial residual r = b - A*x (x = 0, r = b)
-				arma::Col<_type> p = r;			// initial search direction p = r
+				const size_t n 		= b.n_elem;
+				arma::Col<_type> r 	= b;		// initial residual r = b - A*x (x = 0, r = b)
+				arma::Col<_type> p 	= r;		// initial search direction p = r
 				arma::Col<_type> Ap(n);			// matrix-vector multiplication result Ap = A*p
 
 				// initial values
@@ -931,8 +1049,6 @@ namespace algebra
 	// ################################################################### PFAFFIANS ###################################################################
 
 	// #################################################################################################################################################
-
-
 	namespace Pfaffian
 	{
 		enum class PfaffianAlgorithms
