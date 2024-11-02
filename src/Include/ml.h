@@ -92,6 +92,7 @@ namespace MachineLearning {
         auto set_early_stopping(size_t patience, double minDelta = 1e-3) -> void    { this->early_stopping_ = EarlyStoppings::EarlyStopping(patience, minDelta); }
         auto stop(size_t epoch, double _metric = 0.0) -> bool                       { return this->early_stopping_(epoch, _metric); }
         auto stop(size_t epoch, std::complex<double> _metric) -> bool               { return this->early_stopping_(epoch, std::real(_metric)); }
+        auto best() const -> double                                                 { return this->early_stopping_.best_metric_; }
     };
 
         
