@@ -317,9 +317,7 @@ public:
 
 // #######################################################################################################################
 
-// #######################################################################################################################
 // ##################################################### A L G E B R A ###################################################
-// #######################################################################################################################
 
 // #######################################################################################################################
 
@@ -329,13 +327,8 @@ public:
 namespace algebra 
 {
 
-	// ##################################################################################################################################################
-	// ##################################################################################################################################################
-	// ################################################################# G E N E R A L ##################################################################
-	// ##################################################################################################################################################
-	// ##################################################################################################################################################
-
 	// ################################################################## CONJUGATE #####################################################################
+
 	template <typename _T>
 	inline auto conjugate(_T x)														-> _T		{ return std::conj(x); };
 	template <>
@@ -647,18 +640,31 @@ namespace algebra
 				* @note The matrix S is just a covariance matrix of the derivatives of the observable.
 				*/
 				template <typename _T>
-				inline arma::Col<_T> matrixFreeMultiplication(const arma::Mat<_T>& _DeltaO, const arma::Col<_T>& _x)
+				inline arma::Col<_T> matrixFreeMultiplication(const arma::Mat<_T>& _DeltaO, const arma::Col<_T>& _x, const double _reg = 0.0)
 				{
     				const size_t _N = _DeltaO.n_rows;               				// Number of samples (rows)
 					arma::Col<_T> _intermediate = _DeltaO * _x;     				// Calculate \Delta O * x
-					return (_DeltaO.t() * _intermediate) / static_cast<_T>(_N);     // Calculate \Delta O^* * (\Delta O * v) / N				}
+
+					// apply regularization on the diagonal
+					if (_reg > 0.0)
+						return (_DeltaO.t() * _intermediate) / static_cast<_T>(_N)  + _reg * _x;
+					
+					// no regularization
+					return (_DeltaO.t() * _intermediate) / static_cast<_T>(_N);    // Calculate \Delta O^* * (\Delta O * v) / N
+	
 				}
 
 				template <typename _T>
-				inline arma::Col<_T> matrixFreeMultiplication(const arma::Mat<_T>& _DeltaO, const arma::Mat<_T>& _DeltaOConjT, const arma::Col<_T>& x)
+				inline arma::Col<_T> matrixFreeMultiplication(const arma::Mat<_T>& _DeltaO, const arma::Mat<_T>& _DeltaOConjT, const arma::Col<_T>& x, const double _reg = 0.0)
 				{
 					const size_t _N = _DeltaO.n_rows;               				// Number of samples (rows)
 					arma::Col<_T> _intermediate = _DeltaO * x;     					// Calculate \Delta O * x
+
+					// apply regularization on the diagonal
+					if (_reg > 0.0)
+						return (_DeltaOConjT * _intermediate) / static_cast<_T>(_N)  + _reg * x;
+					
+					// no regularization
 					return (_DeltaOConjT * _intermediate) / static_cast<_T>(_N);    // Calculate \Delta O^* * (\Delta O * v) / N
 				}
 
@@ -672,12 +678,13 @@ namespace algebra
 														const arma::Col<_T1>& _preconditioner,
 														double _eps 			= 1.0e-6,
 														size_t _max_iter 		= 1000,
-														bool* _converged 		= nullptr
+														bool* _converged 		= nullptr,
+														double _reg 			= 0.0
 														)
 				{
 					// set the initial values for the solver
 					arma::Col<_T1> x 	= (_x0 == nullptr) ? arma::Col<_T1>(_F.n_elem, arma::fill::zeros) : *_x0;
-					arma::Col<_T1> r 	= _F - matrixFreeMultiplication(_DeltaO, _DeltaOConjT, x);
+					arma::Col<_T1> r 	= _F - matrixFreeMultiplication(_DeltaO, _DeltaOConjT, x, _reg);
 					arma::Col<_T1> z 	= r / _preconditioner;
 					arma::Col<_T1> p 	= z;
 					_T1 rs_old 			= arma::cdot(z, r);
@@ -685,7 +692,7 @@ namespace algebra
 					// iterate until convergence
 					for (size_t i = 0; i < _max_iter; ++i)
 					{
-						arma::Col<_T1> Ap 		= matrixFreeMultiplication(_DeltaO, _DeltaOConjT, p);
+						arma::Col<_T1> Ap 		= matrixFreeMultiplication(_DeltaO, _DeltaOConjT, p, _reg);
 						_T1 alpha 				= rs_old / arma::cdot(p, Ap);
 						x 						+= alpha * p;
 						r 						-= alpha * Ap;
@@ -717,18 +724,20 @@ namespace algebra
 										arma::Col<_T1>* _x0,
 										double _eps 				= 1.0e-6,
 										size_t _max_iter 			= 1000,
-										bool* _converged 			= nullptr)
+										bool* _converged 			= nullptr, 
+										double _reg 				= 0.0
+										)
 				{
 					// set the initial values for the solver
 					arma::Col<_T1> x 	= (_x0 == nullptr) ? arma::Col<_T1>(_F.n_elem, arma::fill::zeros) : *_x0;
-					arma::Col<_T1> r 	= _F - matrixFreeMultiplication(_DeltaO, _DeltaOConjT, x);
+					arma::Col<_T1> r 	= _F - matrixFreeMultiplication(_DeltaO, _DeltaOConjT, x, _reg);
 					arma::Col<_T1> p 	= r;
 					_T1 rs_old 			= arma::cdot(r, r);
 
 					// iterate until convergence
 					for (size_t i = 0; i < _max_iter; ++i)
 					{
-						arma::Col<_T1> Ap 	= matrixFreeMultiplication(_DeltaO, _DeltaOConjT, p);
+						arma::Col<_T1> Ap 	= matrixFreeMultiplication(_DeltaO, _DeltaOConjT, p, _reg);
 						_T1 alpha 			= rs_old / arma::cdot(p, Ap);
 						x 					+= alpha * p;
 						r 					-= alpha * Ap;
@@ -751,7 +760,6 @@ namespace algebra
 						*_converged = false;
 					return x;
 				}
-
 			};
 
 			// ---- MY CONJUGATE GRADIENT SOLVER (symmetric matrices) ----

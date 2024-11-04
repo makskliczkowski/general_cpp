@@ -61,13 +61,16 @@ namespace MachineLearning {
 
     // ##########################################################################################################################################
 
+    #include <vector>
+
     struct Parameters
     {
-        double lr_              = 1e-2;         // the initial learning rate
-        double lr_decay_        = 0.9;          // the learning rate decay
         size_t max_epochs_      = 100;          // the maximum number of epochs
+        double lr_              = 1e-2;         // the initial learning rate
+        std::vector<double> lrh_;               // learning rate history
+        double lr_decay_        = 0.9;          // the learning rate decay
         size_t patience_        = 5;            // the number of epochs to wait before reducing the learning rate or stopping the training
-    
+
         // setters
         void set_lr(double lr)                  { this->lr_ = lr; }
         void set_decay(double d)                { this->lr_decay_ = d; }
@@ -76,14 +79,18 @@ namespace MachineLearning {
 
         // learning rate scheduler
         virtual double operator()(size_t epoch, double _metric = 0.0) = 0;
+        double append(double _lr)               { this->lr_ = _lr; this->lrh_.push_back(_lr); return _lr; }
 
         virtual ~Parameters()   = default;
         Parameters()            = default;
         Parameters(double lr, double decay, size_t max_epochs, size_t patience = 5)
-            : lr_(lr), lr_decay_(decay), max_epochs_(max_epochs), patience_(patience) 
+            : max_epochs_(max_epochs), lr_(lr), lr_decay_(decay), patience_(patience) 
         {
             this->early_stopping_ = EarlyStoppings::EarlyStopping();
         }
+        // --------------------------------------------------------------------------------------------
+
+        const std::vector<double>& hist() const { return this->lrh_; }
 
         // --------------------------------------------------------------------------------------------
 
@@ -115,7 +122,10 @@ namespace MachineLearning {
             ConstantScheduler(double initial_lr, double decay_rate = 0.1, size_t max_epochs = 100)
                 : Parameters(initial_lr, decay_rate, max_epochs) {};
 
-            double operator()(size_t epoch, double _metric = 0.0) override final { return this->lr_; }
+            double operator()(size_t epoch, double _metric = 0.0) override final 
+            { 
+                return this->append(this->lr_); 
+            }
         };
 
         struct ExponentialDecayScheduler : public Parameters
@@ -123,7 +133,10 @@ namespace MachineLearning {
             ExponentialDecayScheduler(double initial_lr, double decay_rate = 0.1, size_t max_epochs = 100)
                 : Parameters(initial_lr, decay_rate, max_epochs) {};
 
-            double operator()(size_t epoch, double _metric = 0.0) override final { return this->lr_ * std::exp(-this->lr_decay_ * epoch); }
+            double operator()(size_t epoch, double _metric = 0.0) override final 
+            { 
+                return this->append(this->lr_ * std::exp(-this->lr_decay_ * epoch)); 
+            }
         };
 
         struct StepDecayScheduler : public Parameters
@@ -133,7 +146,10 @@ namespace MachineLearning {
             StepDecayScheduler(double initial_lr, double decay_rate = 0.1, size_t max_epochs = 100, size_t step_size = 10)
                 : Parameters(initial_lr, decay_rate, max_epochs), step_size_(step_size) {};
 
-            double operator()(size_t epoch, double _metric = 0.0) override final { return this->lr_ * std::pow(this->lr_decay_, std::floor(epoch / this->step_size_)); }
+            double operator()(size_t epoch, double _metric = 0.0) override final 
+            { 
+                return this->append(this->lr_ * std::pow(this->lr_decay_, std::floor(epoch / this->step_size_))); 
+            }
         };
 
         struct CosineAnnealingScheduler : public Parameters
@@ -141,7 +157,10 @@ namespace MachineLearning {
             CosineAnnealingScheduler(double initial_lr, double decay_rate = 0.1, size_t max_epochs = 100)
                 : Parameters(initial_lr, decay_rate, max_epochs) {};
 
-            double operator()(size_t epoch, double _metric = 0.0) override final { return this->lr_ / 2.0 * (1.0 + std::cos(M_PI * epoch / this->max_epochs_)); }
+            double operator()(size_t epoch, double _metric = 0.0) override final 
+            { 
+                return this->append(this->lr_ / 2.0 * (1.0 + std::cos(M_PI * epoch / this->max_epochs_))); 
+            }
         };
 
         struct AdaptiveScheduler : public Parameters
@@ -161,7 +180,7 @@ namespace MachineLearning {
                 // If we're cooling down, skip adjustment
                 if (this->cooldown_counter_ > 0) {
                     this->cooldown_counter_--;
-                    return this->lr_;
+                    return this->append(this->lr_);
                 }
 
                 // Check if current_metric has improved
@@ -178,7 +197,7 @@ namespace MachineLearning {
                     this->epoch_since_reduction_    = 0;
                     this->cooldown_counter_         = this->cooldown_;
                 }
-                return this->lr_;
+                return this->append(this->lr_);
             }
 
         };
