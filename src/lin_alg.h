@@ -528,30 +528,7 @@ namespace algebra
 		// - Add various methods for sparse matrices, non-symmetric matrices, etc.
 		// - Add the option to use the solver without explicitly forming the matrix A
 		// - Add checkers for the matrix properties (symmetric, positive definite, etc.)
-		
-#ifdef __has_include
-#	if __has_include(<mkl_rci.h>) and __has_include(<mkl_spblas.h>) and __has_include(<mkl_blas.h>)
-// #		define MKL_SOLVER_AVAILABLE
-#	endif
-# 	ifdef MKL_SOLVER_AVAILABLE
-#		include <mkl_rci.h>
-#		include <mkl_spblas.h>
-#		include <mkl_blas.h>
-#	else
-// #		pragma message ("--> MKL solver is not available or not using it. Check file lin_alg.h.")
-#	endif
-#endif
-		enum class SolverType
-		{
-			ARMA,
-			// symmetric
-			MKL_CONJ_GRAD,
-			MY_CONJ_GRAD
-			// non-symmetric
-
-			// sparse
-		};
-
+	
 		// #################################################################################################################################################
 
 		namespace Preconditioners {
@@ -559,89 +536,81 @@ namespace algebra
 			/*
 			* @brief Preconditioner interface for any method that can be used as a preconditioner for the conjugate gradient method.
 			*/
-			template<typename T>
+			template<typename T, bool _isPositiveSemidefinite = false>
 			class Preconditioner {
-			private:
-				bool isGram_ = false;		// is the matrix a Gram matrix
+			public:
+				const bool isPositiveSemidefinite_ 	= _isPositiveSemidefinite;	// is the matrix positive semidefinite
+				bool isGram_ 						= false;					// is the matrix a Gram matrix
+				double sigma_ 						= 0.0;						// regularization parameter
+			
+				// -----------------------------------------------------------------------------------------------------------------------------------------
 			public:
 				virtual ~Preconditioner() = default;
 				Preconditioner() 
 					: isGram_(false)
 				{};
-				Preconditioner(const arma::Mat<T>& A, bool isGram = true)
+				Preconditioner(const arma::Mat<T>& A, bool isGram = true, double _sigma = 0.0)
 					: isGram_(isGram)
 				{
-					this->set(A, isGram);
+					this->set(A, isGram, _sigma);
 				}
-				virtual void set(const arma::Mat<T>& A, bool isGram = true) = 0;						// set the preconditioner
-				virtual arma::Col<T> apply(const arma::Col<T>& r, double sigma = 0.0) const = 0;		// general matrix preconditioner
-
-				// operator overloading
-				arma::Col<T> operator()(const arma::Col<T>& r, double sigma = 0.0) const
+				Preconditioner(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0)
+					: isGram_(true), sigma_(_sigma)
 				{
-					return this->apply(r, sigma);
+					this->set(Sp, S, _sigma);
 				}
-			};
-
-			// #################################################################################################################################################
-
-			template <typename T>
-			class JacobiPreconditioner : public Preconditioner<T> {
-
-			private:
-				arma::Col<T> diaginv_;		// diagonal inverse of the matrix 
-				double tol_ = 1.0e-8;
-			public:
-
-				JacobiPreconditioner() 
-					: Preconditioner<T>()
-				{};
-				// is any matrix A, not necessarily a Gram matrix. Otherwise, use isGram = true and A = S+ * S
-				JacobiPreconditioner(const arma::Mat<T>& A, bool isGram = true)
-					: Preconditioner<T>(A, isGram)
-				{
-					this->set(A, isGram);
-				}
+				// -----------------------------------------------------------------------------------------------------------------------------------------
 
 				// set the preconditioner
-				void set(const arma::Mat<T>& A, bool isGram = true) override
-				{
-					if (!isGram)
-						this->diaginv_ = 1.0 / arma::diagvec(A);
-					else
-					{
-						this->diaginv_.set_size(A.n_cols);
-						for (size_t i = 0; i < diaginv_.n_elem; ++i) {
-							T norm_val 			= arma::norm(A.col(i));
-							this->diaginv_(i) 	= (std::abs(norm_val) > tol_) ? 1.0 / norm_val : T(0); // handle near-zero norms
-						}
-					}
-				}
+				virtual void set(bool _isGram, double _sigma = 0.0) { this->isGram_ = _isGram; this->sigma_ = _sigma; }
+				virtual void set(const arma::Mat<T>& A, bool isGram = true, double _sigma = 0.0) = 0;		// set the preconditioner
+				virtual void set(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0) = 0;	// set the preconditioner
 
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+				
 				// apply the preconditioner
-				arma::Col<T> apply(const arma::Col<T>& r, double sigma = 0.0) const override
-				{
-					return this->diaginv_ % r; // element-wise multiplication
-				}
+				virtual arma::Col<T> apply(const arma::Col<T>& r, double sigma = 0.0) const = 0;			// general matrix preconditioner
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+				
+				// operator overloading
+				arma::Col<T> operator()(const arma::Col<T>& r, double sigma = 0.0) const { return this->apply(r, sigma); } 
 			};
 
 			// #################################################################################################################################################
 
-			template <typename T>
-			class IdentityPreconditioner : public Preconditioner<T> {
-				
+			/**
+			* @brief Identity preconditioner for the conjugate gradient method.
+			* The identity preconditioner does not change the input vector.
+			* @tparam T The type of the matrix elements.
+			*/
+			template <typename T, bool _F = false>
+			class IdentityPreconditioner : public Preconditioner<T, _F> {
+
 			public:
-				// 
 				IdentityPreconditioner()
-					: Preconditioner<T>()
+					: Preconditioner<T, _F>()
 					{};
-				IdentityPreconditioner(const arma::Mat<T>& A, bool _isGram)
-					: Preconditioner<T>(A, _isGram)
+				IdentityPreconditioner(const arma::Mat<T>& A, bool _isGram, double _sigma = 0.0)
+					: Preconditioner<T, _F>(A, _isGram, _sigma)
 				{}
 
+				IdentityPreconditioner(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0)
+					: Preconditioner<T, _F>(Sp, S, _sigma)
+				{}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+
 				// set the preconditioner
-				void set(const arma::Mat<T>& A, bool isGram = true) override
+				void set(const arma::Mat<T>& A, bool isGram = true, double _sigma = 0.0) override
 				{
+					Preconditioner<T, _F>::set(isGram, _sigma);
+					// do nothing
+				}
+
+				void set(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0) override
+				{
+					Preconditioner<T, _F>::set(true, _sigma);
 					// do nothing
 				}
 
@@ -654,70 +623,143 @@ namespace algebra
 			
 			// #################################################################################################################################################
 
-			template <typename T>
-			class IncompleteCholeskyPreconditioner : public Preconditioner<T> {
+			/**
+			* @brief Jacobi preconditioner for the conjugate gradient method. This preconditioner is used for symmetric positive definite matrices. 
+			* The Jacobi preconditioner is a diagonal matrix with the diagonal elements of the original matrix on the diagonal. 
+			* The inverse of the diagonal elements is used as the preconditioner.
+			* @tparam T The type of the matrix elements.
+			*/
+			template <typename T, bool _T = true>
+			class JacobiPreconditioner : public Preconditioner<T, _T> {
+			private:
+				arma::Col<T> diaginv_;			// diagonal inverse of the matrix 
+				double tolBig_ 		= 1.0e10;	// if the value is bigger than this, then 1/value is small and we create cut-off
+				T  bigVal_			= 1e-10;	// treated as zero for 1/value
+				double tolSmall_ 	= 1.0e-10; 	// if the value is smaller than this, then 1/value is big and we create cut-off
+				T  smallVal_		= 1e10;		// treated as zero for 1/value
+			public:
+
+				JacobiPreconditioner() 
+					: Preconditioner<T, _T>()
+				{};
+				// is any matrix A, not necessarily a Gram matrix. Otherwise, use isGram = true and A = S+ * S
+				JacobiPreconditioner(const arma::Mat<T>& A, bool isGram = true, double _sigma = 0.0)
+					: Preconditioner<T, _T>(A, isGram, _sigma)
+				{}
+
+				JacobiPreconditioner(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0)
+					: Preconditioner<T, _T>(Sp, S, _sigma)
+				{}
+
+				// set the preconditioner
+				void set(const arma::Mat<T>& A, bool isGram = true, double _sigma = 0.0) override
+				{
+					Preconditioner<T, _T>::set(isGram, _sigma);
+
+					if (!isGram)
+					{
+						arma::Col<T> diag 	= arma::diagvec(A);
+						diag 				+= (T)this->sigma_;
+						this->diaginv_ 		= 1.0 / diag;
+						this->diaginv_ 		= arma::clamp(this->diaginv_, -1.0e10, 1.0e10);
+					}
+					else
+						this->set(A, A, _sigma); // setting A, as Aplus is not needed
+				}
+
+				void set(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0) override
+				{
+					Preconditioner<T, _T>::set(true, _sigma);
+
+					this->diaginv_.set_size(S.n_cols);
+					for (size_t i = 0; i < diaginv_.n_elem; ++i) 
+					{
+						const T norm_val 		= arma::norm(S.col(i)) + this->sigma_;
+						const double norm_abs 	= std::abs(norm_val);
+
+						this->diaginv_(i) = (norm_abs > tolBig_) 	? bigVal_ 	:
+											(norm_abs < tolSmall_) 	? smallVal_ :
+											(1.0 / norm_val);
+					}
+				}
+
+				// apply the preconditioner
+				arma::Col<T> apply(const arma::Col<T>& r, double sigma = 0.0) const override { return this->diaginv_ % r; }
+			};
+
+			// #################################################################################################################################################
+			
+			
+			/*
+			* @brief Incomplete Cholesky preconditioner for the conjugate gradient method. This preconditioner is used for symmetric positive definite matrices.
+			* @tparam T The type of the matrix elements.
+			*/
+			template <typename T, bool _T = true>
+			class IncompleteCholeskyPreconditioner : public Preconditioner<T, _T> {
 
 			private:
 				arma::Mat<T> L_;     // lower triangular incomplete Cholesky factor
 				bool success_ 	= false;
-				double tol_ 	= 1.0e-6;
 			public:
 				IncompleteCholeskyPreconditioner()
-					: Preconditioner<T>()
+					: Preconditioner<T, _T>()
 				{};			
 				/**
 				* @brief Constructor to initialize the preconditioner with a given matrix.
 				* @param A The matrix to decompose.
 				* @param isGram Flag indicating if the matrix is a Gram matrix.
 				*/
-				IncompleteCholeskyPreconditioner(const arma::Mat<T>& A, bool isGram = true)
-					: Preconditioner<T>(A, isGram)
-				{
-					this->set(A, isGram);
-				}
+				IncompleteCholeskyPreconditioner(const arma::Mat<T>& A, bool isGram = true, double _sigma = 0.0)
+					: Preconditioner<T, _T>(A, isGram, _sigma)
+				{}
+
+				IncompleteCholeskyPreconditioner(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0)
+					: Preconditioner<T, _T>(Sp, S, _sigma)
+				{}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
 
 				/**
 				* @brief Set the preconditioner with a given matrix.
 				* @param A The matrix to decompose.
 				* @param isGram Flag indicating if the matrix is a Gram matrix.
+				* @param _sigma Regularization parameter (default is 0.0). This is added to the diagonal of the matrix before decomposition.
 				*/
-				void set(const arma::Mat<T>& A, bool isGram = true) override
+				void set(const arma::Mat<T>& A, bool isGram = true, double _sigma = 0.0) override
 				{
+					Preconditioner<T, _T>::set(isGram, _sigma);
+
 					if (!isGram) {
 						// Directly calculate incomplete Cholesky factor L
-						this->success_ = arma::chol(L_, A, "lower");
+						this->success_ = arma::chol(L_, A + arma::Mat<T>(A.n_cols, A.n_cols, arma::fill::eye)  * this->sigma_, "lower");
 						if (!success_) {
 							std::cerr << "Incomplete Cholesky decomposition failed.\n";
 							L_.reset(); // Clear L_ if decomposition fails
 						}
-					} else {
-						this->success_ = arma::chol(L_, A.t() * A, "lower");
-						if (!success_) {
-							std::cerr << "Incomplete Cholesky decomposition failed.\n";
-							L_.reset(); // Clear L_ if decomposition fails
-						}
-						return;
+					} else 
+						this->set(A.t(), A, _sigma);
+				}
 
-						// Custom decomposition for non-Gram matrices
-						const size_t n = A.n_cols;
-						L_.set_size(n, n);
-						L_.zeros();
+				/**
+				* @brief Set the preconditioner with a given matrix.
+				* @param Sp The matrix to decompose.
+				* @param S The matrix to decompose.
+				* @param _sigma Regularization parameter (default is 0.0). This is added to the diagonal of the matrix before decomposition.
+				*/
+				void set(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0) override
+				{
+					Preconditioner<T, _T>::set(true, _sigma);
 
-						for (size_t j = 0; j < n; ++j) {
-							T sum_sq = arma::dot(A.col(j), A.col(j));
-							
-							for (size_t k = 0; k < j; ++k) {
-								sum_sq -= L_(j, k) * L_(j, k);
-							}
-							L_(j, j) = (std::abs(sum_sq) > tol_) ? std::sqrt(sum_sq) : T(0);
-							
-							for (size_t i = j + 1; i < n; ++i) {
-								L_(i, j) = arma::dot(A.col(j), A.col(i)) / L_(j, j);
-							}
-						}
-						this->success_ = true;
+					arma::Mat<T> A 	= Sp * S;
+					A.diag() 		+= this->sigma_;
+					
+					if (this->success_ 	= arma::chol(L_, A, "lower"); !this->success_) {
+						std::cerr << "Incomplete Cholesky decomposition failed.\n";
+						L_.reset(); // Clear L_ if decomposition fails
 					}
 				}
+
+				// 
 
 				/**
 				* @brief Apply the preconditioner to a given vector.
@@ -728,8 +770,10 @@ namespace algebra
 				arma::Col<T> apply(const arma::Col<T>& r, double sigma = 0.0) const override
 				{
 					if (this->success_) {
-						// Forward solve L*y = r
+						
 						arma::Col<T> y;
+						
+						// Forward solve L*y = r
 						try {
 							y = arma::solve(arma::trimatl(L_), r);
 						} catch (const std::runtime_error& e) {
@@ -744,27 +788,59 @@ namespace algebra
 							std::cerr << "Backward solve failed: " << e.what() << "\n";
 							return r; // If backward solve fails, return r as is
 						}
-					} else {
+					} else
 						return r; // If decomposition failed, return r as is
-					}
 				}
 			};
 
 			// #################################################################################################################################################
 
-			template <typename T>
-			inline Preconditioner<T>* choose(int i = 0) {
+			namespace Symmetric {
+				enum class PreconditionerType {
+					Identity,
+					Jacobi,
+					IncompleteCholesky
+				}; 
+			};
+			namespace NonSymmetric {
+				enum class PreconditionerType {
+					Identity,
+				}; 
+			};
+
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+		
+			template <typename T, bool _Sym = true>
+			inline Preconditioner<T, _Sym>* choose(int i = 0) {
 				switch (i) {
 				case 0:
-					return new IdentityPreconditioner<T>;
+					return new IdentityPreconditioner<T, _Sym>;
 				case 1:
-					return new JacobiPreconditioner<T>;
+					return new JacobiPreconditioner<T, _Sym>;
 				case 2:
+					return new IncompleteCholeskyPreconditioner<T, _Sym>;
+				default:
+					return new IdentityPreconditioner<T, _Sym>;
+				};
+			}
+
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+
+			template <typename T>
+			inline Preconditioner<T>* choose(Symmetric::PreconditionerType i) {
+				switch (i) {
+				case Symmetric::PreconditionerType::Identity:
+					return new IdentityPreconditioner<T>;
+				case Symmetric::PreconditionerType::Jacobi:
+					return new JacobiPreconditioner<T>;
+				case Symmetric::PreconditionerType::IncompleteCholesky:
 					return new IncompleteCholeskyPreconditioner<T>;
 				default:
 					return new IdentityPreconditioner<T>;
 				};
 			}
+			
+			// -----------------------------------------------------------------------------------------------------------------------------------------
 
 			inline std::string name(int i = 0) {
 				switch (i) {
@@ -778,126 +854,87 @@ namespace algebra
 					return "Identity";
 				};
 			}
+			
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+			
+			inline std::string name(Symmetric::PreconditionerType i) {
+				switch (i) {
+				case Symmetric::PreconditionerType::Identity:
+					return "Identity";
+				case Symmetric::PreconditionerType::Jacobi:
+					return "Jacobi";
+				case Symmetric::PreconditionerType::IncompleteCholesky:
+					return "Incomplete Cholesky";
+				default:
+					return "Identity";
+				};
+			}
 		};
 
 		// #################################################################################################################################################
 
-		// ------------ ARMA SOLVER ------------
-		template <typename _T>
-		void solve_arma(const arma::Mat<_T>& A, 
-						const arma::Col<_T>& b, 
-						arma::Col<_T>& x, 
-						auto _opts = arma::solve_opts::likely_sympd)
+		namespace FisherMatrix 
 		{
-			arma::solve(A, b, _opts);
-		}
-
-
-#ifdef MKL_SOLVER_AVAILABLE
-		// --- MKL CONJUGATE GRADIENT SOLVER (symmetric matrices) ---
-		template <typename _T>
-		void solve_mkl_conj_grad(const arma::Mat<_T>& A, 
-								 const arma::Col<_T>& b, 
-								 arma::Col<_T>& x,
-								 double eps = 1.0e-6)
-		{
-			// TODO
-		}
-
-		template <typename _T>
-		void solve_mkl_conj_grad(const arma::Col<_T>& b,
-								 std::function<void(const _T* x, _T* y, size_t n)> _matvecmul,
-								 arma::Col<_T>& x,
-								 double eps = 1.0e-6)
-		{
-			const size_t n 		= b.n_elem;
-
-			// get the pointer to the memory
-			const _T* b_ptr 	= b.memptr();
-			_T* x_ptr 			= x.memptr();
-
-			// the vectors must have the same size
-			assert(b.n_elem == x.n_elem && "The vectors must have the same size.");
-
-			// MKL solver parameters
-			// MKL_LONG n_ 		= static_cast<MKL_LONG>(n);
-			int* ipar 			= new int[128];
-			double* dpar 		= new double[128];
-			_T* tmp 			= new _T[4 * n];
-			int rci_request = 0, itercount = 0;
-
-			// Initialize solver based on type of _T (double or complex)
-			if constexpr (std::is_same_v<_T, double>) {
-				dcg_init(&n, x_ptr, const_cast<_T*>(b_ptr),
-						&rci_request, ipar, dpar, reinterpret_cast<double*>(tmp));
-			} 
-			else if constexpr (std::is_same_v<_T, std::complex<double>>) {
-				// Complex version initialization
-				// Note: MKL does not provide complex CG directly; this is an example
-				throw std::runtime_error("MKL does not provide complex CG directly.");
-			}
-			// TODO!: finish the implementation
-		}
-#endif
-
-		namespace ConjugateGradient
-		{
-
-			template<typename _T>
-			struct ConjugateGradientParams
+			
+			/*
+			* @brief In case we know that the matrix S that shall be inverted is a Fisher matrix, 
+			* we may use the knowledge that S_{ij} = <\Delta O^*_i \Delta O_j>, where \Delta O is the
+			* derivative of the observable with respect to the parametes. (rows are samples, columns are parameters)
+			* and the mean over the samples is taken and then taken out of the matrix afterwards.
+			* @note The matrix S is symmetric and positive definite, so we can use the conjugate gradient method.
+			* @note The matrix S is not explicitly formed, but the matrix-vector multiplication is used.
+			* @note The matrix S is just a covariance matrix of the derivatives of the observable.
+			* @note The matrix shall be divided by the number of samples N.
+			*/
+			template <typename _T>
+			inline arma::Col<_T> matrixFreeMultiplication(const arma::Mat<_T>& _DeltaO, const arma::Col<_T>& _x, const double _reg = 0.0)
 			{
-				double eps	 	= 	1.0e-6;
-				size_t max_iter = 	1000;
-				size_t n		= 	0;
-				arma::Col<_T> b;	// right-hand side
-				arma::Col<_T> x;	// solution
-				arma::Col<_T> r;	// residual
-				arma::Mat<_T> Ap;	// matrix-vector multiplication result
-			};
+				const size_t _N 			= _DeltaO.n_rows;               	// Number of samples (rows)
+				arma::Col<_T> _intermediate = _DeltaO * _x;     				// Calculate \Delta O * x
 
-			namespace FisherMatrix {
+				// apply regularization on the diagonal
+				if (_reg > 0.0)
+					return (_DeltaO.t() * _intermediate) / static_cast<_T>(_N)  + _reg * _x;
 				
-				// uses those for the matrix-vector multiplication because of the Fisher matrix form of the matrix
+				// no regularization
+				return (_DeltaO.t() * _intermediate) / static_cast<_T>(_N);    // Calculate \Delta O^* * (\Delta O * v) / N
+			}
 
-				/*
-				* @brief In case we know that the matrix S that shall be inverted is a Fisher matrix, 
-				* we may use the knowledge that S_{ij} = <\Delta O^*_i \Delta O_j>, where \Delta O is the
-				* derivative of the observable with respect to the parametes. (rows are samples, columns are parameters)
-				* and the mean over the samples is taken and then taken out of the matrix afterwards.
-				* @note The matrix S is symmetric and positive definite, so we can use the conjugate gradient method.
-				* @note The matrix S is not explicitly formed, but the matrix-vector multiplication is used.
-				* @note The matrix S is just a covariance matrix of the derivatives of the observable.
+			template <typename _T>
+			inline arma::Col<_T> matrixFreeMultiplication(const arma::Mat<_T>& _DeltaO, const arma::Mat<_T>& _DeltaOConjT, const arma::Col<_T>& x, const double _reg = 0.0)
+			{
+				const size_t _N 			= _DeltaO.n_rows;               	// Number of samples (rows)
+				arma::Col<_T> _intermediate = _DeltaO * x;     					// Calculate \Delta O * x
+
+				// apply regularization on the diagonal
+				if (_reg > 0.0)
+					return (_DeltaOConjT * _intermediate) / static_cast<_T>(_N)  + _reg * x;
+				
+				// no regularization
+				return (_DeltaOConjT * _intermediate) / static_cast<_T>(_N);    // Calculate \Delta O^* * (\Delta O * v) / N
+			}
+
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+
+			// Conjugate gradient solver for the Fisher matrix inversion
+			namespace CG 
+			{
+				
+				/**
+				* @brief Conjugate gradient solver for the Fisher matrix inversion. This method is used whenever the matrix can be 
+				* decomposed into the form S = \Delta O^* \Delta O, where \Delta O is the derivative of the observable with respect to the parameters. 
+				* The matrix S is symmetric and positive definite, so the conjugate gradient method can be used.
+				* @equation S_{ij} = <\Delta O^*_i \Delta O_j> / N 
+				* @param _DeltaO The matrix \Delta O.
+				* @param _DeltaOConjT The matrix \Delta O^+.
+				* @param _F The right-hand side vector.
+				* @param _x0 The initial guess for the solution.
+				* @param _eps The convergence criterion.
+				* @param _max_iter The maximum number of iterations.
+				* @param _converged The flag indicating if the solver converged.
+				* @param _reg The regularization parameter. (A + \lambda I) x \approx b
+				* @return The solution vector x.
 				*/
-				template <typename _T>
-				inline arma::Col<_T> matrixFreeMultiplication(const arma::Mat<_T>& _DeltaO, const arma::Col<_T>& _x, const double _reg = 0.0)
-				{
-    				const size_t _N = _DeltaO.n_rows;               				// Number of samples (rows)
-					arma::Col<_T> _intermediate = _DeltaO * _x;     				// Calculate \Delta O * x
-
-					// apply regularization on the diagonal
-					if (_reg > 0.0)
-						return (_DeltaO.t() * _intermediate) / static_cast<_T>(_N)  + _reg * _x;
-					
-					// no regularization
-					return (_DeltaO.t() * _intermediate) / static_cast<_T>(_N);    // Calculate \Delta O^* * (\Delta O * v) / N
-	
-				}
-
-				template <typename _T>
-				inline arma::Col<_T> matrixFreeMultiplication(const arma::Mat<_T>& _DeltaO, const arma::Mat<_T>& _DeltaOConjT, const arma::Col<_T>& x, const double _reg = 0.0)
-				{
-					const size_t _N = _DeltaO.n_rows;               				// Number of samples (rows)
-					arma::Col<_T> _intermediate = _DeltaO * x;     					// Calculate \Delta O * x
-
-					// apply regularization on the diagonal
-					if (_reg > 0.0)
-						return (_DeltaOConjT * _intermediate) / static_cast<_T>(_N)  + _reg * x;
-					
-					// no regularization
-					return (_DeltaOConjT * _intermediate) / static_cast<_T>(_N);    // Calculate \Delta O^* * (\Delta O * v) / N
-				}
-
-				// without preconditioner
 				template<typename _T1>
 				inline arma::Col<_T1> conjugate_gradient(const arma::Mat<_T1>& _DeltaO,
 										const arma::Mat<_T1>& _DeltaOConjT,
@@ -912,13 +949,23 @@ namespace algebra
 					// set the initial values for the solver
 					arma::Col<_T1> x 	= (_x0 == nullptr) ? arma::Col<_T1>(_F.n_elem, arma::fill::zeros) : *_x0;
 					arma::Col<_T1> r 	= _F - matrixFreeMultiplication(_DeltaO, _DeltaOConjT, x, _reg);
-					arma::Col<_T1> p 	= r;
 					_T1 rs_old 			= arma::cdot(r, r);
+
+					// check for convergence already
+					if (std::abs(rs_old) < _eps) {
+						if (_converged != nullptr)
+							*_converged = true;
+						return x;
+					}
+
+					// create the search direction vector
+					arma::Col<_T1> p 	= r;
+					arma::Col<_T1> Ap;		// matrix-vector multiplication result
 
 					// iterate until convergence
 					for (size_t i = 0; i < _max_iter; ++i)
 					{
-						arma::Col<_T1> Ap 	= matrixFreeMultiplication(_DeltaO, _DeltaOConjT, p, _reg);
+						Ap 					= matrixFreeMultiplication(_DeltaO, _DeltaOConjT, p, _reg);
 						_T1 alpha 			= rs_old / arma::cdot(p, Ap);
 						x 					+= alpha * p;
 						r 					-= alpha * Ap;
@@ -941,15 +988,30 @@ namespace algebra
 						*_converged = false;
 					return x;
 				}
+				// -----------------------------------------------------------------------------------------------------------------------------------------
 
-				// ---- MY CONJUGATE GRADIENT SOLVER (symmetric matrices) and Gram Matrix ----
-
+				/*
+				* @brief Conjugate gradient solver for the Fisher matrix inversion. This method is used whenever the matrix can be
+				* decomposed into the form S = \Delta O^* \Delta O, where \Delta O is the derivative of the observable with respect to the parameters.
+				* The matrix S is symmetric and positive definite, so the conjugate gradient method can be used.
+				* @equation S_{ij} = <\Delta O^*_i \Delta O_j> / N
+				* @param _DeltaO The matrix \Delta O.
+				* @param _DeltaOConjT The matrix \Delta O^+.
+				* @param _F The right-hand side vector.
+				* @param _x0 The initial guess for the solution.
+				* @param _preconditioner The preconditioner for the conjugate gradient method.
+				* @param _eps The convergence criterion.
+				* @param _max_iter The maximum number of iterations.
+				* @param _converged The flag indicating if the solver converged.
+				* @param _reg The regularization parameter. (A + \lambda I) x \approx b
+				* @return The solution vector x.
+				*/
 				template<typename _T1>
 				inline arma::Col<_T1> conjugate_gradient(const arma::Mat<_T1>& _DeltaO,
 														const arma::Mat<_T1>& _DeltaOConjT,
 														const arma::Col<_T1>& _F, 
 														arma::Col<_T1>* _x0,
-														Preconditioners::Preconditioner<_T1>* _preconditioner = nullptr,
+														Preconditioners::Preconditioner<_T1, true>* _preconditioner = nullptr,
 														double _eps 			= 1.0e-6,
 														size_t _max_iter 		= 1000,
 														bool* _converged 		= nullptr,
@@ -964,28 +1026,28 @@ namespace algebra
 					arma::Col<_T1> r 	= _F - matrixFreeMultiplication(_DeltaO, _DeltaOConjT, x, _reg);	// calculate the first residual
 					arma::Col<_T1> z 	= _preconditioner->apply(r);										// apply the preconditioner to Mz = r
 					arma::Col<_T1> p 	= z;																// set the search direction
+					arma::Col<_T1> Ap;																		// matrix-vector multiplication result
+
 					_T1 rs_old 			= arma::cdot(r, z);													// the initial norm of the residual
-					_T1 initial_rs		= std::abs(rs_old);  												// For relative tolerance check
+					// _T1 initial_rs		= std::abs(rs_old);  												// For relative tolerance check
 					
 					// iterate until convergence
 					for (size_t i = 0; i < _max_iter; ++i)
 					{
-						arma::Col<_T1> Ap 		= matrixFreeMultiplication(_DeltaO, _DeltaOConjT, p, _reg);
+						Ap 						= matrixFreeMultiplication(_DeltaO, _DeltaOConjT, p, _reg);
 						_T1 alpha 				= rs_old / arma::cdot(p, Ap);
 						x 						+= alpha * p;
 						r 						-= alpha * Ap;
 
 						// Check for convergence
-						if (std::abs(arma::cdot(r, r) / initial_rs) < _eps) {
+						if (std::abs(arma::cdot(r, r)) < _eps) {
 							if (_converged != nullptr)
 								*_converged = true;
 							return x;
 						}
-						// update the preconditioner
-						z 						= _preconditioner->apply(r);
+						z 						= _preconditioner->apply(r); 								// update the preconditioner
 						_T1 rs_new 				= arma::cdot(r, z);
-						_T1 _beta 				= rs_new / rs_old;
-						p 						= z + _beta * p;
+						p 						= z + (rs_new / rs_old) * p;
 						rs_old 					= rs_new;
 					}
 
@@ -994,367 +1056,397 @@ namespace algebra
 						*_converged = false;
 					return x;
 				}
-
-
-				// -----------------------------------------------------------------------------------------------------------------------------------------
-				namespace MINRES_QLP {
-
-					// ---- MY MINRES_QLP SOLVER (symmetric matrices) and Gram Matrix ----
-					template <typename _T1>
-					inline arma::Col<_T1> minres_qlp(const arma::Mat<_T1>& _DeltaO,
-											const arma::Mat<_T1>& _DeltaOConjT,
-											const arma::Col<_T1>& _F,
-											arma::Col<_T1>* _x0			= nullptr,
-											double _eps 				= 1.0e-6,
-											size_t _max_iter 			= 1000,
-											bool* _converged 			= nullptr, 
-											double _reg 				= 0.0)
-					{
-						// !TODO: Implement the MINRES_QLP solver
-						return conjugate_gradient<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _eps, _max_iter, _converged, _reg);
-					}
-
-
-					template <typename _T1>
-					inline arma::Col<_T1> minres_qlp(const arma::Mat<_T1>& _DeltaO,
-											const arma::Mat<_T1>& _DeltaOConjT,
-											const arma::Col<_T1>& _F,
-											arma::Col<_T1>* _x0			= nullptr,
-											Preconditioners::Preconditioner<_T1>* _preconditioner = nullptr,
-											double _eps 				= 1.0e-6,
-											size_t _max_iter 			= 1000,
-											bool* _converged 			= nullptr, 
-											double _reg 				= 0.0)
-					{
-						if (_preconditioner == nullptr)
-							return minres_qlp<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _eps, _max_iter, _converged, _reg);
-
-						const size_t _n 	= _F.n_elem;
-						arma::Col<_T1> x 	= (_x0 == nullptr) ? arma::Col<_T1>(_n, arma::fill::zeros) : *_x0;
-
-						// // initial values
-						arma::Col<_T1> z0	= arma::Col<_T1>(_n, arma::fill::zeros);
-						arma::Col<_T1> z1 	= _F; 										// initial vector z1
-						arma::Col<_T1> q 	= _preconditioner->apply(z0);				// initial vector q1
-
-						arma::Col<_T1> p 	= q;										// initial vector p1
-						_T1 _beta0 			= 0.0;										// beta_0 = 0
-						_T1 _beta1			= _beta1;									// beta_1 = sqrt(b^T * q1)
-						_T1 _phi_old 		= _beta1;									// phi_0 = beta_0
-
-						// rho for Lanczos
-						_T1 _rho_old 		= 0.0;
-
-						// iterate until convergence
-						for (int k = 0; k < _max_iter; ++k)
-						{
-							p 					= matrixFreeMultiplication(_DeltaO, _DeltaOConjT, q, -1.0) - _reg * q;
-							_T1 _alpha 			= arma::cdot(q, p) / _beta1 / _beta1;
-							arma::Col<_T1> zkp1	= p / _beta1 - (_alpha / _beta1) * z1 - (_beta0 / _beta1) * z0;
-							// apply the preconditioner
-							q 					= _preconditioner->apply(zkp1);
-							_T1 _beta_new 		= std::sqrt(arma::cdot(q, zkp1));
-							if (k == 0)
-								_rho_old 		= _alpha * _alpha + _beta1 * _beta1;
-							else
-								_rho_old 		= _alpha * _alpha + _beta1 * _beta1 + _beta0 * _beta0;
-							
-							// previous left reflection
-						}
-						// if (_converged != nullptr)
-						// 	*_converged = false;
-						return x;
-					}
-				};
 			};
 
-			// ---- MY CONJUGATE GRADIENT SOLVER (symmetric matrices) ----
-			
-			template<typename _T1, typename _T2>
-			inline bool solve_my_conj_grad(const arma::Mat<_T1>& A, 
-									const arma::Col<_T2>& b, 
-									arma::Col<typename std::common_type<_T1, _T2>>& x,
-									double eps = 1.0e-6)
+
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+			namespace MINRES_QLP 
 			{
-				using _type = typename std::common_type<_T1, _T2>::type;
 
-				const size_t n 		= b.n_elem;
-				arma::Col<_type> r 	= b;		// initial residual r = b - A*x (x = 0, r = b)
-				arma::Col<_type> p 	= r;		// initial search direction p = r
-				arma::Col<_type> Ap(n);			// matrix-vector multiplication result Ap = A*p
-
-				// initial values
-				_type rs_old = arma::cdot(r, r);	// r^T * r - dot product of residuals
-
-				// iterate until convergence
-				for (size_t i = 0; i < n; ++i)
+				// ---- MY MINRES_QLP SOLVER (symmetric matrices) and Gram Matrix ----
+				template <typename _T1>
+				inline arma::Col<_T1> minres_qlp(const arma::Mat<_T1>& _DeltaO,
+										const arma::Mat<_T1>& _DeltaOConjT,
+										const arma::Col<_T1>& _F,
+										arma::Col<_T1>* _x0			= nullptr,
+										double _eps 				= 1.0e-6,
+										size_t _max_iter 			= 1000,
+										bool* _converged 			= nullptr, 
+										double _reg 				= 0.0)
 				{
-					Ap = A * p;								// calculate the matrix-vector multiplication
-					
-					_type alpha = rs_old / arma::cdot(p, Ap); 	// calculate the step size
-					x += alpha * p;							// update the solution - in the direction of the search
-					r -= alpha * Ap;						// update the residual - orthogonal to the search direction
-					
-					_type rs_new = arma::cdot(r, r);		// calculate the new dot product of residuals
-
-					if (std::abs(std::sqrt(rs_new)) < eps)	// check for convergence (if the residual is small enough)
-						return true;
-
-					p = r + (rs_new / rs_old) * p;			// calculate the new search direction
-					rs_old = rs_new;						// update the old residual
-				}
-				return false;
-			}
-
-			/*
-			* @brief Solve the linear system of equations Ax = b using my conjugate gradient solver.
-			* This is used when the matrix A is symmetric and positive definite. Not explicitly forming the matrix A.
-			* @param b right-hand side vector
-			* @param _matvecmul function that performs the matrix-vector multiplication y = A*x
-			* @param x solution vector - output
-			* @param eps tolerance for the solver
-			* @returns true if the solver converged, false otherwise
-			*/
-			template <typename _T>
-			inline bool solve_my_conj_grad(const arma::Col<_T>& b,
-									std::function<void(const _T* x, _T* y, size_t n)> _matvecmul,
-									arma::Col<_T>& x,
-									double eps = 1.0e-6)
-			{
-				const size_t n = b.n_elem;
-				arma::Col<_T> r = b;	// initial residual r = b - A*x (x = 0, r = b)
-				arma::Col<_T> p = r;	// initial search direction p = r
-				arma::Col<_T> Ap(n);	// matrix-vector multiplication result Ap = A*p
-
-				// initial values
-				double rs_old = algebra::real(arma::cdot(r, r)); // r^T * r - dot product of residuals
-				const double eps_2 = eps * eps;
-				// iterate until convergence
-				for (size_t i = 0; i < n; ++i)
-				{
-					_matvecmul(p, Ap, n); 					// calculate the matrix-vector multiplication
-					
-					_T pAp = arma::cdot(p, Ap);      	 	// dot product p^T * Ap
-					if (std::abs(pAp) == 0)                 // avoid division by zero (degenerate case)
-						return false;
-
-					_T alpha = rs_old / pAp; 				// calculate the step size
-					x += alpha * p;							// update the solution - in the direction of the search
-					r -= alpha * Ap;						// update the residual - orthogonal to the search direction
-					
-					double rs_new = algebra::real(arma::cdot(r, r)); // calculate the new dot product of residuals
-
-					if (rs_new < eps_2)						// check for convergence (if the residual is small enough)
-						return true;
-
-					p = r + (rs_new / rs_old) * p;			// calculate the new search direction
-					rs_old = rs_new;						// update the old residual
-				}
-				return false;
-			}
-
-			/*
-			* @brief Solve the linear system of equations Ax = b using my conjugate gradient solver.
-			* This is used when the matrix A is symmetric and positive definite. Not explicitly forming the matrix A.
-			* @param b right-hand side vector
-			* @param _matvecmul function that performs the matrix-vector multiplication y = A*x
-			* @param x solution vector - output
-			* @param eps tolerance for the solver
-			* @returns true if the solver converged, false otherwise
-			*/
-			template <typename _T>
-			inline bool solve_my_conj_grad(const arma::Col<_T>& b,
-									std::function<void(const arma::Col<_T>& x, arma::Col<_T>& y, size_t n)> _matvecmul,
-									arma::Col<_T>& x,
-									double eps = 1.0e-6)
-			{
-				const size_t n 	= b.n_elem;
-				arma::Col<_T> r = b;	// initial residual r = b - A*x (x = 0, r = b)
-				arma::Col<_T> p = r;	// initial search direction p = r
-				arma::Col<_T> Ap(n);	// matrix-vector multiplication result Ap = A*p
-
-				// initial values
-				x.zeros();									// initial solution x = 0
-    			_T rs_old = arma::cdot(r, r);  			 	// r^T * r - initial dot product of residuals
-
-				// iterate until convergence
-				for (size_t i = 0; i < n; ++i)
-				{
-					_matvecmul(p, Ap, n); 					// calculate the matrix-vector multiplication
-					
-					_T pAp = arma::cdot(p, Ap);      	 	// dot product p^T * Ap
-					if (std::abs(pAp) == 0)                 // avoid division by zero (degenerate case)
-						return false;
-
-					_T alpha = rs_old / pAp;          		// step size
-					x += alpha * p;							// update the solution - in the direction of the search
-					r -= alpha * Ap;						// update the residual - orthogonal to the search direction
-					
-					_T rs_new = arma::cdot(r, r); 			// calculate the new dot product of residuals
-
-					if (std::abs(std::sqrt(rs_new)) < eps)	// check for convergence (if the residual is small enough)
-						return true;
-
-					p = r + (rs_new / rs_old) * p;			// calculate the new search direction - r + (rs_new / rs_old) * p
-					rs_old = rs_new;						// update the old residual
+					// !TODO: Implement the MINRES_QLP solver
+					return CG::conjugate_gradient<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _eps, _max_iter, _converged, _reg);
 				}
 				
-				return false;
-			}
+				// #################################################################################################################################################
 
-			// -------------------- PREALLOCATED MEMORY --------------------
-
-			template <typename _T1, typename _T2 = _T1>
-			inline bool solve_my_conj_grad(const arma::Col<_T1>& b,
-										std::function<void(const arma::Col<typename std::common_type<_T1, _T2>::type>& x,
-															arma::Col<typename std::common_type<_T1, _T2>::type>& y, size_t n)> _matvecmul,
-										arma::Col<_T2>& x,
-										arma::Col<typename std::common_type<_T1, _T2>::type>& r,  // preallocated residual
-										arma::Col<typename std::common_type<_T1, _T2>::type>& p,  // preallocated search direction
-										arma::Col<typename std::common_type<_T1, _T2>::type>& Ap, // preallocated matrix-vector multiplication result
-										double eps = 1.0e-6)
-			{
-				using _type 	= typename std::common_type<_T1, _T2>::type;
-				const size_t n 	= b.n_elem;
-
-				// preallocate memory if not provided
-				const double eps_2 = eps * eps;				 	// square of the tolerance
-
-				// initial values
-				double rs_old = algebra::real(arma::cdot(r, r)); // r^T * r - dot product of residuals
-				double rs_new = 0;
-
-				// iterate until convergence
-				for (size_t i = 0; i < n; ++i)
+				template <typename _T1>
+				inline arma::Col<_T1> minres_qlp(const arma::Mat<_T1>& _DeltaO,
+										const arma::Mat<_T1>& _DeltaOConjT,
+										const arma::Col<_T1>& _F,
+										arma::Col<_T1>* _x0			= nullptr,
+										Preconditioners::Preconditioner<_T1, true>* _preconditioner = nullptr,
+										double _eps 				= 1.0e-6,
+										size_t _max_iter 			= 1000,
+										bool* _converged 			= nullptr, 
+										double _reg 				= 0.0)
 				{
-					_matvecmul(p, Ap, n);                       // calculate the matrix-vector multiplication
+					if (_preconditioner == nullptr)
+						return minres_qlp<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _eps, _max_iter, _converged, _reg);
+
+					const size_t _n 	= _F.n_elem;
+					arma::Col<_T1> x 	= (_x0 == nullptr) ? arma::Col<_T1>(_n, arma::fill::zeros) : *_x0;
+
+					// // // initial values
+					// arma::Col<_T1> z0	= arma::Col<_T1>(_n, arma::fill::zeros);
+					// arma::Col<_T1> z1 	= _F; 										// initial vector z1
+					// arma::Col<_T1> q 	= _preconditioner->apply(z0);				// initial vector q1
+
+					// arma::Col<_T1> p 	= q;										// initial vector p1
+					// _T1 _beta0 			= 0.0;										// beta_0 = 0
+					// _T1 _beta1			= _beta1;									// beta_1 = sqrt(b^T * q1)
+					// _T1 _phi_old 		= _beta1;									// phi_0 = beta_0
+
+					// // rho for Lanczos
+					// _T1 _rho_old 		= 0.0;
+
+					// // iterate until convergence
+					// for (int k = 0; k < _max_iter; ++k)
+					// {
+					// 	p 					= matrixFreeMultiplication(_DeltaO, _DeltaOConjT, q, -1.0) - _reg * q;
+					// 	_T1 _alpha 			= arma::cdot(q, p) / _beta1 / _beta1;
+					// 	arma::Col<_T1> zkp1	= p / _beta1 - (_alpha / _beta1) * z1 - (_beta0 / _beta1) * z0;
+					// 	// apply the preconditioner
+					// 	q 					= _preconditioner->apply(zkp1);
+					// 	_T1 _beta_new 		= std::sqrt(arma::cdot(q, zkp1));
+					// 	if (k == 0)
+					// 		_rho_old 		= _alpha * _alpha + _beta1 * _beta1;
+					// 	else
+					// 		_rho_old 		= _alpha * _alpha + _beta1 * _beta1 + _beta0 * _beta0;
 						
-					_type pAp = arma::cdot(p, Ap);              // dot product p^T * Ap
-					if (std::abs(pAp) == 0)                    	// avoid division by zero (degenerate case)
-						return false;	
-	
-					_type alpha = rs_old / pAp;                	// calculate the step size
-					x += alpha * (p);                           // update the solution - in the direction of the search
-					r -= alpha * (Ap);                          // update the residual - orthogonal to the search direction
-	
-					rs_new = algebra::real(arma::cdot(r, r));   // calculate the new dot product of residuals
-	
-					if (rs_new < eps_2)                        	// check for convergence (if the residual is small enough)
-						return true;	
-	
-					p = r + (rs_new / rs_old) * p;        	 	// calculate the new search direction
-					rs_old = rs_new;                           	// update the old residual
+					// 	// previous left reflection
+					// }
+					// if (_converged != nullptr)
+					// 	*_converged = false;
+					return x;
 				}
-				return true;
+
+			};
+
+			// #################################################################################################################################################
+
+			enum class Type {
+				ARMA,
+				ConjugateGradient,
+				MINRES_QLP, 
+				PseudoInverse,
+				Direct
+			};
+			
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+
+
+			template <typename _T1>
+			inline arma::Col<_T1> solve(Type _type,
+										const arma::Mat<_T1>& _DeltaO,
+										const arma::Mat<_T1>& _DeltaOConjT,
+										const arma::Col<_T1>& _F,
+										arma::Col<_T1>* _x0										= nullptr,
+										Preconditioners::Preconditioner<_T1, true>* _preconditioner = nullptr,
+										double _eps 											= 1.0e-6,
+										size_t _max_iter 										= 1000,
+										bool* _converged 										= nullptr, 
+										double _reg 											= 0.0)
+			{
+				switch (_type) 
+				{
+				case Type::ARMA:
+				{
+					arma::Mat<_T1> _S 	= 	_DeltaOConjT * _DeltaO;
+					_S.diag() 			+= 	_reg;
+					return arma::solve(_S, _F);
+				}
+				case Type::ConjugateGradient:
+					return CG::conjugate_gradient<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+				case Type::MINRES_QLP:
+					return MINRES_QLP::minres_qlp<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+				case Type::PseudoInverse:
+				{
+					arma::Mat<_T1> _S 	= 	_DeltaOConjT * _DeltaO;
+					_S.diag() 			+= 	_reg;
+					return arma::pinv(_S, _eps) * _DeltaOConjT * _F;
+				}
+				case Type::Direct:
+				{
+					arma::Mat<_T1> _S 	= 	_DeltaOConjT * _DeltaO;
+					_S.diag() 			+= 	_reg;
+					return arma::inv(_S) * _F;
+				}
+				default:
+					return CG::conjugate_gradient<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+				}
 			}
+
+			template <typename _T1>
+			inline arma::Col<_T1> solve(int _type,
+										const arma::Mat<_T1>& _DeltaO,
+										const arma::Mat<_T1>& _DeltaOConjT,
+										const arma::Col<_T1>& _F,
+										arma::Col<_T1>* _x0										= nullptr,
+										Preconditioners::Preconditioner<_T1, true>* _preconditioner = nullptr,
+										double _eps 											= 1.0e-6,
+										size_t _max_iter 										= 1000,
+										bool* _converged 										= nullptr, 
+										double _reg 											= 0.0) 
+			{
+				return solve<_T1>(static_cast<Type>(_type), _DeltaO, _DeltaOConjT, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+			}
+
+			template <typename _T1>
+			inline arma::Col<_T1> solve(Type _type,
+										const arma::Mat<_T1>& _DeltaO,
+										const arma::Mat<_T1>& _DeltaOConjT,
+										const arma::Col<_T1>& _F,
+										arma::Col<_T1>* _x0										= nullptr,
+										double _eps 											= 1.0e-6,
+										size_t _max_iter 										= 1000,
+										bool* _converged 										= nullptr, 
+										double _reg 											= 0.0)
+			{
+				switch (_type) 
+				{
+				case Type::ARMA:
+				{
+					arma::Mat<_T1> _S 	= 	_DeltaOConjT * _DeltaO;
+					_S.diag() 			+= 	_reg;
+					return arma::solve(_S, _F);
+				}
+				case Type::ConjugateGradient:
+					return CG::conjugate_gradient<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _eps, _max_iter, _converged, _reg);
+				case Type::MINRES_QLP:
+					return MINRES_QLP::minres_qlp<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _eps, _max_iter, _converged, _reg);
+				case Type::PseudoInverse:
+				{
+					arma::Mat<_T1> _S 	= 	_DeltaOConjT * _DeltaO;
+					_S.diag() 			+= 	_reg;
+					return arma::pinv(_S, _eps) * _DeltaOConjT * _F;
+				}
+				case Type::Direct:
+				{
+					arma::Mat<_T1> _S 	= 	_DeltaOConjT * _DeltaO;
+					_S.diag() 			+= 	_reg;
+					return arma::inv(_S) * _F;
+				}
+				default:
+					return CG::conjugate_gradient<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _eps, _max_iter, _converged, _reg);
+				}
+			}
+			
+			template <typename _T1>
+			inline arma::Col<_T1> solve(int _type,
+										const arma::Mat<_T1>& _DeltaO,
+										const arma::Mat<_T1>& _DeltaOConjT,
+										const arma::Col<_T1>& _F,
+										arma::Col<_T1>* _x0										= nullptr,
+										double _eps 											= 1.0e-6,
+										size_t _max_iter 										= 1000,
+										bool* _converged 										= nullptr, 
+										double _reg 											= 0.0)
+			{
+				return solve<_T1>(static_cast<Type>(_type), _DeltaO, _DeltaOConjT, _F, _x0, _eps, _max_iter, _converged, _reg);
+			}
+
+			// #################################################################################################################################################
+
+			inline std::string name(Type _type)
+			{
+				switch (_type) 
+				{
+				case Type::ARMA:
+					return "ARMA";
+				case Type::ConjugateGradient:
+					return "Conjugate Gradient";
+				case Type::MINRES_QLP:
+					return "MINRES_QLP";
+				case Type::PseudoInverse:
+					return "Pseudo Inverse";
+				case Type::Direct:
+					return "Direct";
+				default:
+					return "Conjugate Gradient";
+				}
+			}
+
+			inline std::string name(int _type)
+			{
+				return name(static_cast<Type>(_type));
+			} 
+
+			// #################################################################################################################################################
+		};
+		
+		// #################################################################################################################################################
+
+		namespace Symmetric
+		{	
+			// #################################################################################################################################################
+
+			template <typename _T>
+			inline arma::Col<_T> matrixMultiplication(const arma::Mat<_T>& A, const arma::Col<_T>& x, const double _reg = 0.0)
+			{
+				arma::Col<_T> _intermediate = A * x;
+				if (_reg > 0.0)
+					return A.t() * _intermediate + _reg * x;
+				return A.t() * _intermediate;
+			}
+			
+			// #################################################################################################################################################
+
+			template <typename _T>
+			inline arma::Col<_T> solve_arma(const arma::Mat<_T>& A, 
+											const arma::Col<_T>& b)
+			{
+				return arma::solve(A, b, arma::solve_opts::likely_sympd);
+			}
+			
+			// #################################################################################################################################################
+
+			namespace CG
+			{
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+
+				template <typename _T>
+				inline arma::Col<_T> conjugate_gradient(const arma::Mat<_T>& _A,
+														const arma::Col<_T>& _F,
+														arma::Col<_T>* _x0										= nullptr,
+														Preconditioners::Preconditioner<_T>* _preconditioner 	= nullptr,
+														double _eps 											= 1.0e-6,
+														size_t _max_iter 										= 1000,
+														bool* _converged 										= nullptr, 
+														double _reg 											= 0.0)
+				{
+					if (_preconditioner == nullptr)
+						return conjugate_gradient<_T>(_A, _F, _x0, _eps, _max_iter, _converged, _reg);
+
+					// set the initial values for the solver
+					arma::Col<_T> x 	= (_x0 == nullptr) ? arma::Col<_T>(_F.n_elem, arma::fill::zeros) : *_x0;
+					arma::Col<_T> r 	= _F - matrixMultiplication(_A, x, _reg);
+					arma::Col<_T> z 	= _preconditioner->apply(r);
+					arma::Col<_T> p 	= z;
+					arma::Col<_T> Ap;		// matrix-vector multiplication result
+
+					_T rs_old 			= arma::cdot(r, z);
+					_T initial_rs		= std::abs(rs_old);
+
+					// iterate until convergence
+					for (size_t i = 0; i < _max_iter; ++i)
+					{
+						Ap 					= matrixMultiplication(_A, p, _reg);
+						_T alpha 			= rs_old / arma::cdot(p, Ap);
+						x 					+= alpha * p;
+						r 					-= alpha * Ap;
+
+						// Check for convergence
+						if (std::abs(arma::cdot(r, r)) < _eps) {
+							if (_converged != nullptr)
+								*_converged = true;
+							return x;
+						}
+						z 					= _preconditioner->apply(r);
+						_T rs_new 			= arma::cdot(r, z);
+						p 					= z + (rs_new / rs_old) * p;
+						rs_old 				= rs_new;
+					}
+
+					std::cerr << "\t\t\tConjugate gradient solver did not converge." << std::endl;
+					if (_converged != nullptr)
+						*_converged = false;
+					return x;
+				}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+
+				// conjugate gradient solver for symmetric matrices
+				template <typename _T>
+				inline arma::Col<_T> conjugate_gradient(const arma::Mat<_T>& _A,
+														const arma::Col<_T>& _F,
+														arma::Col<_T>* _x0			= nullptr,
+														double _eps 				= 1.0e-6,
+														size_t _max_iter 			= 1000,
+														bool* _converged 			= nullptr, 
+														double _reg 				= 0.0)
+				{
+					// set the initial values for the solver
+					arma::Col<_T> x 	= (_x0 == nullptr) ? arma::Col<_T>(_F.n_elem, arma::fill::zeros) : *_x0;
+					arma::Col<_T> r 	= _F - matrixMultiplication(_A, x, _reg);
+					_T rs_old 			= arma::cdot(r, r);
+
+					// check for convergence already
+					if (std::abs(rs_old) < _eps) {
+						if (_converged != nullptr)
+							*_converged = true;
+						return x;
+					}
+
+					// create the search direction vector
+					arma::Col<_T> p 	= r;
+					arma::Col<_T> Ap;		// matrix-vector multiplication result
+
+					// iterate until convergence
+					for (size_t i = 0; i < _max_iter; ++i)
+					{
+						Ap 					= matrixMultiplication(_A, p, _reg);
+						_T alpha 			= rs_old / arma::cdot(p, Ap);
+						x 					+= alpha * p;
+						r 					-= alpha * Ap;
+						_T rs_new 			= arma::cdot(r, r);
+
+						// Check for convergence
+						if (std::abs(rs_new) < _eps) {
+							if (_converged != nullptr)
+								*_converged = true;
+							return x;
+						}
+						
+						// update the search direction
+						p 					= r + (rs_new / rs_old) * p;
+						rs_old 				= rs_new;
+					}
+
+					std::cerr << "\t\t\tConjugate gradient solver did not converge." << std::endl;
+					if (_converged != nullptr)
+						*_converged = false;
+					return x;
+				}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+
+			};
+
+			// #################################################################################################################################################
 		};
 
 		// #################################################################################################################################################
 
+		namespace General 
+		{	
+			// #################################################################################################################################################
 
-		/*
-		* @brief Solve the linear system of equations Ax = b using the specified solver.
-		* @param A matrix
-		* @param b right-hand side vector
-		* @param x solution vector - output
-		* @param solver solver type
-		* @param _opts options for the solver - default for ARMA only
-		*/
-		template <typename _T>
-		inline bool solve(	const arma::Mat<_T>& A, 
-					const arma::Col<_T>& b, 
-					arma::Col<_T>& x, 
-					SolverType solver 	= SolverType::ARMA, 
-					auto _opts 			= arma::solve_opts::likely_sympd,
-					double eps 			= 1.0e-6)
-		{
-			switch (solver)
+			// ------------ ARMA SOLVER ------------
+			template <typename _T>
+			arma::Col<_T> solve_arma(	const arma::Mat<_T>& A, 
+										const arma::Col<_T>& b, 
+										auto _opts = arma::solve_opts::likely_sympd)
 			{
-			case SolverType::ARMA:
-				return solve_arma(A, b, x, _opts);
-				break;
-#ifdef MKL_SOLVER_AVAILABLE
-			case SolverType::MKL_CONJ_GRAD:
-				solve_mkl_conj_grad(A, b, x);
-				break;
-#endif
-			case SolverType::MY_CONJ_GRAD:
-				return Solvers::ConjugateGradient::solve_my_conj_grad(A, b, x, eps);
-				break;
-			default:
-				solve_arma(A, b, x, _opts);
-				break;
+				return arma::solve(A, b, _opts);
 			}
-			return false;
-		}
 
-		/*
-		* @brief Solve the linear system of equations Ax = b without explicitly forming the matrix A.
-		* @param b right-hand side vector
-		* @param _matvecmul function that performs the matrix-vector multiplication y = A*x
-		* @param x solution vector - output
-		*/
-		template <typename _T>
-		inline bool solve(const arma::Col<_T>& b,
-					std::function<void(const _T* x, _T* y, size_t n)> _matvecmul,
-					arma::Col<_T>& x,
-					SolverType solver = SolverType::ARMA,
-					double eps = 1.0e-6)
-		{
-			switch (solver)
-			{
-			case SolverType::ARMA:
-				throw std::invalid_argument("ARMA solver cannot be used without the matrix A.");
-				break;
-#ifdef MKL_SOLVER_AVAILABLE
-			case SolverType::MKL_CONJ_GRAD:
-				break;
-#endif
-			case SolverType::MY_CONJ_GRAD:
-				return Solvers::ConjugateGradient::solve_my_conj_grad(b, _matvecmul, x, eps);
-				break;
-			default:
-				break;
-			}
-			return false;
-		}
+			// #################################################################################################################################################
+		};
 
-		/*
-		* @brief Solve the linear system of equations Ax = b without explicitly forming the matrix A.
-		* @param b right-hand side vector
-		* @param _matvecmul function that performs the matrix-vector multiplication y = A*x
-		* @param x solution vector - output
-		* @param solver solver type
-		* @param eps tolerance for the solver
-		*/
-		template <typename _T>
-		inline bool solve(const arma::Col<_T>& b,
-					std::function<void(const arma::Col<_T>& x, arma::Col<_T>& y, size_t n)> _matvecmul,
-					arma::Col<_T>& x,
-					SolverType solver = SolverType::ARMA,
-					double eps = 1.0e-6)
-		{
-			switch (solver)
-			{
-			case SolverType::ARMA:
-				throw std::invalid_argument("ARMA solver cannot be used without the matrix A.");
-				break;
-#ifdef MKL_SOLVER_AVAILABLE
-			case SolverType::MKL_CONJ_GRAD:
-				break;
-#endif
-			case SolverType::MY_CONJ_GRAD:
-				return Solvers::ConjugateGradient::solve_my_conj_grad(b, _matvecmul, x, eps);
-				break;
-			default:
-				break;			
-			}
-			return false;
-		}
+		// #################################################################################################################################################
 
-		// ---------- PREALLOCATED MEMORY ----------
-
-
+		
 	};
 
 
