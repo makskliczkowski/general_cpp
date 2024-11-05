@@ -42,7 +42,7 @@
 * @param val value to be checked
 * @return sign of a variable
 */
-template <typename T1, typename T2>
+template <typename T1, typename T2 = T1>
 inline T1 sgn(T2 val) {
 	return (T2(0) < val) - (val < T2(0));
 }
