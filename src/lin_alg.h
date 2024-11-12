@@ -348,6 +348,71 @@ namespace algebra
 	template <>
 	inline auto imag(double x)														-> double	{ return 0.0; };
 	
+	template <typename _T>
+	inline auto norm(_T x)															-> double	{ return std::norm(x); };
+	template <>
+	inline auto norm(double x)														-> double	{ return x * x; };
+	template <typename _T, typename ... _Ts>
+	inline auto norm(_T x, _Ts... y)												-> double	{ return algebra::norm(x) + norm(y...); };
+	template <typename ..._Ts>
+	inline auto norm(_Ts... y)														-> double	{ return std::sqrt(algebra::norm(y...)); };
+
+	template <typename _T>
+	inline auto max(_T x)															-> double	{ return x; };
+	template <>
+	inline auto max(std::complex<double> x)											-> double 	{ return std::abs(x); };
+	template <typename _T>
+	inline auto max(_T x, _T y)														-> double	{ return std::max(x, y); };
+	template <>
+	inline auto max(std::complex<double> x, std::complex<double> y)					-> double 	{ return std::max(std::abs(x), std::abs(y)); };
+	template <typename _T, typename ... _Ts>
+	inline auto max(_T x, _Ts... y)													-> double	{ return algebra::max(x, algebra::max(y...)); };
+	template <typename ..._Ts>
+	inline auto max(_Ts... y)														-> double	{ return algebra::max(y...); };
+
+	template <typename _T>
+	inline auto min(_T x)															-> double	{ return x; };
+	template <>
+	inline auto min(std::complex<double> x)											-> double 	{ return std::abs(x); };
+	template <typename _T>
+	inline auto min(_T x, _T y)														-> double	{ return std::min(x, y); };
+	template <>
+	inline auto min(std::complex<double> x, std::complex<double> y)					-> double 	{ return std::min(std::abs(x), std::abs(y)); };
+	template <typename _T, typename ... _Ts>
+	inline auto min(_T x, _Ts... y)													-> double	{ return algebra::min(x, algebra::min(y...)); };
+	template <typename ..._Ts>
+	inline auto min(_Ts... y)														-> double	{ return algebra::min(y...); };
+
+	template <typename _T>
+	inline bool gr(_T x, _T y)														{ return x > y; };
+	template <>
+	inline bool gr(std::complex<double> x, std::complex<double> y)					{ return std::abs(x) > std::abs(y); };
+
+	template <typename _T>
+	inline bool ls(_T x, _T y)														{ return x < y; };
+	template <>
+	inline bool ls(std::complex<double> x, std::complex<double> y)					{ return std::abs(x) < std::abs(y); };
+
+	template <typename _T>
+	inline bool eq(_T x, _T y)														{ return x == y; };
+	template <>
+	inline bool eq(std::complex<double> x, std::complex<double> y)					{ return std::abs(x - y) < 1e-10; };
+	
+	template <typename _T>
+	inline bool neq(_T x, _T y)														{ return x != y; };
+	template <>
+	inline bool neq(std::complex<double> x, std::complex<double> y)					{ return std::abs(x - y) > 1e-10; };
+
+	template <typename _T>
+	inline bool geq(_T x, _T y)														{ return x >= y; };
+	template <>
+	inline bool geq(std::complex<double> x, std::complex<double> y)					{ return std::abs(x) >= std::abs(y); };
+
+	template <typename _T>
+	inline bool leq(_T x, _T y)														{ return x <= y; };
+	template <>
+	inline bool leq(std::complex<double> x, std::complex<double> y)					{ return std::abs(x) <= std::abs(y); };
+
 	// ###################################################################### CAST #####################################################################
 
 	template <typename _T, typename _Tin>
@@ -385,6 +450,8 @@ namespace algebra
 	inline auto cast(const arma::SpMat<std::complex<double>>& x)					-> arma::SpMat<_T>					{ return x; };
 	template <>
 	inline auto cast<double>(const arma::SpMat<std::complex<double>>& x)			-> arma::SpMat<double>				{ return arma::real(x); };
+
+
 
 	// #################################################################################################################################################
 	
@@ -522,13 +589,11 @@ namespace algebra
 	// *************************************************************************************************************************************************
 	namespace Solvers
 	{	
-		// !TODO:
-		// - Implement the MKL Conjugate Gradient solver
-		// - Implement the ARMA solver for the matrix-vector multiplication
-		// - Add various methods for sparse matrices, non-symmetric matrices, etc.
-		// - Add the option to use the solver without explicitly forming the matrix A
-		// - Add checkers for the matrix properties (symmetric, positive definite, etc.)
-	
+		// #################################################################################################################################################
+
+		template <typename _T1 = double>
+		void sym_ortho(_T1 a, _T1 b, _T1& c, _T1& s, _T1& r);
+
 		// #################################################################################################################################################
 
 		namespace Preconditioners {
@@ -562,7 +627,7 @@ namespace algebra
 				// -----------------------------------------------------------------------------------------------------------------------------------------
 
 				// set the preconditioner
-				virtual void set(bool _isGram, double _sigma = 0.0) { this->isGram_ = _isGram; this->sigma_ = _sigma; }
+				void set(bool _isGram, double _sigma = 0.0) { this->isGram_ = _isGram; this->sigma_ = _sigma; }
 				virtual void set(const arma::Mat<T>& A, bool isGram = true, double _sigma = 0.0) = 0;		// set the preconditioner
 				virtual void set(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0) = 0;	// set the preconditioner
 
@@ -795,6 +860,57 @@ namespace algebra
 
 			// #################################################################################################################################################
 
+			/*
+			* @brief Binormalization preconditioner for the conjugate gradient method. This preconditioner is used for symmetric positive definite matrices.
+			* Scale the matrix with a series of k diagonal matrices D1, D2, ..., Dk -> DAD = D_k ... D_2 D_1 A D_1 D_2 ... D_k
+			*/
+			template <typename T, bool _T = true>
+			class BinormalizationPreconditioner : public Preconditioner<T, _T> {
+			private:
+				bool success_ 	= false;
+			public:
+				BinormalizationPreconditioner()
+					: Preconditioner<T, _T>()
+				{};			
+				/**
+				* @brief Constructor to initialize the preconditioner with a given matrix.
+				* @param A The matrix to decompose.
+				* @param isGram Flag indicating if the matrix is a Gram matrix.
+				*/
+				BinormalizationPreconditioner(const arma::Mat<T>& A, bool isGram = true, double _sigma = 0.0)
+					: Preconditioner<T, _T>(A, isGram, _sigma)
+				{}
+
+				BinormalizationPreconditioner(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0)
+					: Preconditioner<T, _T>(Sp, S, _sigma)
+				{}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+
+				/**
+				* @brief Set the preconditioner with a given matrix.
+				* @param A The matrix to decompose.
+				* @param isGram Flag indicating if the matrix is a Gram matrix.
+				* @param _sigma Regularization parameter (default is 0.0). This is added to the diagonal of the matrix before decomposition.
+				*/
+				void set(const arma::Mat<T>& A, bool isGram = true, double _sigma = 0.0) override
+				{
+					// !TODO
+				}
+
+				/**
+				* @brief Set the preconditioner with a given matrix.
+				* @param Sp The matrix to decompose.
+				* @param S The matrix to decompose.
+				* @param _sigma Regularization parameter (default is 0.0). This is added to the
+				* diagonal of the matrix before decomposition.
+				*/
+				void set(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0) override
+				{
+					// !TODO
+				}
+			};
+			// #################################################################################################################################################
 			namespace Symmetric {
 				enum class PreconditionerType {
 					Identity,
@@ -959,206 +1075,17 @@ namespace algebra
 			namespace CG 
 			{
 				
-				/**
-				* @brief Conjugate gradient solver for the Fisher matrix inversion. This method is used whenever the matrix can be 
-				* decomposed into the form S = \Delta O^* \Delta O, where \Delta O is the derivative of the observable with respect to the parameters. 
-				* The matrix S is symmetric and positive definite, so the conjugate gradient method can be used.
-				* @equation S_{ij} = <\Delta O^*_i \Delta O_j> / N 
-				* @param _DeltaO The matrix \Delta O.
-				* @param _DeltaOConjT The matrix \Delta O^+.
-				* @param _F The right-hand side vector.
-				* @param _x0 The initial guess for the solution.
-				* @param _eps The convergence criterion.
-				* @param _max_iter The maximum number of iterations.
-				* @param _converged The flag indicating if the solver converged.
-				* @param _reg The regularization parameter. (A + \lambda I) x \approx b
-				* @return The solution vector x.
-				*/
+
 				template<typename _T1>
-				inline arma::Col<_T1> conjugate_gradient(const arma::Mat<_T1>& _DeltaO,
-										const arma::Mat<_T1>& _DeltaOConjT,
-										const arma::Col<_T1>& _F,
-										arma::Col<_T1>* _x0,
-										double _eps 				= 1.0e-6,
-										size_t _max_iter 			= 1000,
-										bool* _converged 			= nullptr, 
-										double _reg 				= 0.0
-										)
-				{
-					// set the initial values for the solver
-					arma::Col<_T1> x 	= (_x0 == nullptr) ? arma::Col<_T1>(_F.n_elem, arma::fill::zeros) : *_x0;
-					arma::Col<_T1> r 	= _F - matrixFreeMultiplication(_DeltaO, _DeltaOConjT, x, _reg);
-					_T1 rs_old 			= arma::cdot(r, r);
+				arma::Col<_T1> conjugate_gradient(SOLVE_FISHER_ARG_TYPESD(_T1));
 
-					// check for convergence already
-					if (std::abs(rs_old) < _eps) {
-						if (_converged != nullptr)
-							*_converged = true;
-						return x;
-					}
-
-					// create the search direction vector
-					arma::Col<_T1> p 	= r;
-					arma::Col<_T1> Ap;		// matrix-vector multiplication result
-
-					// iterate until convergence
-					for (size_t i = 0; i < _max_iter; ++i)
-					{
-						Ap 					= matrixFreeMultiplication(_DeltaO, _DeltaOConjT, p, _reg);
-						_T1 alpha 			= rs_old / arma::cdot(p, Ap);
-						x 					+= alpha * p;
-						r 					-= alpha * Ap;
-						_T1 rs_new 			= arma::cdot(r, r);
-
-						// Check for convergence
-						if (std::abs(rs_new) < _eps) {
-							if (_converged != nullptr)
-								*_converged = true;
-							return x;
-						}
-						
-						// update the search direction
-						p 					= r + (rs_new / rs_old) * p;
-						rs_old 				= rs_new;
-					}
-
-					std::cerr << "\t\t\tConjugate gradient solver did not converge." << std::endl;
-					if (_converged != nullptr)
-						*_converged = false;
-					return x;
-				}
-				// -----------------------------------------------------------------------------------------------------------------------------------------
-
-				/*
-				* @brief Conjugate gradient solver for the Fisher matrix inversion. This method is used whenever the matrix can be
-				* decomposed into the form S = \Delta O^* \Delta O, where \Delta O is the derivative of the observable with respect to the parameters.
-				* The matrix S is symmetric and positive definite, so the conjugate gradient method can be used.
-				* @equation S_{ij} = <\Delta O^*_i \Delta O_j> / N
-				* @param _DeltaO The matrix \Delta O.
-				* @param _DeltaOConjT The matrix \Delta O^+.
-				* @param _F The right-hand side vector.
-				* @param _x0 The initial guess for the solution.
-				* @param _preconditioner The preconditioner for the conjugate gradient method.
-				* @param _eps The convergence criterion.
-				* @param _max_iter The maximum number of iterations.
-				* @param _converged The flag indicating if the solver converged.
-				* @param _reg The regularization parameter. (A + \lambda I) x \approx b
-				* @return The solution vector x.
-				*/
 				template<typename _T1>
-				inline arma::Col<_T1> conjugate_gradient(const arma::Mat<_T1>& _DeltaO,
-														const arma::Mat<_T1>& _DeltaOConjT,
-														const arma::Col<_T1>& _F, 
-														arma::Col<_T1>* _x0,
-														Preconditioners::Preconditioner<_T1, true>* _preconditioner = nullptr,
-														double _eps 			= 1.0e-6,
-														size_t _max_iter 		= 1000,
-														bool* _converged 		= nullptr,
-														double _reg 			= 0.0
-														)
-				{
-					if (_preconditioner == nullptr)
-						return conjugate_gradient<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _eps, _max_iter, _converged, _reg);
-
-					// set the initial values for the solver
-					arma::Col<_T1> x 	= (_x0 == nullptr) ? arma::Col<_T1>(_F.n_elem, arma::fill::zeros) : *_x0;
-					arma::Col<_T1> r 	= _F - matrixFreeMultiplication(_DeltaO, _DeltaOConjT, x, _reg);	// calculate the first residual
-					arma::Col<_T1> z 	= _preconditioner->apply(r);										// apply the preconditioner to Mz = r
-					arma::Col<_T1> p 	= z;																// set the search direction
-					arma::Col<_T1> Ap;																		// matrix-vector multiplication result
-
-					_T1 rs_old 			= arma::cdot(r, z);													// the initial norm of the residual
-					// _T1 initial_rs		= std::abs(rs_old);  												// For relative tolerance check
-					
-					// iterate until convergence
-					for (size_t i = 0; i < _max_iter; ++i)
-					{
-						Ap 						= matrixFreeMultiplication(_DeltaO, _DeltaOConjT, p, _reg);
-						_T1 alpha 				= rs_old / arma::cdot(p, Ap);
-						x 						+= alpha * p;
-						r 						-= alpha * Ap;
-
-						// Check for convergence
-						if (std::abs(arma::cdot(r, r)) < _eps) {
-							if (_converged != nullptr)
-								*_converged = true;
-							return x;
-						}
-						z 						= _preconditioner->apply(r); 								// update the preconditioner
-						_T1 rs_new 				= arma::cdot(r, z);
-						p 						= z + (rs_new / rs_old) * p;
-						rs_old 					= rs_new;
-					}
-
-					std::cerr << "\t\t\tConjugate gradient solver did not converge." << std::endl;
-					if (_converged != nullptr)
-						*_converged = false;
-					return x;
-				}
+				arma::Col<_T1> conjugate_gradient(SOLVE_FISHER_ARG_TYPESD_PRECONDITIONER(_T1));
 			};
-
 
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 			namespace MINRES_QLP 
 			{	
-
-
-				// #################################################################################################################################################
-
-				/**
-				* @brief  The reflectors from Algorithm 1 in Choi and Saunders (2005) for real a and b, which is a stable form for computing
-				r = √a2 + b2 ≥ 0, c = a/r , and s = b/r 
-				* @note Is a Givens rotation matrix
-				* @param a first value
-				* @param b second value
-				* @param c = a/r
-				* @param s = b/r
-				* @param r = √a2 + b2
-				*/
-				template <typename _T1>
-				inline void sym_ortho(_T1 a, _T1 b, _T1& c, _T1& s, _T1& r)
-				{
-					if (b == 0)
-					{
-						if (a == 0)
-							c = 1;
-						else 
-							c = sgn<_T1>(a);
-						s = 0;
-						r = std::abs(a);
-					}
-					else if (a == 0)
-					{
-						c = 0;
-						s = sgn<_T1>(b);
-						r = std::abs(b);
-					}
-					else if (std::abs(b) > std::abs(a))
-					{
-						auto tau= a / b;
-						s 		= sgn<_T1>(b) / std::sqrt(1 + tau * tau);
-						c 		= s * tau;
-						r 		= b / s; // computationally better than d = a / c since | c | <= | s |
-					}
-					else 
-					{
-						auto tau= b / a;
-						c 		= sgn<_T1>(a) / std::sqrt(1 + tau * tau);
-						s 		= c * tau;
-						r 		= a / c; // computationally better than d = b / s since | s | <= | c |
-					}
-				}
-
-				template <>
-				inline void sym_ortho<std::complex<double>>(std::complex<double> a, std::complex<double> b, std::complex<double>& c, std::complex<double>& s, std::complex<double>& r)
-				{
-					double _c2, _s2, _r2;
-					sym_ortho<double>(algebra::real(a), algebra::real(b), _c2, _s2, _r2);
-					c = std::complex<double>(_c2, 0);
-					s = std::complex<double>(_s2, 0);
-					r = std::complex<double>(_r2, 0);
-				}
-
 				// #################################################################################################################################################
 
 				template <typename _T1>
@@ -1343,7 +1270,6 @@ namespace algebra
 		};
 
 		// #################################################################################################################################################
-
 		namespace General 
 		{	
 			// #################################################################################################################################################
@@ -1362,7 +1288,43 @@ namespace algebra
 
 		// #################################################################################################################################################
 
-		
+		// METHODS
+
+		/**
+		* % MINRES-QLP: Minimum Residual QLP Method - minimal leng solution to symmetric (possibly singular) Ax = b or min ||Ax - b||
+		* ---------
+		* !TODO 
+		*	- Implement the MINRES-QLP method for general symmetric matrices A (possibly singular)
+		*	- Implement the MINRES-QLP method for symmetric positive definite matrices A (not singular)
+		*  - Implement convergence criterion return rather than finished iterations
+		* !CURRENTLY
+		* 	- The method is implemented for Fisher matrices, which are symmetric positive definite matrices constructed as S = \Delta O^* \Delta O
+		* 	X = minres_qlp(deltaO, deltaO^+, F, x0, eps, max_iter, converged, reg) solves the system Sx = F or the minimization problem ||Sx - F||_2
+		*  	The N_samples x N_params matrix deltaO is the derivative of the observable with respect to the parameters (rows are samples, columns are parameters)
+		*  	The N_params x N_params matrix deltaO^+ is the conjugate transpose of deltaO (rows are parameters, columns are samples)
+		*      The method allows for specification of the initial guess x0, the convergence criterion eps, the maximum number of iterations max_iter, the regularization parameter reg 
+		*      such that the system to solve is (S + reg*I)x = F or the minimization problem ||(S + reg*I)x - F||_2
+		* @ see MINRES_QLP::minres_qlp in upper part of this namespace - inside other namespaces.
+		* 		Additionally, in the method MAXXNORM and ACONDLIM parameters are specified on Norm of X and Condition number of A, respectively.
+		* @note The method shall be possible to solve the complex and real systems.
+		* @note in minres_qlp one can also specify the preconditioner for the system to solve such that the system to solve is M^{-1}Sx = M^{-1}F or the minimization problem ||M^{-1}Sx - M^{-1}F||_2
+		* !CONVERGENCE CRITERION:
+		* 		- -1 	(beta_k = 0) 		F and X are eigenvectors of (A - sigma*I) 
+		* 		- 0 	(beta_km1  = 0) 	F = 0, X = 0
+		* 		- 1     X solves the system to the required tolerance RELRES = RNORM / (ANORM * XNORM + BNORM) <= RTOL, where R = B - (A - sigma*I)X and RNORM = ||R||_2
+		* 		- 2     X solves the system to the required tolerance RELRES = ARNORM / (ANORM * XNORM) <= RTOL,  where AR = (A - sigma*I)R and ARNORM = NORM(AR).
+		*      	- 3 	same as 1, but with RTOL = EPS
+		*      	- 4 	same as 2, but with RTOL = EPS
+		*      	- 5 	X converged to eigenvector of (A - sigma*I) 
+		*      	- 6     XNORM exceeded MAXXNORM
+		*      	- 7     ACOND exceeded ACONDLIM
+		*      	- 8 	MAXITER reached
+		* 		- 9 	The sytem appears to be singular or badly scaled
+		* @ref Sou-Cheng T. Choi and Michael A. Saunders, ALGORITHM: MINRES-QLP for Singular Symmetric and Hermitian Linear Equations and Least-Squares Problems, to appear in ACM Transactions on Mathematical Software.
+		* @credit The code was based on the published algorithm and the MATLAB implementation by Sou-Cheng: https://www.mathworks.com/matlabcentral/fileexchange/42419-minres-qlp and translated to C++ 
+		* with some modifications and related changes.
+		// ---------
+		*/
 	};
 
 

@@ -44,7 +44,37 @@
 */
 template <typename T1, typename T2 = T1>
 inline T1 sgn(T2 val) {
-	return (T2(0) < val) - (val < T2(0));
+	if (val == T2(0.0)) 
+		return T1(0.0);
+	return (T2(0) < _T2(val)) - (_T2(val) < T2(0));
+}
+
+template <>
+inline double sgn(double val) {
+	if (val == 0.0) 
+		return 0.0;
+	return (0.0 < val) - (val < 0.0);
+}
+
+template <> 
+inline std::complex<double> sgn(std::complex<double> val) {
+	if (val == std::complex<double>(0.0)) 
+		return std::complex<double>(0.0, 0.0);
+	return val / std::abs(val);
+}
+
+template <> 
+inline std::complex<float> sgn(std::complex<float> val) {
+	if (val == std::complex<float>(0.0)) 
+		return std::complex<float>(0.0, 0.0);
+	return val / std::abs(val);
+}
+
+template <> 
+inline std::complex<long double> sgn(std::complex<long double> val) {
+	if (val == std::complex<long double>(0.0)) 
+		return std::complex<long double>(0.0, 0.0);
+	return val / std::abs(val);
 }
 
 // #################################################################

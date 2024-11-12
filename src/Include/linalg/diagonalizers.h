@@ -236,16 +236,16 @@ inline void LanczosMethod<_T>::diagS(
 	_psi0						= _psi0 / (_T)arma::norm(_psi0);
 
 	// add vector to matrix at zeroth position
-	_krylovVec.col(0)			= _psi0;
+	_krylovVec.col(0)			= _psi0;							// first Kryolov vector V_0 - M^0 * psi_0
 
 	// start with first step of Hamiltonian multiplication
-	arma::Col<_T> carryVec0		= _M * _psi0;
-	_T ai						= arma::cdot(_psi0, carryVec0);
+	arma::Col<_T> carryVec0		= _M * _psi0;						// first carry vector for Lanczos' power method
+	_T ai						= arma::cdot(_psi0, carryVec0);		// first coefficient - diagonal element
 	_T bi						= 0.0;
 
 	// take away the parallel part and update the basis vector
 	arma::Col<_T> carryVec1		= carryVec0 - ai * _psi0;
-	_T bip1						= (_T)arma::norm(carryVec1);
+	_T bip1						= (_T)arma::norm(carryVec1);		// second coefficient - off-diagonal element - norm of the vector
 	_psiMat(0, 0)				= ai;
 	_psiMat(0, 1)				= bip1;
 
