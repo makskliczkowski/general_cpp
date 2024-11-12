@@ -326,102 +326,6 @@ public:
 
 namespace algebra 
 {
-
-	// ################################################################## CONJUGATE #####################################################################
-
-	template <typename _T>
-	inline auto conjugate(_T x)														-> _T		{ return std::conj(x); };
-	template <>
-	inline auto conjugate(double x)													-> double	{ return x; };
-	template <>
-	inline auto conjugate(float x)													-> float	{ return x; };
-	template <>
-	inline auto conjugate(int x)													-> int		{ return x; };
-
-	template <typename _T>
-	inline auto real(_T x)															-> double	{ return std::real(x); };
-	template <>
-	inline auto real(double x)														-> double	{ return x; };
-
-	template <typename _T>
-	inline auto imag(_T x)															-> double	{ return std::imag(x); };
-	template <>
-	inline auto imag(double x)														-> double	{ return 0.0; };
-	
-	template <typename _T>
-	inline auto norm(_T x)															-> double	{ return std::norm(x); };
-	template <>
-	inline auto norm(double x)														-> double	{ return x * x; };
-	template <typename _T, typename ... _Ts>
-	inline auto norm(_T x, _Ts... y)												-> double	{ return algebra::norm(x) + norm(y...); };
-	template <typename ..._Ts>
-	inline auto norm(_Ts... y)														-> double	{ return std::sqrt(algebra::norm(y...)); };
-
-	template <typename _T>
-	inline auto max(_T x)															-> double	{ return x; };
-	template <>
-	inline auto max(std::complex<double> x)											-> double 	{ return std::abs(x); };
-	template <typename _T>
-	inline auto max(_T x, _T y)														-> double	{ return std::max(x, y); };
-	template <>
-	inline auto max(std::complex<double> x, std::complex<double> y)					-> double 	{ return std::max(std::abs(x), std::abs(y)); };
-	template <typename _T, typename ... _Ts>
-	inline auto max(_T x, _Ts... y)													-> double	{ return algebra::max(x, algebra::max(y...)); };
-	template <typename ..._Ts>
-	inline auto max(_Ts... y)														-> double	{ return algebra::max(y...); };
-
-	template <typename _T>
-	inline auto min(_T x)															-> double	{ return x; };
-	template <>
-	inline auto min(std::complex<double> x)											-> double 	{ return std::abs(x); };
-	template <typename _T>
-	inline auto min(_T x, _T y)														-> double	{ return std::min(x, y); };
-	template <>
-	inline auto min(std::complex<double> x, std::complex<double> y)					-> double 	{ return std::min(std::abs(x), std::abs(y)); };
-	template <typename _T, typename ... _Ts>
-	inline auto min(_T x, _Ts... y)													-> double	{ return algebra::min(x, algebra::min(y...)); };
-	template <typename ..._Ts>
-	inline auto min(_Ts... y)														-> double	{ return algebra::min(y...); };
-
-	template <typename _T>
-	inline bool gr(_T x, _T y)														{ return x > y; };
-	template <>
-	inline bool gr(std::complex<double> x, std::complex<double> y)					{ return std::abs(x) > std::abs(y); };
-
-	template <typename _T>
-	inline bool ls(_T x, _T y)														{ return x < y; };
-	template <>
-	inline bool ls(std::complex<double> x, std::complex<double> y)					{ return std::abs(x) < std::abs(y); };
-
-	template <typename _T>
-	inline bool eq(_T x, _T y)														{ return x == y; };
-	template <>
-	inline bool eq(std::complex<double> x, std::complex<double> y)					{ return std::abs(x - y) < 1e-10; };
-	
-	template <typename _T>
-	inline bool neq(_T x, _T y)														{ return x != y; };
-	template <>
-	inline bool neq(std::complex<double> x, std::complex<double> y)					{ return std::abs(x - y) > 1e-10; };
-
-	template <typename _T>
-	inline bool geq(_T x, _T y)														{ return x >= y; };
-	template <>
-	inline bool geq(std::complex<double> x, std::complex<double> y)					{ return std::abs(x) >= std::abs(y); };
-
-	template <typename _T>
-	inline bool leq(_T x, _T y)														{ return x <= y; };
-	template <>
-	inline bool leq(std::complex<double> x, std::complex<double> y)					{ return std::abs(x) <= std::abs(y); };
-
-	// ###################################################################### CAST #####################################################################
-
-	template <typename _T, typename _Tin>
-	inline auto cast(_Tin x)														-> _T								{ return static_cast<_T>(x); };
-	template <typename _T>
-	inline auto cast(std::complex<double> x)										-> _T								{ return x; };
-	template <>
-	inline auto cast<double>(std::complex<double> x)								-> double							{ return std::real(x); };
-	
 	// Armadillo columns
 	template <typename _T>
 	inline auto cast(const arma::Col<double>& x)									-> arma::Col<_T>					{ return x; };
@@ -450,7 +354,6 @@ namespace algebra
 	inline auto cast(const arma::SpMat<std::complex<double>>& x)					-> arma::SpMat<_T>					{ return x; };
 	template <>
 	inline auto cast<double>(const arma::SpMat<std::complex<double>>& x)			-> arma::SpMat<double>				{ return arma::real(x); };
-
 
 
 	// #################################################################################################################################################
