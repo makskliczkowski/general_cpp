@@ -46,7 +46,7 @@ template <typename T1, typename T2 = T1>
 inline T1 sgn(T2 val) {
 	if (val == T2(0.0)) 
 		return T1(0.0);
-	return (T2(0) < _T2(val)) - (_T2(val) < T2(0));
+	return (T2(0) < T2(val)) - (T2(val) < T2(0));
 }
 
 template <>

@@ -2,6 +2,7 @@
 #include "../../src/Include/maths.h"
 #include "../../src/Include/str.h"
 #include "../../src/flog.h"
+#include "armadillo"
 #include <cassert>
 #include <complex>
 #include <stdexcept>
@@ -118,38 +119,88 @@ namespace algebra
 
         // the template specializations
         template void sym_ortho<double>(double a, double b, double& c, double& s, double& r);
-        template void sym_ortho<long double>(long double a, long double b, long double& c, long double& s, long double& r);
-        template void sym_ortho<float>(float a, float b, float& c, float& s, float& r);
-        template void sym_ortho<std::complex<long double>>(std::complex<long double> a, std::complex<long double> b, std::complex<long double>& c, std::complex<long double>& s, std::complex<long double>& r);
-        template void sym_ortho<std::complex<float>>(std::complex<float> a, std::complex<float> b, std::complex<float>& c, std::complex<float>& s, std::complex<float>& r);
-
         // #################################################################################################################################################
-    };
+    
+		namespace Preconditioners
+		{
+			// template specializations of the preconditioner class
+			template class Preconditioner<double, true>;
+			template class Preconditioner<std::complex<double>, true>;
+			template class Preconditioner<double, false>;
+			template class Preconditioner<std::complex<double>, false>;
+		};
+	};
 };
 
 // #################################################################################################################################################
 
-// FOR THE FISHER MATRIX SOLVERS - SYMMETRIC MATRICES WITH FORM S = A^T * A, given A
+// FOR GENERAL TYPES 
 
 // #################################################################################################################################################
 
 namespace algebra
-{   
-    namespace Solvers
-    {
-        namespace FisherMatrix
-        {
-            namespace CG
-            {
-                // #################################################################################################################################################
+{
+	namespace Solvers
+	{
+		namespace General
+		{
+			/**
+			* @brief Matrix-vector multiplication for the general case.
+			* @param _A The matrix A.
+			* @param _x The vector x.
+			* @param _reg The regularization parameter.
+			*/
+			template <typename _T>
+			arma::Col<_T> matrixFreeMultiplication(const arma::Mat<_T>& _A, const arma::Col<_T>& _x, const double _reg)
+			{
+				arma::Col <_T> _out = _A * _x;
+				if (_reg > 0.0)
+					return _out + _reg * _x;
+				else
+					return _out;
+			}
 
+			/**
+			* @brief Matrix-vector multiplication with a sparse matrix for the general case.
+			* @param _A The sparse matrix A.
+			* @param _x The vector x.
+			* @param _reg The regularization parameter.
+			*/
+			template <typename _T>
+			arma::Col<_T> matrixFreeMultiplication(const arma::SpMat<_T>& _A, const arma::Col<_T>& _x, const double _reg)
+			{
+				arma::Col <_T> _out = _A * _x;
+				if (_reg > 0.0)
+					return _out + _reg * _x;
+				else
+					return _out;
+			}
+
+			// template specializations
+			template arma::Col<double> matrixFreeMultiplication(const arma::Mat<double>& _A, const arma::Col<double>& _x, const double _reg);
+			template arma::Col<std::complex<double>> matrixFreeMultiplication(const arma::Mat<std::complex<double>>& _A, const arma::Col<std::complex<double>>& _x, const double _reg);
+			// sparse matrix
+			template arma::Col<double> matrixFreeMultiplication(const arma::SpMat<double>& _A, const arma::Col<double>& _x, const double _reg);
+			template arma::Col<std::complex<double>> matrixFreeMultiplication(const arma::SpMat<std::complex<double>>& _A, const arma::Col<std::complex<double>>& _x, const double _reg);
+			// #################################################################################################################################################
+		};
+	};
+};
+
+// *************************************************************************************************************************************************
+
+// #################################################################################################################################################
+
+// METHODS FOR GENERAL SOLVERS
+
+namespace algebra {
+	namespace Solvers {
+		namespace General {
+			// #################################################################################################################################################
+			namespace CG {
 				/**
-				* @brief Conjugate gradient solver for the Fisher matrix inversion. This method is used whenever the matrix can be 
-				* decomposed into the form S = \Delta O^* \Delta O, where \Delta O is the derivative of the observable with respect to the parameters. 
-				* The matrix S is symmetric and positive definite, so the conjugate gradient method can be used.
-				* @equation S_{ij} = <\Delta O^*_i \Delta O_j> / N 
-				* @param _DeltaO The matrix \Delta O.
-				* @param _DeltaOConjT The matrix \Delta O^+.
+				* @brief Conjugate gradient solver for the general case.
+				* @param _matrixFreeMultiplication The matrix-vector multiplication function. It is used to calculate the matrix-vector product Sx.
 				* @param _F The right-hand side vector.
 				* @param _x0 The initial guess for the solution.
 				* @param _eps The convergence criterion.
@@ -159,11 +210,11 @@ namespace algebra
 				* @return The solution vector x.
 				*/
                 template <typename _T1>
-                arma::Col<_T1> conjugate_gradient(SOLVE_FISHER_ARG_TYPES(_T1))
+                arma::Col<_T1> conjugate_gradient(SOLVE_MATMUL_ARG_TYPES(_T1))
 				{
 					// set the initial values for the solver
 					arma::Col<_T1> x 	= (_x0 == nullptr) ? arma::Col<_T1>(_F.n_elem, arma::fill::zeros) : *_x0;
-					arma::Col<_T1> r 	= _F - matrixFreeMultiplication(_DeltaO, _DeltaOConjT, x, _reg);
+					arma::Col<_T1> r 	= _F - _matrixFreeMultiplication(x, _reg);
 					_T1 rs_old 			= arma::cdot(r, r);
 
 					// check for convergence already
@@ -180,7 +231,7 @@ namespace algebra
 					// iterate until convergence
 					for (size_t i = 0; i < _max_iter; ++i)
 					{
-						Ap 					= matrixFreeMultiplication(_DeltaO, _DeltaOConjT, p, _reg);
+						Ap 					= _matrixFreeMultiplication(p, _reg);
 						_T1 alpha 			= rs_old / arma::cdot(p, Ap);
 						x 					+= alpha * p;
 						r 					-= alpha * Ap;
@@ -203,15 +254,8 @@ namespace algebra
 					return x;
 				}
 
-                // -----------------------------------------------------------------------------------------------------------------------------------------
-
-				/*
-				* @brief Conjugate gradient solver for the Fisher matrix inversion. This method is used whenever the matrix can be
-				* decomposed into the form S = \Delta O^* \Delta O, where \Delta O is the derivative of the observable with respect to the parameters.
-				* The matrix S is symmetric and positive definite, so the conjugate gradient method can be used.
-				* @equation S_{ij} = <\Delta O^*_i \Delta O_j> / N
-				* @param _DeltaO The matrix \Delta O.
-				* @param _DeltaOConjT The matrix \Delta O^+.
+				/**
+				* @brief Conjugate gradient solver for the general case with a preconditioner.
 				* @param _F The right-hand side vector.
 				* @param _x0 The initial guess for the solution.
 				* @param _preconditioner The preconditioner for the conjugate gradient method.
@@ -222,14 +266,14 @@ namespace algebra
 				* @return The solution vector x.
 				*/
 				template<typename _T1>
-				arma::Col<_T1> conjugate_gradient(SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(_T1))
+				arma::Col<_T1> conjugate_gradient(SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(_T1, true))
 				{
 					if (_preconditioner == nullptr)
-						return conjugate_gradient<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _eps, _max_iter, _converged, _reg);
+						return Solvers::General::CG::conjugate_gradient<_T1>(_matrixFreeMultiplication, _F, _x0, _eps, _max_iter, _converged, _reg);
 
 					// set the initial values for the solver
 					arma::Col<_T1> x 	= (_x0 == nullptr) ? arma::Col<_T1>(_F.n_elem, arma::fill::zeros) : *_x0;
-					arma::Col<_T1> r 	= _F - matrixFreeMultiplication(_DeltaO, _DeltaOConjT, x, _reg);	// calculate the first residual
+					arma::Col<_T1> r 	= _F - _matrixFreeMultiplication(x, _reg);	// calculate the first residual
 					arma::Col<_T1> z 	= _preconditioner->apply(r);										// apply the preconditioner to Mz = r
 					arma::Col<_T1> p 	= z;																// set the search direction
 					arma::Col<_T1> Ap;																		// matrix-vector multiplication result
@@ -240,7 +284,7 @@ namespace algebra
 					// iterate until convergence
 					for (size_t i = 0; i < _max_iter; ++i)
 					{
-						Ap 						= matrixFreeMultiplication(_DeltaO, _DeltaOConjT, p, _reg);
+						Ap 						= _matrixFreeMultiplication(p, _reg);
 						_T1 alpha 				= rs_old / arma::cdot(p, Ap);
 						x 						+= alpha * p;
 						r 						-= alpha * Ap;
@@ -266,25 +310,41 @@ namespace algebra
                 // #################################################################################################################################################
 
                 // define the template specializations
-                template arma::Col<double> conjugate_gradient(SOLVE_FISHER_ARG_TYPES(double));
-                template arma::Col<long double> conjugate_gradient(SOLVE_FISHER_ARG_TYPES(long double));
-                template arma::Col<float> conjugate_gradient(SOLVE_FISHER_ARG_TYPES(float));
-                template arma::Col<std::complex<double>> conjugate_gradient(SOLVE_FISHER_ARG_TYPES(std::complex<double>));
-                template arma::Col<std::complex<long double>> conjugate_gradient(SOLVE_FISHER_ARG_TYPES(std::complex<long double>));
-                template arma::Col<std::complex<float>> conjugate_gradient(SOLVE_FISHER_ARG_TYPES(std::complex<float>));
+                template arma::Col<double> conjugate_gradient(SOLVE_MATMUL_ARG_TYPES(double));
+                template arma::Col<std::complex<double>> conjugate_gradient(SOLVE_MATMUL_ARG_TYPES(std::complex<double>));
                 // with preconditioner
-                template arma::Col<double> conjugate_gradient(SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(double));
-                template arma::Col<long double> conjugate_gradient(SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(long double));
-                template arma::Col<float> conjugate_gradient(SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(float));
-                template arma::Col<std::complex<double>> conjugate_gradient(SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(std::complex<double>));
-                template arma::Col<std::complex<long double>> conjugate_gradient(SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(std::complex<long double>));
-                template arma::Col<std::complex<float>> conjugate_gradient(SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(std::complex<float>));
-                
-            };
+                template arma::Col<double> conjugate_gradient(SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(double, true));
+                template arma::Col<std::complex<double>> conjugate_gradient(SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(std::complex<double>, true));
+			};
+			// #################################################################################################################################################
+			namespace MINRES 
+			{
+				template <typename _T1>
+				arma::Col<_T1> minres(SOLVE_MATMUL_ARG_TYPES(_T1))
+				{
+					// !TODO: Implement the MINRES solver
+					return General::CG::conjugate_gradient<_T1>(_matrixFreeMultiplication, _F, _x0, _eps, _max_iter, _converged, _reg);
+				}
 
-			// ####################################################################################################################################
-            namespace MINRES_QLP
-            {
+				template <typename _T1>
+				arma::Col<_T1> minres(SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(_T1, true))
+				{
+					// !TODO: Implement the MINRES solver with preconditioner
+					return General::CG::conjugate_gradient<_T1>(_matrixFreeMultiplication, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+				}
+
+				// #################################################################################################################################################
+
+				// define the template specializations
+				template arma::Col<double> minres(SOLVE_MATMUL_ARG_TYPES(double));
+				template arma::Col<std::complex<double>> minres(SOLVE_MATMUL_ARG_TYPES(std::complex<double>));
+				// with preconditioner
+				template arma::Col<double> minres(SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(double, true));
+				template arma::Col<std::complex<double>> minres(SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(std::complex<double>, true));
+			};
+			// #################################################################################################################################################
+			namespace MINRES_QLP
+			{
 				enum class MINRES_QLP_FLAGS {
 					PROCESSING 			= -2,   // Processing the MINRES_QLP solver.
 					VALUE_BETA_ZERO 	= -1,   // Value: beta_k = 0. F and X are eigenvectors of (A - sigma*I).
@@ -316,36 +376,27 @@ namespace algebra
 				};
                 constexpr std::string convergence_message(MINRES_QLP_FLAGS _flag) { return MINRES_QLP_MESSAGES[(int)_flag + (int)MINRES_QLP_FLAGS::PROCESSING]; }
 				constexpr double MAXXNORM 	= 1.0e+7;	// maximum norm of the solution
-				constexpr double CONLIM 	= 1.0e+15;	// maximum condition number of the matrix
+				constexpr double CONLIM [[maybe_unused]] 	= 1.0e+15;	// maximum condition number of the matrix
 				constexpr double TRANSCOND 	= 1.0e+7;	// condition number for the transposed matrix
 				constexpr double MINNORM 	= 1.0e-14;	// minimum norm of the solution
 
                 // -----------------------------------------------------------------------------------------------------------------------------------------
                 
                 template <typename _T1>
-				arma::Col<_T1> minres_qlp(  const arma::Mat<_T1>& _DeltaO,
-                                            const arma::Mat<_T1>& _DeltaOConjT,
-                                            const arma::Col<_T1>& _F,
-                                            arma::Col<_T1>* _x0,
-                                            double _eps,
-                                            size_t _max_iter,
-                                            bool* _converged, 
-                                            double _reg)
+				arma::Col<_T1> minres_qlp(SOLVE_MATMUL_ARG_TYPES(_T1))
                 {
 					// !TODO: Implement the MINRES_QLP solver
-					return CG::conjugate_gradient<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _eps, _max_iter, _converged, _reg);
+					return General::CG::conjugate_gradient<_T1>(_matrixFreeMultiplication, _F, _x0, _eps, _max_iter, _converged, _reg);
 				}
                 
                 // -----------------------------------------------------------------------------------------------------------------------------------------
 				
                 /*
-				* @brief MINRES_QLP solver for the Fisher matrix inversion. This method is used whenever the matrix can be
-				* decomposed into the form S = \Delta O^* \Delta O, where \Delta O is the derivative of the observable with respect to the parameters.
+				* @brief MINRES_QLP solver for the general case with a preconditioner.
 				* The matrix S is symmetric and positive definite, so the MINRES_QLP method can be used.
 				* The method is a preconditioned solver for approximating (A-\sigma I) * x = b, where A = S and b = F. 
 				* Preconditioning makes it A = M^{-1/2} (A - \sigma I) M^{-1/2} x = M^{-1/2} b, where M is the preconditioner.
 				* @ref S.-C. T. Choi and M. A. Saunders MINRES-QLP for Symmetric and Hermitian Linear Equations and Least-Squares Problems
-				* @equation S_{ij} = <\Delta O^*_i \Delta O_j> / N
 				* @param _DeltaO The matrix \Delta O.
 				* @param _DeltaOConjT The matrix \Delta O^+.
 				* @param _F The right-hand side vector.
@@ -363,12 +414,10 @@ namespace algebra
 				* @return The solution vector x.
 				*/
 				template <typename _T1>
-				arma::Col<_T1> minres_qlp(SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(_T1))
+				arma::Col<_T1> minres_qlp(SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(_T1, true))
 				{
-					assert(_DeltaO.n_cols == _F.n_elem); 									// check the dimensions of the matrix and the vector
-
 					if (_preconditioner == nullptr)
-						return minres_qlp<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _eps, _max_iter, _converged, _reg);
+						return Solvers::General::MINRES_QLP::minres_qlp<_T1>(_matrixFreeMultiplication, _F, _x0, _eps, _max_iter, _converged, _reg);
 
 					const size_t _n 	= _F.n_elem;										// number of elements			
 					if (_max_iter == 0) _max_iter = _n;										// maximum number of iterations
@@ -401,18 +450,18 @@ namespace algebra
 					_T1 _c_km1_1 = -1.0, _c_km1_2 [[maybe_unused]] = -1.0, _c_km1_3 [[maybe_unused]] = -1.0, _c_k_1, _c_k_2, _c_k_3;
 					_T1 _s_km1_1 = 0.0, _s_km1_2 [[maybe_unused]] = 0.0, _s_km1_3 [[maybe_unused]] = 0.0, _s_k_1, _s_k_2, _s_k_3; 
 					_T1 _gamma_k = 0.0, _gamma_km1 = 0.0, _gamma_km2 = 0.0, _gamma_km3 = 0.0, _gamma_min = 0.0, _gamma_min_km1, _gamma_min_km2;
-					_T1 _eps_k = 0.0;									
+					_T1 _eps_k[[maybe_unused]] = 0.0;									
 					_T1 _tau_k = 0.0, _tau_km1 = 0.0, _tau_km2 = 0.0;						// use them as previous values of tau's
-					_T1 _Ax_norm_k = 0.0, _Ax_norm_km1 = 0.0;								// use them as previous values of Ax_norm's - norm of the matrix-vector multiplication
+					_T1 _Ax_norm_k = 0.0, _Ax_norm_km1[[maybe_unused]] = 0.0;								// use them as previous values of Ax_norm's - norm of the matrix-vector multiplication
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 					// Previous right reflection
-					_T1 _theta_k = 0.0, _theta_km1 = 0.0, _theta_km2;					
+					_T1 _theta_k = 0.0, _theta_km1 = 0.0, _theta_km2 = 0.0;					// use them as previous values of theta's
 					_T1 _eta_k = 0.0, _eta_km1 = 0.0, _eta_km2 = 0.0;	
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 					_T1 _xnorm_k = 0.0, _xnorm_km2 = 0.0;									// is xi in the algorithm - norm of the solution vector
-					_T1 _mu_k = 0.0, _mu_km1 = 0.0, _mu_km2 = 0.0, _mu_km3, _mu_km4 = 0.0;	// use them as previous values of mu'
+					_T1 _mu_k = 0.0, _mu_km1 = 0.0, _mu_km2 = 0.0, _mu_km3 = 0.0, _mu_km4 = 0.0;	// use them as previous values of mu'
 					_T1 _relres_km1 = 0.0, _relAres_km1 = 0.0;								// use them as previous values of relative residuals
-					_T1 _rnorm = _beta_k, _rnorm_km1 = _beta_k, _rnorm_km2 = _beta_k;		// use them as previous values of rnorm's
+					_T1 _rnorm = _beta_k, _rnorm_km1 = _beta_k, _rnorm_km2[[maybe_unused]] = _beta_k;		// use them as previous values of rnorm's
 					_T1 _relres = _rnorm / (_beta_k + 1e-10), _relAres = 0.0;				// relative residual with a safety margin for beta_k = 0
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 					// Regarding the wektor w and the solution vector x
@@ -424,7 +473,7 @@ namespace algebra
 					_T1 _gammaqlp_k = 0.0, _gammaqlp_km1 = 0.0;
 					_T1 _thetaqlp_k = 0.0;
 					_T1 _muqlp_k = 0.0, _muqlp_km1 = 0.0;
-					_T1 _root_k = 0.0, _root_km1 = 0.0;
+					_T1 _root_k [[maybe_unused]]= 0.0, _root_km1 = 0.0;
 					int _QLP_iter = 0;
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -441,7 +490,7 @@ namespace algebra
 						// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 						_T1 _beta_kp1 = 0.0, _pnorm_rho_k = 0.0;											// beta_{k+1} - at each iteration - to be updated later on
 						{
-							p_k				= matrixFreeMultiplication(_DeltaO, _DeltaOConjT, q_k, -1.0);	// apply the matrix-vector multiplication 
+							p_k				= _matrixFreeMultiplication(q_k, -1.0);							// apply the matrix-vector multiplication 
 							if (_reg > 0)
 								p_k 		-= _reg * q_k; 													// (here the regularization is applied - is sigma * I) 
 							
@@ -489,7 +538,7 @@ namespace algebra
 						{
 							// use symortho to get the new reflection 
 							// update _gamma_k ((2) second stage)
-							sym_ortho(_gamma_k, _beta_kp1, _c_k_1, _s_k_1, _gamma_k); 						// [current left reflection]
+							algebra::Solvers::sym_ortho(_gamma_k, _beta_kp1, _c_k_1, _s_k_1, _gamma_k); 						// [current left reflection]
 							_tau_k 				= _c_k_1 * _phi_km1; 										// [Last element of tk]
 							_phi_k 				= _s_k_1 * _phi_km1; 										// 
 							_Ax_norm_k			= norm(_Ax_norm_k, _tau_k); 								// [Update ‖Axk‖]
@@ -502,7 +551,7 @@ namespace algebra
 						// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 						// apply the previous right reflection P{k-2,k}
 						// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-						_T1 _delta_k_tmp;
+						_T1 _delta_k_tmp[[maybe_unused]];
 						if (k > 1)
 						{
 							// update delta_k ((3) third stage)
@@ -651,7 +700,7 @@ namespace algebra
 							if (_flag != MINRES_QLP_FLAGS::SINGULAR)
 								_rnorm 	= _phi_k;
 							_relres 	= _rnorm / (_Anorm * _xnorm_k + _beta_k + 1e-10);
-							_root_km1   = algebra::norm(_delta_k_tmp, _delta_kp1);
+							_root_km1   = algebra::norm(_delta_k, _delta_kp1);
 							_Anorm_km1  = _rnorm_km1 * _root_km1;
 							_relAres_km1= _root_km1 / _Anorm;
 						}
@@ -693,117 +742,295 @@ namespace algebra
 
                 // define the template specializations
                 // double
-                template arma::Col<double> minres_qlp(SOLVE_FISHER_ARG_TYPES(double));
-                template arma::Col<double> minres_qlp(SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(double));
+                template arma::Col<double> minres_qlp(SOLVE_MATMUL_ARG_TYPES(double));
+                template arma::Col<double> minres_qlp(SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(double, true));
                 // complex double
-                template arma::Col<std::complex<double>> minres_qlp(SOLVE_FISHER_ARG_TYPES(std::complex<double>));
-                template arma::Col<std::complex<double>> minres_qlp(SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(std::complex<double>));
+                template arma::Col<std::complex<double>> minres_qlp(SOLVE_MATMUL_ARG_TYPES(std::complex<double>));
+                template arma::Col<std::complex<double>> minres_qlp(SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(std::complex<double>, true));
 
                 // -----------------------------------------------------------------------------------------------------------------------------------------
-
-            };
-        };
-    };
-};
-
-// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-// !GENERAL SOLVER FOR THIS TYPE OF PROBLEM
-
-namespace algebra
-{
-    namespace Solvers
-    {
-        namespace FisherMatrix
-        {
-            template <typename _T1>
-			arma::Col<_T1> solve(Type _type, SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(_T1))
+			};
+			// #################################################################################################################################################
+            
+			/**
+			* @brief Solve the linear system using the specified solver type and the matrix-free multiplication function
+			* @param _type Type of the solver
+			*/
+			template <typename _T1, bool _symmetric>
+			arma::Col<_T1> solve(Type _type, SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(_T1, _symmetric))
 			{
 				switch (_type) 
 				{
 				case Type::ARMA:
 				{
-					arma::Mat<_T1> _S 	= 	_DeltaOConjT * _DeltaO;
-					_S.diag() 			+= 	_reg;
-					return arma::solve(_S, _F);
+					LOGINFO("Solvers::Fisher::solve: ARMA solver is not implemented for the matrix-free multiplication.", LOG_TYPES::ERROR, 3);
+					return _F;
 				}
 				case Type::ConjugateGradient:
-					return CG::conjugate_gradient<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+				{
+					if constexpr (_symmetric == true)
+						return General::CG::conjugate_gradient<_T1>(_matrixFreeMultiplication, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+					else
+					{
+						LOGINFO("The ConjugateGradient solver is only implemented for positive semidefinite matrices.", LOG_TYPES::ERROR, 3);
+						return _F;
+					}
+				}
+				case Type::MINRES: 
+				{
+					if constexpr (_symmetric == true)
+						return General::MINRES::minres<_T1>(_matrixFreeMultiplication, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+					else
+					{
+						LOGINFO("The MINRES solver is only implemented for symmetric matrices.", LOG_TYPES::ERROR, 3);
+						return _F;
+					}
+				}
 				case Type::MINRES_QLP:
-					return MINRES_QLP::minres_qlp<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+				{
+					if constexpr (_symmetric == true)
+						return General::MINRES_QLP::minres_qlp<_T1>(_matrixFreeMultiplication, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+					else
+					{
+						LOGINFO("The MINRES_QLP solver is only implemented for symmetric matrices.", LOG_TYPES::ERROR, 3);
+						return _F;
+					}
+				}
 				case Type::PseudoInverse:
 				{
-					arma::Mat<_T1> _S 	= 	_DeltaOConjT * _DeltaO;
-					_S.diag() 			+= 	_reg;
-					return arma::pinv(_S, _eps) * _DeltaOConjT * _F;
+					LOGINFO("Solvers::Fisher::solve: PseudoInverse solver is not implemented for the matrix-free multiplication.", LOG_TYPES::ERROR, 3);
+					return _F;
 				}
 				case Type::Direct:
 				{
-					arma::Mat<_T1> _S 	= 	_DeltaOConjT * _DeltaO;
-					_S.diag() 			+= 	_reg;
-					return arma::inv(_S) * _F;
+					LOGINFO("Solvers::Fisher::solve: Direct solver is not implemented for the matrix-free multiplication.", LOG_TYPES::ERROR, 3);
+					return _F;
 				}
 				default:
-					return CG::conjugate_gradient<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+				{
+					if constexpr (_symmetric == true)
+						return General::CG::conjugate_gradient<_T1>(_matrixFreeMultiplication, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+					else
+					{
+						LOGINFO("The ConjugateGradient solver is only implemented for positive semidefinite matrices.", LOG_TYPES::ERROR, 3);
+						return _F;
+					}
+				}
 				}
 			}
 
-			template <typename _T1>
-			inline arma::Col<_T1> solve(int _type, SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(_T1)) { return solve<_T1>(static_cast<Type>(_type), _DeltaO, _DeltaOConjT, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg); }
-
-			template <typename _T1>
-			inline arma::Col<_T1> solve(Type _type, SOLVE_FISHER_ARG_TYPES(_T1))
-			{
-				switch (_type) 
-				{
-				case Type::ARMA:
-				{
-					arma::Mat<_T1> _S 	= 	_DeltaOConjT * _DeltaO;
-					_S.diag() 			+= 	_reg;
-					return arma::solve(_S, _F);
-				}
-				case Type::ConjugateGradient:
-					return CG::conjugate_gradient<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _eps, _max_iter, _converged, _reg);
-				case Type::MINRES_QLP:
-					return MINRES_QLP::minres_qlp<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _eps, _max_iter, _converged, _reg);
-				case Type::PseudoInverse:
-				{
-					arma::Mat<_T1> _S 	= 	_DeltaOConjT * _DeltaO;
-					_S.diag() 			+= 	_reg;
-					return arma::pinv(_S, _eps) * _DeltaOConjT * _F;
-				}
-				case Type::Direct:
-				{
-					arma::Mat<_T1> _S 	= 	_DeltaOConjT * _DeltaO;
-					_S.diag() 			+= 	_reg;
-					return arma::inv(_S) * _F;
-				}
-				default:
-					return CG::conjugate_gradient<_T1>(_DeltaO, _DeltaOConjT, _F, _x0, _eps, _max_iter, _converged, _reg);
-				}
-			}
+			template <typename _T1, bool _symmetric>
+			arma::Col<_T1> solve(int _type, SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(_T1, _symmetric)) { return General::solve<_T1, _symmetric>(static_cast<Type>(_type), _matrixFreeMultiplication, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg); }
 			
-			template <typename _T1>
-			inline arma::Col<_T1> solve(int _type, SOLVE_FISHER_ARG_TYPES(_T1)) { return solve<_T1>(static_cast<Type>(_type), _DeltaO, _DeltaOConjT, _F, _x0, _eps, _max_iter, _converged, _reg); }
+			// *********************************************************************************************************************************************
+			
+			/**
+			* @brief Solve the linear system using the specified solver type 
+			* @param _type Type of the solver
+			*/
+			template <typename _T1, bool _symmetric>
+			arma::Col<_T1> solve(Solvers::General::Type _type, SOLVE_MAT_ARG_TYPES_PRECONDITIONER(_T1, _symmetric))
+			{
+				switch (_type) 
+				{
+				case Solvers::General::Type::ARMA:
+				{
+					if (_symmetric == true)
+						return arma::solve(_A + _reg * arma::eye(_A.n_rows, _A.n_cols), _F, arma::solve_opts::likely_sympd);
+					else
+						return arma::solve(_A + _reg * arma::eye(_A.n_rows, _A.n_cols), _F);
+				}
+				case Solvers::General::Type::ConjugateGradient:
+				{
+					if constexpr (_symmetric == true)
+						return General::CG::conjugate_gradient<_T1>(_A, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+					else
+					{
+						LOGINFO("The ConjugateGradient solver is only implemented for positive semidefinite matrices.", LOG_TYPES::ERROR, 3);
+						return _F;
+					}
+				}
+				case Solvers::General::Type::MINRES:
+				{
+					if constexpr (_symmetric == true)
+						return General::MINRES::minres<_T1>(_A, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+					else
+					{
+						LOGINFO("The MINRES solver is only implemented for symmetric matrices.", LOG_TYPES::ERROR, 3);
+						return _F;
+					}
+				}
+				case Solvers::General::Type::MINRES_QLP:
+				{
+					if constexpr (_symmetric == true)
+						return General::MINRES_QLP::minres_qlp<_T1>(_A, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+					else
+					{
+						LOGINFO("The MINRES_QLP solver is only implemented for symmetric matrices.", LOG_TYPES::ERROR, 3);
+						return _F;
+					}
+				}
+				case Solvers::General::Type::PseudoInverse:
+					return arma::pinv(_A, _eps) * _F;
+				case Solvers::General::Type::Direct:
+					return arma::inv(_A) * _F;
+				default:
+				{
+					if constexpr (_symmetric == true)
+						return General::CG::conjugate_gradient<_T1>(_A, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+					else
+					{
+						LOGINFO("The ConjugateGradient solver is only implemented for positive semidefinite matrices.", LOG_TYPES::ERROR, 3);
+						return _F;
+					}
+				}
+				}
+			}
+
+			template <typename _T1, bool _symmetric>
+			arma::Col<_T1> solve(int _type, SOLVE_MAT_ARG_TYPES_PRECONDITIONER(_T1, _symmetric)) { return General::solve<_T1, _symmetric>(static_cast<Solvers::General::Type>(_type), _A, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg); }
+
+			// *********************************************************************************************************************************************
+			
+			/**
+			* @brief Solve the linear system using the specified solver type - sparse matrix
+			* @param _type Type of the solver
+			*/
+			template <typename _T1, bool _symmetric>
+			arma::Col<_T1> solve(Solvers::General::Type _type, SOLVE_SPMAT_ARG_TYPES_PRECONDITIONER(_T1, _symmetric))
+			{
+				switch (_type) 
+				{
+				case Solvers::General::Type::ARMA:
+				{
+					if (_symmetric == true)
+						return arma::solve(_A + _reg * arma::eye(_A.n_rows, _A.n_cols), _F, arma::solve_opts::likely_sympd);
+					else
+						return arma::solve(_A + _reg * arma::eye(_A.n_rows, _A.n_cols), _F);
+				}
+				case Solvers::General::Type::ConjugateGradient:
+				{
+					if constexpr (_symmetric == true)
+						return General::CG::conjugate_gradient<_T1>(_A, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+					else
+					{
+						LOGINFO("The ConjugateGradient solver is only implemented for positive semidefinite matrices.", LOG_TYPES::ERROR, 3);
+						return _F;
+					}
+				}
+				case Solvers::General::Type::MINRES:
+				{
+					if constexpr (_symmetric == true)
+						return General::MINRES::minres<_T1>(_A, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+					else
+					{
+						LOGINFO("The MINRES solver is only implemented for symmetric matrices.", LOG_TYPES::ERROR, 3);
+						return _F;
+					}
+				}
+				case Solvers::General::Type::MINRES_QLP:
+				{
+					if constexpr (_symmetric == true)
+						return General::MINRES_QLP::minres_qlp<_T1>(_A, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+					else
+					{
+						LOGINFO("The MINRES_QLP solver is only implemented for symmetric matrices.", LOG_TYPES::ERROR, 3);
+						return _F;
+					}
+				}
+				case Solvers::General::Type::PseudoInverse:
+					return arma::pinv(arma::Mat<_T1>(_A), _eps) * _F;
+				case Solvers::General::Type::Direct:
+					return arma::inv(arma::Mat<_T1>(_A)) * _F;
+				default:
+				{
+					if constexpr (_symmetric == true)
+						return General::CG::conjugate_gradient<_T1>(_A, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg);
+					else
+					{
+						LOGINFO("The ConjugateGradient solver is only implemented for positive semidefinite matrices.", LOG_TYPES::ERROR, 3);
+						return _F;
+					}
+				}
+				}
+			}	
+
+			template <typename _T1, bool _symmetric>
+			arma::Col<_T1> solve(int _type, SOLVE_SPMAT_ARG_TYPES_PRECONDITIONER(_T1, _symmetric)) { return General::solve<_T1, _symmetric>(static_cast<Solvers::General::Type>(_type), _A, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg); }		
+			
+			// *********************************************************************************************************************************************
+
+			template <typename _T1, bool _symmetric>
+			inline arma::Col<_T1> solve(Type _type, SOLVE_MATMUL_ARG_TYPES(_T1)){ return General::solve<_T1, _symmetric>(_type, _matrixFreeMultiplication, _F, _x0, nullptr, _eps, _max_iter, _converged, _reg); }
+			
+			template <typename _T1, bool _symmetric>
+			inline arma::Col<_T1> solve(int _type, SOLVE_MATMUL_ARG_TYPES(_T1)) { return General::solve<_T1, _symmetric>(static_cast<Type>(_type), _matrixFreeMultiplication, _F, _x0, _eps, _max_iter, _converged, _reg); }
+
+			// *********************************************************************************************************************************************
+
+			template <typename _T1, bool _symmetric>
+			inline arma::Col<_T1> solve(Solvers::General::Type _type, SOLVE_MAT_ARG_TYPES(_T1)){ return General::solve<_T1, _symmetric>(_type, _A, _F, _x0, nullptr, _eps, _max_iter, _converged, _reg); }
+
+			template <typename _T1, bool _symmetric>
+			inline arma::Col<_T1> solve(int _type, SOLVE_MAT_ARG_TYPES(_T1)) { return General::solve<_T1, _symmetric>(static_cast<Solvers::General::Type>(_type), _A, _F, _x0, _eps, _max_iter, _converged, _reg); }
+
+			// *********************************************************************************************************************************************
+
+			template <typename _T1, bool _symmetric>
+			inline arma::Col<_T1> solve(Solvers::General::Type _type, SOLVE_SPMAT_ARG_TYPES(_T1)){ return General::solve<_T1, _symmetric>(_type, _A, _F, _x0, nullptr, _eps, _max_iter, _converged, _reg); }
+
+			template <typename _T1, bool _symmetric>
+			inline arma::Col<_T1> solve(int _type, SOLVE_SPMAT_ARG_TYPES(_T1)) { return General::solve<_T1, _symmetric>(static_cast<Solvers::General::Type>(_type), _A, _F, _x0, _eps, _max_iter, _converged, _reg); }
 
             // -----------------------------------------------------------------------------------------------------------------------------------------
 
             // define the template specializations
             // double
-            template arma::Col<double> solve(Type _type, SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(double));
-            template arma::Col<double> solve(int _type, SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(double));
-            template arma::Col<double> solve(Type _type, SOLVE_FISHER_ARG_TYPES(double));
-            template arma::Col<double> solve(int _type, SOLVE_FISHER_ARG_TYPES(double));
-
-            // complex double
-            template arma::Col<std::complex<double>> solve(Type _type, SOLVE_FISHER_ARG_TYPES(std::complex<double>));
-            template arma::Col<std::complex<double>> solve(int _type, SOLVE_FISHER_ARG_TYPES(std::complex<double>));
-            template arma::Col<std::complex<double>> solve(Type _type, SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(std::complex<double>));
-            template arma::Col<std::complex<double>> solve(int _type, SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(std::complex<double>));
-            
-            // -----------------------------------------------------------------------------------------------------------------------------------------
-
-            /**
+			template arma::Col<double> solve(Type _type, SOLVE_MATMUL_ARG_TYPES(double));
+			template arma::Col<double> solve(int _type, SOLVE_MATMUL_ARG_TYPES(double));
+			template arma::Col<double> solve(Solvers::General::Type _type, SOLVE_MAT_ARG_TYPES(double));
+			template arma::Col<double> solve(int _type, SOLVE_MAT_ARG_TYPES(double));
+			template arma::Col<double> solve(Solvers::General::Type _type, SOLVE_SPMAT_ARG_TYPES(double));
+			template arma::Col<double> solve(int _type, SOLVE_SPMAT_ARG_TYPES(double));
+			// double with preconditioner
+			template arma::Col<double> solve(Type _type, SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(double, true));
+			template arma::Col<double> solve(int _type, SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(double, true));
+			template arma::Col<double> solve(Solvers::General::Type _type, SOLVE_MAT_ARG_TYPES_PRECONDITIONER(double, true));
+			template arma::Col<double> solve(int _type, SOLVE_MAT_ARG_TYPES_PRECONDITIONER(double, true));
+			template arma::Col<double> solve(Solvers::General::Type _type, SOLVE_SPMAT_ARG_TYPES_PRECONDITIONER(double, true));
+			template arma::Col<double> solve(int _type, SOLVE_SPMAT_ARG_TYPES_PRECONDITIONER(double, true));
+			// and false
+			template arma::Col<double> solve(Type _type, SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(double, false));
+			template arma::Col<double> solve(int _type, SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(double, false));
+			template arma::Col<double> solve(Solvers::General::Type _type, SOLVE_MAT_ARG_TYPES_PRECONDITIONER(double, false));
+			template arma::Col<double> solve(int _type, SOLVE_MAT_ARG_TYPES_PRECONDITIONER(double, false));
+			template arma::Col<double> solve(Solvers::General::Type _type, SOLVE_SPMAT_ARG_TYPES_PRECONDITIONER(double, false));
+			template arma::Col<double> solve(int _type, SOLVE_SPMAT_ARG_TYPES_PRECONDITIONER(double, false));
+			// complex double
+			template arma::Col<std::complex<double>> solve(Type _type, SOLVE_MATMUL_ARG_TYPES(std::complex<double>));
+			template arma::Col<std::complex<double>> solve(int _type, SOLVE_MATMUL_ARG_TYPES(std::complex<double>));
+			template arma::Col<std::complex<double>> solve(Solvers::General::Type _type, SOLVE_MAT_ARG_TYPES(std::complex<double>));
+			template arma::Col<std::complex<double>> solve(int _type, SOLVE_MAT_ARG_TYPES(std::complex<double>));
+			template arma::Col<std::complex<double>> solve(Solvers::General::Type _type, SOLVE_SPMAT_ARG_TYPES(std::complex<double>));
+			template arma::Col<std::complex<double>> solve(int _type, SOLVE_SPMAT_ARG_TYPES(std::complex<double>));
+			// complex double with preconditioner
+			template arma::Col<std::complex<double>> solve(Type _type, SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(std::complex<double>, true));
+			template arma::Col<std::complex<double>> solve(int _type, SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(std::complex<double>, true));
+			template arma::Col<std::complex<double>> solve(Solvers::General::Type _type, SOLVE_MAT_ARG_TYPES_PRECONDITIONER(std::complex<double>, true));
+			template arma::Col<std::complex<double>> solve(int _type, SOLVE_MAT_ARG_TYPES_PRECONDITIONER(std::complex<double>, true));
+			template arma::Col<std::complex<double>> solve(Solvers::General::Type _type, SOLVE_SPMAT_ARG_TYPES_PRECONDITIONER(std::complex<double>, true));
+			template arma::Col<std::complex<double>> solve(int _type, SOLVE_SPMAT_ARG_TYPES_PRECONDITIONER(std::complex<double>, true));
+			// and false
+			template arma::Col<std::complex<double>> solve(Type _type, SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(std::complex<double>, false));
+			template arma::Col<std::complex<double>> solve(int _type, SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(std::complex<double>, false));
+			template arma::Col<std::complex<double>> solve(Solvers::General::Type _type, SOLVE_MAT_ARG_TYPES_PRECONDITIONER(std::complex<double>, false));
+			template arma::Col<std::complex<double>> solve(int _type, SOLVE_MAT_ARG_TYPES_PRECONDITIONER(std::complex<double>, false));
+			template arma::Col<std::complex<double>> solve(Solvers::General::Type _type, SOLVE_SPMAT_ARG_TYPES_PRECONDITIONER(std::complex<double>, false));
+			template arma::Col<std::complex<double>> solve(int _type, SOLVE_SPMAT_ARG_TYPES_PRECONDITIONER(std::complex<double>, false));
+			
+			// #################################################################################################################################################
+			
+			/**
             * @brief Get the name of the solver type
             * @param _type Type of the solver
             * @return Name of the solver
@@ -816,6 +1043,8 @@ namespace algebra
 					return "ARMA";
 				case Type::ConjugateGradient:
 					return "Conjugate Gradient";
+				case Type::MINRES:
+					return "MINRES";
 				case Type::MINRES_QLP:
 					return "MINRES_QLP";
 				case Type::PseudoInverse:
@@ -830,7 +1059,71 @@ namespace algebra
 			std::string name(int _type) { return name(static_cast<Type>(_type)); } 
 
 			// -----------------------------------------------------------------------------------------------------------------------------------------
-        }
+		};
+	};
+};
+
+// #################################################################################################################################################
+
+// FOR THE FISHER MATRIX SOLVERS - SYMMETRIC MATRICES WITH FORM S = A^T * A, given A
+
+// #################################################################################################################################################
+
+namespace algebra {   
+    namespace Solvers {
+        namespace FisherMatrix {
+			// #################################################################################################################################################
+
+			/**
+			* @brief In case we know that the matrix S that shall be inverted is a Fisher matrix, 
+			* we may use the knowledge that S_{ij} = <\Delta O^*_i \Delta O_j>, where \Delta O is the
+			* derivative of the observable with respect to the parametes. (rows are samples, columns are parameters)
+			* and the mean over the samples is taken and then taken out of the matrix afterwards.
+			* @note The matrix S is symmetric and positive definite, so we can use the conjugate gradient method.
+			* @note The matrix S is not explicitly formed, but the matrix-vector multiplication is used.
+			* @note The matrix S is just a covariance matrix of the derivatives of the observable.
+			* @note The matrix shall be divided by the number of samples N.
+			*/
+			template <typename _T>
+			arma::Col<_T> matrixFreeMultiplication(SOLVE_FISHER_MATRIX(_T), const arma::Col<_T>& _x, const double _reg)
+			{
+				const size_t _N 			= _DeltaO.n_rows;               	// Number of samples (rows)
+				arma::Col<_T> _intermediate = _DeltaO * _x;     				// Calculate \Delta O * x
+
+				// apply regularization on the diagonal
+				if (_reg > 0.0)
+					return (_DeltaO.t() * _intermediate) / static_cast<_T>(_N)  + _reg * _x;
+				
+				// no regularization
+				return (_DeltaO.t() * _intermediate) / static_cast<_T>(_N);    // Calculate \Delta O^* * (\Delta O * v) / N
+			}
+
+			/** 
+			* @brief Same as the above method, but with the conjugate transpose of the matrix \Delta O. 
+			*/
+			template <typename _T>
+			arma::Col<_T> matrixFreeMultiplication(SOLVE_FISHER_MATRICES(_T), const arma::Col<_T>& x, const double _reg)
+			{
+				const size_t _N 			= _DeltaO.n_rows;               	// Number of samples (rows)
+				arma::Col<_T> _intermediate = _DeltaO * x;     					// Calculate \Delta O * x
+
+				// apply regularization on the diagonal
+				if (_reg > 0.0)
+					return (_DeltaOConjT * _intermediate) / static_cast<_T>(_N)  + _reg * x;
+				
+				// no regularization
+				return (_DeltaOConjT * _intermediate) / static_cast<_T>(_N);    // Calculate \Delta O^* * (\Delta O * v) / N
+			}
+
+			// template specializations
+			template arma::Col<double> matrixFreeMultiplication(SOLVE_FISHER_MATRIX(double), const arma::Col<double>& _x, const double _reg);
+			template arma::Col<std::complex<double>> matrixFreeMultiplication(SOLVE_FISHER_MATRIX(std::complex<double>), const arma::Col<std::complex<double>>& _x, const double _reg);
+			// with the conjugate transpose
+			template arma::Col<double> matrixFreeMultiplication(SOLVE_FISHER_MATRICES(double), const arma::Col<double>& x, const double _reg);
+			template arma::Col<std::complex<double>> matrixFreeMultiplication(SOLVE_FISHER_MATRICES(std::complex<double>), const arma::Col<std::complex<double>>& x, const double _reg);
+
+			// #################################################################################################################################################
+        };
     };
 };
 

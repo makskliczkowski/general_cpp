@@ -319,7 +319,7 @@ static std::string prettyTime(std::time_t now)
 * @brief pretty prints the time point
 * @returns string time in a given format %Y-%m-%d:%X
 */
-static std::string prettyTime()
+static std::string prettyTime() 
 {
 	return prettyTime(std::time(0));
 }
