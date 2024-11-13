@@ -1,4 +1,3 @@
-#pragma once
 /*******************************
 * Contains the possible methods
 * for linear algebra usage.
@@ -9,16 +8,13 @@
 * Journal of Open Source Software,
 * Vol. 1, No. 2, pp. 26, 2016. 
 *******************************/
+#pragma once
 
 #ifndef ALG_H
 #define ALG_H
 
 using uint = unsigned int;
-// ############################################## INCLUDE FROM ARMADILLO #############################################
-
-#ifdef _WIN32
-//#define H5_BUILT_AS_DYNAMIC_LIB 
-#endif
+// ################################################ INCLUDE FROM ARMADILLO ###############################################
 
 // #define ARMA_WARN_LEVEL 1
 #define ARMA_USE_LAPACK             
@@ -38,7 +34,7 @@ using uint = unsigned int;
 #define ARMA_DONT_PRINT_CXX03_WARNING
 #define ARMA_DONT_PRINT_FAST_MATH_WARNING
 #include <armadillo>
-
+// #######################################################################################################################
 #define DH5_USE_110_API
 #define D_HDF5USEDLL_ 
 
@@ -362,137 +358,143 @@ namespace algebra
 	
 	// #################################################################################################################################################
 
-	/*
-	* @brief same as in https://numpy.org/doc/stable/reference/generated/numpy.outer.html
-	* @param A first vector
-	* @param B second vector
-	* @returns the outer product of two vectors
-	*/
-	template <template <typename _T1i> class _T1, template <typename _T2i> class _T2, typename _T1i, typename _T2i>
-	arma::Mat<typename std::common_type<_T1i, _T2i>::type> outer(const _T1<_T1i>& A, const _T2<_T2i>& B)
-	{
-		using res_typ = typename std::common_type<_T1i, _T2i>::type;
-		arma::Mat<res_typ> out(A.n_elem, B.n_elem, arma::fill::zeros);
-
-		for(size_t i = 0; i < A.n_elem; i++)
-			for(size_t j = 0; j < B.n_elem; j++)
-				out(i, j) = res_typ(A(i) * B(j));
-
-		return out;
-	}
-
-	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-	/*
-	* @brief Allows to calculate the matrix consisting of COL vector times ROW vector
-	* @param setMat matrix to set the elements onto
-	* @param setVec column vector to set the elements from
-	*/
-	template <typename _type>
-	inline void setKetBra(arma::Mat<_type>& setMat, const arma::Col<_type>& setVec) {
-		setMat = arma::cdot(setVec, setVec.as_row());
-	}
-	
-	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-	/*
-	* @brief Allows to calculate the matrix consisting of COL vector times ROW vector
-	* @param setMat matrix to set the elements onto
-	* @param setVec column vector to set the elements from
-	* @param plus if add or substract
-	*/
-	template <typename _type>
-	inline void setKetBra(arma::Mat<_type>& setMat, const arma::Col<_type>& setVec, bool plus) {
-		UPDATEV(setMat, arma::cdot(setVec, setVec.as_row()), plus);
-	}
-
-	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-	/*
-	* Puts the given matrix mSet(smaller) to a specific place in the m2Set (bigger) matrix
-	* @param m2Set (bigger) matrix to find the submatrix in and set it's elements
-	* @param mSet (smaller) matrix to be put in the m2Set
-	* @param row row of the left upper element (row,col) of M2Set
-	* @param col col of the left upper element (row,col) of M2Set
-	* @param update if we shall add or substract MSet elements from M2Set depending on minus parameter
-	* @param minus substract?
-	*/
-	template <typename _type1, typename _type2>
-	void setSubMFromM(arma::Mat<_type1>& m2Set, const arma::Mat<_type2>& mSet, uint row, uint col, uint nrow, uint ncol, bool update = true, bool minus = false)
-	{
-		if (update)
-			UPDATEV(SUBM(m2Set, row, col, row + nrow - 1, col + ncol - 1), mSet, !minus)
-		else
-			SUBM(m2Set, row, col, row + nrow - 1, col + ncol - 1) = mSet;
-	}
-
-	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-	/*
-	* @brief Uses the given matrix MSet (bigger) to set the M2Set (smaller) matrix
-	* @param M2Set (smaller) matrix to find the submatrix in and set it's elements
-	* @param MSet (bigger) matrix to be put in the M2Set
-	* @param row row of the left upper element (row,col) of MSet
-	* @param col col of the left upper element (row,col) of MSet
-	* @param update if we shall add or substract MSet elements from M2Set depending on minus parameter
-	* @param minus substract?
-	*/
-	template <typename _type1, typename _type2>
-	void setMFromSubM(arma::Mat<_type1>& m2Set, const arma::Mat<_type2>& mSet, uint row, uint col, uint nrow, uint ncol, bool update = true, bool minus = false)
-	{
-		if (update)
-			UPDATEV(m2Set, SUBM(mSet, row, col, row + nrow - 1, col + ncol - 1), !minus)
-		else
-			m2Set = SUBM(mSet, row, col, row + nrow - 1, col + ncol - 1);
-	}
-
-	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-	/*
-	* @brief Calculates the multiplication of two matrices. One is a diagonal matrix (right).
-	* @param _A left matrix
-	* @param _D right diagonal matrix
-	*/
-	template<typename _MatType, typename _T>
-	inline _MatType matTimesDiagMat(const _MatType& _A, const arma::Col<_T>& _D)
-	{
-		return _A.each_row() % _D.t();
-	}
-
-	/*
-	* @brief Calculates the diagonal being the result of matrix multiplication
-	*/
-	template<typename _MatType, typename _MatType2>
-	inline arma::Col<typename std::common_type<inner_elem_type_t<_MatType>, inner_elem_type_t<_MatType2>>::type>
-		matDiagProduct(const _MatType& _L, const _MatType2& _R)
-	{
-		using _type = typename std::common_type<inner_elem_type_t<_MatType>, inner_elem_type_t<_MatType2>>::type;
-		arma::Col<_type> diagonal(_L.n_rows, arma::fill::zeros);
-
-		// assert(_L.n_cols == _R.n_rows && "Matrix dimensions must be compatible for multiplication");
-
-		// calculate the diagonal
-		for (std::size_t i = 0; i < _L.n_rows; ++i)
+	namespace MatMul {
+		/*
+		* @brief same as in https://numpy.org/doc/stable/reference/generated/numpy.outer.html
+		* @param A first vector
+		* @param B second vector
+		* @returns the outer product of two vectors
+		*/
+		template <template <typename _T1i> class _T1, template <typename _T2i> class _T2, typename _T1i, typename _T2i>
+		arma::Mat<typename std::common_type<_T1i, _T2i>::type> outer(const _T1<_T1i>& A, const _T2<_T2i>& B)
 		{
-			for (std::size_t k = 0; k < _L.n_cols; ++k)
-			{
-				diagonal(i) += algebra::cast<_type>(_L(i, k)) * algebra::cast<_type>(_R(k, i));
-			}
+			using res_typ = typename std::common_type<_T1i, _T2i>::type;
+			arma::Mat<res_typ> out(A.n_elem, B.n_elem, arma::fill::zeros);
+
+			for(size_t i = 0; i < A.n_elem; i++)
+				for(size_t j = 0; j < B.n_elem; j++)
+					out(i, j) = res_typ(A(i) * B(j));
+
+			return out;
 		}
-		return diagonal;
-	}
 
-	// #################################################################################################################################################
-	
-	// ############################################################### MATRIX PROPERTIES ###############################################################
-	
-	// #################################################################################################################################################
-	
+		// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+		/*
+		* @brief Allows to calculate the matrix consisting of COL vector times ROW vector
+		* @param setMat matrix to set the elements onto
+		* @param setVec column vector to set the elements from
+		*/
+		template <typename _type>
+		inline void setKetBra(arma::Mat<_type>& setMat, const arma::Col<_type>& setVec) {
+			setMat = arma::cdot(setVec, setVec.as_row());
+		}
+		
+		// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+		/*
+		* @brief Allows to calculate the matrix consisting of COL vector times ROW vector
+		* @param setMat matrix to set the elements onto
+		* @param setVec column vector to set the elements from
+		* @param plus if add or substract
+		*/
+		template <typename _type>
+		inline void setKetBra(arma::Mat<_type>& setMat, const arma::Col<_type>& setVec, bool plus) {
+			UPDATEV(setMat, arma::cdot(setVec, setVec.as_row()), plus);
+		}
+
+		// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+		/*
+		* Puts the given matrix mSet(smaller) to a specific place in the m2Set (bigger) matrix
+		* @param m2Set (bigger) matrix to find the submatrix in and set it's elements
+		* @param mSet (smaller) matrix to be put in the m2Set
+		* @param row row of the left upper element (row,col) of M2Set
+		* @param col col of the left upper element (row,col) of M2Set
+		* @param update if we shall add or substract MSet elements from M2Set depending on minus parameter
+		* @param minus substract?
+		*/
+		template <typename _type1, typename _type2>
+		void setSubMFromM(arma::Mat<_type1>& m2Set, const arma::Mat<_type2>& mSet, uint row, uint col, uint nrow, uint ncol, bool update = true, bool minus = false)
+		{
+			if (update)
+				UPDATEV(SUBM(m2Set, row, col, row + nrow - 1, col + ncol - 1), mSet, !minus)
+			else
+				SUBM(m2Set, row, col, row + nrow - 1, col + ncol - 1) = mSet;
+		}
+
+		// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+		/*
+		* @brief Uses the given matrix MSet (bigger) to set the M2Set (smaller) matrix
+		* @param M2Set (smaller) matrix to find the submatrix in and set it's elements
+		* @param MSet (bigger) matrix to be put in the M2Set
+		* @param row row of the left upper element (row,col) of MSet
+		* @param col col of the left upper element (row,col) of MSet
+		* @param update if we shall add or substract MSet elements from M2Set depending on minus parameter
+		* @param minus substract?
+		*/
+		template <typename _type1, typename _type2>
+		void setMFromSubM(arma::Mat<_type1>& m2Set, const arma::Mat<_type2>& mSet, uint row, uint col, uint nrow, uint ncol, bool update = true, bool minus = false)
+		{
+			if (update)
+				UPDATEV(m2Set, SUBM(mSet, row, col, row + nrow - 1, col + ncol - 1), !minus)
+			else
+				m2Set = SUBM(mSet, row, col, row + nrow - 1, col + ncol - 1);
+		}
+
+		// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+		/*
+		* @brief Calculates the multiplication of two matrices. One is a diagonal matrix (right).
+		* @param _A left matrix
+		* @param _D right diagonal matrix
+		*/
+		template<typename _MatType, typename _T>
+		inline _MatType matTimesDiagMat(const _MatType& _A, const arma::Col<_T>& _D)
+		{
+			return _A.each_row() % _D.t();
+		}
+
+		/*
+		* @brief Calculates the diagonal being the result of matrix multiplication
+		*/
+		template<typename _MatType, typename _MatType2>
+		inline arma::Col<typename std::common_type<inner_elem_type_t<_MatType>, inner_elem_type_t<_MatType2>>::type>
+			matDiagProduct(const _MatType& _L, const _MatType2& _R)
+		{
+			using _type = typename std::common_type<inner_elem_type_t<_MatType>, inner_elem_type_t<_MatType2>>::type;
+			arma::Col<_type> diagonal(_L.n_rows, arma::fill::zeros);
+
+			// assert(_L.n_cols == _R.n_rows && "Matrix dimensions must be compatible for multiplication");
+
+			// calculate the diagonal
+			for (std::size_t i = 0; i < _L.n_rows; ++i)
+			{
+				for (std::size_t k = 0; k < _L.n_cols; ++k)
+				{
+					diagonal(i) += algebra::cast<_type>(_L(i, k)) * algebra::cast<_type>(_R(k, i));
+				}
+			}
+			return diagonal;
+		}
+	};
+
+	using namespace MatMul;
+	
 	// *************************************************************************************************************************************************
+
+	// ########################################################### MATRIX EQUATIONS SOLVERS ############################################################
+
+	// #################################################################################################################################################
 
 	namespace Solvers
 	{	
+		// #################################################################################################################################################
+
+		template <typename _T1>
+		void sym_ortho(_T1 a, _T1 b, _T1& c, _T1& s, _T1& r);
+
 		// #################################################################################################################################################
 
 		namespace Preconditioners {
@@ -809,69 +811,116 @@ namespace algebra
 					// !TODO
 				}
 			};
+
+			// #################################################################################################################################################
+
+			template <typename T, bool _T = true>
+			class IncompleteLUPreconditioner : public Preconditioner<T, _T> {
+			private:
+				arma::Mat<T> L_;     // lower triangular incomplete Cholesky factor
+				arma::Mat<T> U_;     // upper triangular incomplete Cholesky factor
+				arma::Col<arma::uword> P_; // permutation vector
+				bool success_ 	= false;
+			public:
+				IncompleteLUPreconditioner()
+					: Preconditioner<T, _T>()
+				{};
+				/**
+				* @brief Constructor to initialize the preconditioner with a given matrix.
+				* @param A The matrix to decompose.
+				* @param isGram Flag indicating if the matrix is a Gram matrix.
+				*/
+				IncompleteLUPreconditioner(const arma::Mat<T>& A, bool isGram = true, double _sigma = 0.0)
+					: Preconditioner<T, _T>(A, isGram, _sigma)
+				{}
+
+				IncompleteLUPreconditioner(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0)
+					: Preconditioner<T, _T>(Sp, S, _sigma)
+				{}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+				
+				/**
+				* @brief Set the preconditioner with a given matrix.
+				* @param A The matrix to decompose.
+				* @param isGram Flag indicating if the matrix is a Gram matrix.
+				* @param _sigma Regularization parameter (default is 0.0). This is added to the diagonal of the matrix before decomposition.
+				*/
+				void set(const arma::Mat<T>& A, bool isGram = true, double _sigma = 0.0) override
+				{
+					Preconditioner<T, _T>::set(isGram, _sigma);
+
+					// !TODO
+				}
+
+				/**
+				* @brief Set the preconditioner with a given matrix.
+				* @param Sp The matrix to decompose.
+				* @param S The matrix to decompose.
+				* @param _sigma Regularization parameter (default is 0.0). This is added to the diagonal of the matrix before decomposition.
+				*/
+				void set(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0) override
+				{
+					Preconditioner<T, _T>::set(true, _sigma);
+
+					// !TODO
+				}
+
+				/**
+				* @brief Apply the preconditioner to a given vector.
+				* @param r The vector to precondition.
+				* @param sigma Regularization parameter (default is 0.0).
+				* @return The preconditioned vector.
+				*/
+				arma::Col<T> apply(const arma::Col<T>& r, double sigma = 0.0) const override
+				{
+					// !TODO
+					return r;
+				}
+			};
+			
+
 			// #################################################################################################################################################
 			namespace Symmetric {
 				enum class PreconditionerType {
 					Identity,
 					Jacobi,
-					IncompleteCholesky
+					IncompleteCholesky,
+					IncompleteLU
 				}; 
 			};
 			namespace NonSymmetric {
 				enum class PreconditionerType {
-					Identity,
+					Identity
 				}; 
 			};
 
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 		
-			template <typename T, bool _Sym = true>
-			inline Preconditioner<T, _Sym>* choose(int i = 0) {
-				switch (i) {
-				case 0:
-					return new IdentityPreconditioner<T, _Sym>;
-				case 1:
-					return new JacobiPreconditioner<T, _Sym>;
-				case 2:
-					return new IncompleteCholeskyPreconditioner<T, _Sym>;
-				default:
-					return new IdentityPreconditioner<T, _Sym>;
-				};
-			}
 
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 
-			template <typename T>
-			inline Preconditioner<T>* choose(Symmetric::PreconditionerType i) {
+			template <typename T, bool _symmetric = true>
+			inline Preconditioner<T, _symmetric>* choose(Symmetric::PreconditionerType i) {
 				switch (i) {
 				case Symmetric::PreconditionerType::Identity:
-					return new IdentityPreconditioner<T>;
+					return new IdentityPreconditioner<T, _symmetric>;
 				case Symmetric::PreconditionerType::Jacobi:
-					return new JacobiPreconditioner<T>;
+					return new JacobiPreconditioner<T, _symmetric>;
 				case Symmetric::PreconditionerType::IncompleteCholesky:
-					return new IncompleteCholeskyPreconditioner<T>;
+					return new IncompleteCholeskyPreconditioner<T, _symmetric>;
+				case Symmetric::PreconditionerType::IncompleteLU:
+					return new IncompleteLUPreconditioner<T, _symmetric>;
 				default:
-					return new IdentityPreconditioner<T>;
+					return new IdentityPreconditioner<T, _symmetric>;
 				};
 			}
+
+			template <typename T, bool _Sym = true>
+			inline Preconditioner<T, _Sym>* choose(int i = 0) { return choose<T, _Sym>(static_cast<Symmetric::PreconditionerType>(i)); };
 			
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 
-			inline std::string name(int i = 0) {
-				switch (i) {
-				case 0:
-					return "Identity";
-				case 1:
-					return "Jacobi";
-				case 2:
-					return "Incomplete Cholesky";
-				default:
-					return "Identity";
-				};
-			}
-			
-			// -----------------------------------------------------------------------------------------------------------------------------------------
-			
 			inline std::string name(Symmetric::PreconditionerType i) {
 				switch (i) {
 				case Symmetric::PreconditionerType::Identity:
@@ -880,10 +929,17 @@ namespace algebra
 					return "Jacobi";
 				case Symmetric::PreconditionerType::IncompleteCholesky:
 					return "Incomplete Cholesky";
+				case Symmetric::PreconditionerType::IncompleteLU:
+					return "Incomplete LU";
 				default:
 					return "Identity";
 				};
 			}
+
+			inline std::string name(int i = 0) { return name(static_cast<Symmetric::PreconditionerType>(i)); };
+			
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+			
 		};
 
 		// #################################################################################################################################################
@@ -925,6 +981,7 @@ namespace algebra
 		#define SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(_T1, _T2) Solvers::_AX_fun<_T1> _matrixFreeMultiplication, SOLVE_GENERAL_ARG_TYPES_PRECONDITIONER(_T1, _T2)
 		#define SOLVE_MATMUL_ARG_TYPESD(_T1) Solvers::_AX_fun<_T1> _matrixFreeMultiplication, SOLVE_GENERAL_ARG_TYPESD(_T1)
 		#define SOLVE_MATMUL_ARG_TYPESD_PRECONDITIONER(_T1, _T2) Solvers::_AX_fun<_T1> _matrixFreeMultiplication, SOLVE_GENERAL_ARG_TYPESD_PRECONDITIONER(_T1, _T2)
+		
 		// #################################################################################################################################################
 		namespace General { 
 			// #################################################################################################################################################
@@ -1091,9 +1148,7 @@ namespace algebra
 			std::string name(Solvers::General::Type _type);
 			std::string name(int _type);
 		};
-
 		// #################################################################################################################################################
-
 		namespace FisherMatrix 
 		{	
 			/*
@@ -1216,177 +1271,24 @@ namespace algebra
 	// #################################################################################################################################################
 	namespace Pfaffian
 	{
-		enum class PfaffianAlgorithms
-		{
+		enum class PfaffianAlgorithms {
 			ParlettReid,
 			Householder,
 			Schur,
 			Hessenberg,
 			Recursive
 		};
-
-		/*
-		* @brief Calculate the Pfaffian of a skew square matrix A. Use the recursive definition.
-		* @link https://s3.amazonaws.com/researchcompendia_prod/articles/2f85f444b9e340246d9991177acf9732-2013-12-23-02-19-16/a30-wimmer.pdf
-		* @param A skew-symmetric matrix
-		* @param N size of the matrix
-		* @returns the Pfaffian of a skew-symmetric matrix A
-		*/
-		template <typename _T>
-		_T pfaffian_r(const arma::Mat<_T>& A, arma::u64 N)
-		{
-			if (N == 0)
-				return _T(1.0);
-			else if (N == 1)
-				return _T(0.0);
-			else
-			{
-				_T pfa = 0.0;
-				for (arma::u64 i = 2; i <= N; i++)
-				{
-					arma::Mat<_T> temp = A;
-					_T _sign = (i % 2 == 0) ? 1. : -1.;
-					temp.shed_col(i - 1);
-					temp.shed_row(i - 1);
-					temp.shed_row(0);
-					if (N > 2)
-						temp.shed_col(0);
-					pfa += _sign * A(0, i - 1) * pfaffian_r(temp, N - 2);
-				}
-				return pfa;
-			}
-		}
-
 		// #################################################################################################################################################
-
-		/*
-		* @brief Computing the Pfaffian of a skew-symmetric matrix. Using the fact that for an arbitrary skew-symmetric matrix,
-		* the pfaffian Pf(B A B^T ) = det(B)Pf(A). This is done via Hessenberg decomposition.
-		* @param A skew-symmetric matrix
-		* @param N size of the matrix
-		* @returns the Pfaffian of a skew-symmetric matrix A
-		*/
 		template <typename _T>
-		_T pfaffian_hess(const arma::Mat<_T>& A, arma::u64 N)
-		{
-			// calculate the Upper Hessenberg decomposition. Take the upper diagonal only
-			arma::Mat<_T> H, Q;
-			arma::hess(Q, H, A);
-			return arma::det(Q) * arma::prod(arma::Col<_T>(H.diag(1)).elem(arma::regspace<arma::uvec>(0, N - 1, 2)));
-		}
-
-		// #################################################################################################################################################
-
-		/*
-		* @brief Computing the Pfaffian of a skew-symmetric matrix. Using the fact that for an arbitrary skew-symmetric matrix,
-		* the pfaffian Pf(B A B^T ) = det(B)Pf(A). This is done via Parlett-Reid algorithm.
-		* @param A skew-symmetric matrix
-		* @param N size of the matrix
-		* @returns the Pfaffian of a skew-symmetric matrix A
-		*/
+		_T pfaffian_r(const arma::Mat<_T>& A, arma::u64 N);
 		template <typename _T>
-		_T pfaffian_p(arma::Mat<_T> A, arma::u64 N)
-		{
-			if(!(A.n_rows == A.n_cols && A.n_rows == N && N > 0))
-				throw std::runtime_error("Error: Matrix size must be even for Pfaffian calculation.");
-	#ifdef _DEBUG
-			// Check if it's skew-symmetric
-			//if(!(((A + A.st()).max()) < 1e-14))
-	#endif
-			// quick return if possible
-			if (N % 2 == 1)
-				return 0; 
-			// work on a copy of A
-
-			_T pfaffian = 1.0;
-			for (arma::u64 k = 0; k < N - 1; k += 2)
-			{
-				// First, find the largest entry in A[k + 1:, k] and
-				// permute it to A[k + 1, k]
-				auto kp = k + 1 + arma::abs(A.col(k).subvec(k + 1, N - 1)).index_max();
-
-				// Check if we need to pivot
-				if (kp != k + 1)
-				{
-					// interchange rows k + 1 and kp
-					A.swap_rows(k + 1, kp);
-
-					// Then interchange columns k + 1 and kp
-					A.swap_cols(k + 1, kp);
-
-					// every interchange corresponds to a "-" in det(P)
-					pfaffian *= -1;
-				}
-
-				// Now form the Gauss vector
-				if (A(k + 1, k) != 0.0)
-				{
-					pfaffian *=	A(k, k + 1);
-					if (k + 2 < N)
-					{
-						arma::Row<_T> tau	=	A.row(k).subvec(k + 2, N - 1) / A(k, k + 1);
-						// Update the matrix block A(k + 2:, k + 2)
-						const auto col				=	A.col(k + 1).subvec(k + 2, N - 1);
-						auto subMat 				=	A.submat(k + 2, k + 2, N - 1, N - 1);	
-						const auto col_times_row	=	outer(col, tau);
-						const auto row_times_col	=	outer(tau, col);
-						//col_times_row.print("COL * TAU");
-						//row_times_col.print("TAU * COL");
-						subMat				+=	row_times_col;
-						subMat				-=	col_times_row;
-					}
-				}
-				// if we encounter a zero on the super/subdiagonal, the Pfaffian is 0
-				else
-					return 0.0;
-			}
-			return pfaffian;
-		}
-
-		// #################################################################################################################################################
-	
-		/*
-		* @brief Computing the Pfaffian of a skew-symmetric matrix. Using the fact that for an arbitrary skew-symmetric matrix,
-		* the pfaffian Pf(B A B^T ) = det(B)Pf(A). This is done via Schur decomposition.
-		* @param A skew-symmetric matrix
-		* @param N size of the matrix
-		* @returns the Pfaffian of a skew-symmetric matrix A
-		*/
+		_T pfaffian_hess(const arma::Mat<_T>& A, arma::u64 N);
 		template <typename _T>
-		_T pfaffian_s(arma::Mat<_T> A, arma::u64 N)
-		{
-			arma::Mat<_T> U, S;
-			arma::schur(U, S, A);
-			return arma::det(U) * arma::prod(arma::Col<_T>(S.diag(1)).elem(arma::regspace<arma::uvec>(0, N - 1, 2)));
-		}
-	
-		// #################################################################################################################################################
-
+		_T pfaffian_p(arma::Mat<_T> A, arma::u64 N);
 		template <typename _T>
-		_T pfaffian(const arma::Mat<_T>& A, arma::u64 N, PfaffianAlgorithms _alg = PfaffianAlgorithms::ParlettReid)
-		{
-	//#ifdef _DEBUG
-	//		A.save(arma::hdf5_name("A.h5"));
-	//#endif
-			switch (_alg)
-			{
-			case PfaffianAlgorithms::ParlettReid:
-				return pfaffian_p<_T>(A, N);
-			case PfaffianAlgorithms::Householder:
-				//LOGINFO("Householder Pfaffian algorithm not implemented yet.", LOG_TYPES::ERROR, 2);
-				return 0;
-			case PfaffianAlgorithms::Schur:
-				return pfaffian_s<_T>(A, N);
-			case PfaffianAlgorithms::Hessenberg:
-				return pfaffian_hess<_T>(A, N);
-			case PfaffianAlgorithms::Recursive:
-				return pfaffian_r(A, N);
-			default:
-				return pfaffian_p<_T>(A, N);
-			}
-		}
-		
-		// #################################################################################################################################################
+		_T pfaffian_s(arma::Mat<_T> A, arma::u64 N);
+		template <typename _T>
+		_T pfaffian(const arma::Mat<_T>& A, arma::u64 N, PfaffianAlgorithms _alg = PfaffianAlgorithms::ParlettReid);
 		
 		/*
 		* @brief Update the Pfaffian of a skew-symmetric matrix after a row and column update.
@@ -1395,12 +1297,10 @@ namespace algebra
 		* @returns the Pfaffian of an updated skew-symmetric matrix
 		*/
 		template <typename _Tp, typename _T>
-		_Tp pfaffian_upd_row_n_col(_Tp _pffA, const _T& _Ainv_row, const _T& _updRow)
+		inline _Tp pfaffian_upd_row_n_col(_Tp _pffA, const _T& _Ainv_row, const _T& _updRow)
 		{
 			return -_pffA * algebra::cast<_Tp>(arma::dot(_Ainv_row, _updRow));
 		}
-
-
 	};
 
 	// #################################################################################################################################################
