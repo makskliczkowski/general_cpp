@@ -77,6 +77,7 @@ constexpr auto PRETTY_TIME_FORMAT_MS			= ".%03Id"; 			// printf format
 #include <map>
 class Timer
 {
+public:
 	enum class TimePrecision { MICROSECONDS = 0, MILLISECONDS = 1, SECONDS = 2 };
 protected:
 	const static inline std::string _startName 	= "start";

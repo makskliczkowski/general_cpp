@@ -7,6 +7,7 @@
 #include <complex>
 #include <stdexcept>
 #include <stdlib.h>
+#include <string>
 
 
 // #################################################################################################################################################
@@ -408,26 +409,149 @@ namespace algebra
 			// *********************************************************************************************************************************************
 
 			template <typename _T1, bool _symmetric>
-			inline arma::Col<_T1> solve(Type _type, SOLVE_MATMUL_ARG_TYPES(_T1)){ return General::solve<_T1, _symmetric>(_type, _matrixFreeMultiplication, _F, _x0, nullptr, _eps, _max_iter, _converged, _reg); }
+			arma::Col<_T1> solve(Type _type, SOLVE_MATMUL_ARG_TYPES(_T1)){ return General::solve<_T1, _symmetric>(_type, _matrixFreeMultiplication, _F, _x0, nullptr, _eps, _max_iter, _converged, _reg); }
 			
 			template <typename _T1, bool _symmetric>
-			inline arma::Col<_T1> solve(int _type, SOLVE_MATMUL_ARG_TYPES(_T1)) { return General::solve<_T1, _symmetric>(static_cast<Type>(_type), _matrixFreeMultiplication, _F, _x0, _eps, _max_iter, _converged, _reg); }
+			arma::Col<_T1> solve(int _type, SOLVE_MATMUL_ARG_TYPES(_T1)) { return General::solve<_T1, _symmetric>(static_cast<Type>(_type), _matrixFreeMultiplication, _F, _x0, _eps, _max_iter, _converged, _reg); }
 
 			// *********************************************************************************************************************************************
 
 			template <typename _T1, bool _symmetric>
-			inline arma::Col<_T1> solve(Solvers::General::Type _type, SOLVE_MAT_ARG_TYPES(_T1)){ return General::solve<_T1, _symmetric>(_type, _A, _F, _x0, nullptr, _eps, _max_iter, _converged, _reg); }
+			arma::Col<_T1> solve(Solvers::General::Type _type, SOLVE_MAT_ARG_TYPES(_T1)){ return General::solve<_T1, _symmetric>(_type, _A, _F, _x0, nullptr, _eps, _max_iter, _converged, _reg); }
 
 			template <typename _T1, bool _symmetric>
-			inline arma::Col<_T1> solve(int _type, SOLVE_MAT_ARG_TYPES(_T1)) { return General::solve<_T1, _symmetric>(static_cast<Solvers::General::Type>(_type), _A, _F, _x0, _eps, _max_iter, _converged, _reg); }
+			arma::Col<_T1> solve(int _type, SOLVE_MAT_ARG_TYPES(_T1)) { return General::solve<_T1, _symmetric>(static_cast<Solvers::General::Type>(_type), _A, _F, _x0, _eps, _max_iter, _converged, _reg); }
 
 			// *********************************************************************************************************************************************
 
 			template <typename _T1, bool _symmetric>
-			inline arma::Col<_T1> solve(Solvers::General::Type _type, SOLVE_SPMAT_ARG_TYPES(_T1)){ return General::solve<_T1, _symmetric>(_type, _A, _F, _x0, nullptr, _eps, _max_iter, _converged, _reg); }
+			arma::Col<_T1> solve(Solvers::General::Type _type, SOLVE_SPMAT_ARG_TYPES(_T1)){ return General::solve<_T1, _symmetric>(_type, _A, _F, _x0, nullptr, _eps, _max_iter, _converged, _reg); }
 
 			template <typename _T1, bool _symmetric>
-			inline arma::Col<_T1> solve(int _type, SOLVE_SPMAT_ARG_TYPES(_T1)) { return General::solve<_T1, _symmetric>(static_cast<Solvers::General::Type>(_type), _A, _F, _x0, _eps, _max_iter, _converged, _reg); }
+			arma::Col<_T1> solve(int _type, SOLVE_SPMAT_ARG_TYPES(_T1)) { return General::solve<_T1, _symmetric>(static_cast<Solvers::General::Type>(_type), _A, _F, _x0, _eps, _max_iter, _converged, _reg); }
+
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+
+			template <typename _T1, bool _symmetric>
+			void solve_test(Solvers::General::Type _type, double _eps, int _max_iter, double _reg, Preconditioners::Preconditioner<_T1, _symmetric>* _preconditioner)
+			{
+				Timer _timer;
+				_timer.start();
+
+				// Define complex symmetric matrix A (4x4) and vector b (4x1)
+				arma::cx_mat A(4, 4, arma::fill::zeros);
+				arma::cx_vec b(4);
+
+				// Initialize symmetric matrix A
+				A(0, 0) = arma::cx_double(1, 0);
+				A(0, 1) = arma::cx_double(2, -1);
+				A(0, 2) = arma::cx_double(3, 2);
+				A(0, 3) = arma::cx_double(-1, 1);
+
+				A(1, 1) = arma::cx_double(2, 0);
+				A(1, 2) = arma::cx_double(1, -1);
+				A(1, 3) = arma::cx_double(4, 1);
+
+				A(2, 2) = arma::cx_double(3, 0);
+				A(2, 3) = arma::cx_double(1, 3);
+
+				A(3, 3) = arma::cx_double(1, 0);
+
+				// Fill lower triangle to make A symmetric
+				A(1, 0) = std::conj(A(0, 1));
+				A(2, 0) = std::conj(A(0, 2));
+				A(2, 1) = std::conj(A(1, 2));
+				A(3, 0) = std::conj(A(0, 3));
+				A(3, 1) = std::conj(A(1, 3));
+				A(3, 2) = std::conj(A(2, 3));
+
+				// Initialize b
+				b(0) = arma::cx_double(1, 2);
+				b(1) = arma::cx_double(0, -1);
+				b(2) = arma::cx_double(3, -1);
+				b(3) = arma::cx_double(2, 3);
+
+				// setup the matrices for real or complex
+				arma::Mat<_T1> A_true;
+				arma::Col<_T1> b_true;
+
+				if constexpr (std::is_same<_T1, double>::value)
+				{
+					A_true = arma::real(A);
+					b_true = arma::real(b);
+				}
+				else
+				{
+					A_true = arma::conv_to<arma::Mat<_T1>>::from(A);
+					b_true = arma::conv_to<arma::Col<_T1>>::from(b);
+				}
+				std::cout << "------------------------------------------------" << std::endl;
+				std::cout << "Test for " << name(_type) << " solver" << std::endl;
+				std::cout << "Matrix A:" << std::endl << A_true << std::endl;
+				std::cout << "------------------------------------------------" << std::endl;
+
+				double _diff_arma = 0;
+				std::string _elapsed_arma;
+				{
+					_timer.checkpoint("arma::solve");
+
+					// Solve for x in A * x = b
+					auto x = arma::solve(A_true, b_true);
+
+					// Output the result
+					std::cout 		<< "(ARMA) Solution x:" << std::endl << x.as_row() << std::endl;
+					arma::Col<_T1> check = A_true * x;
+					_diff_arma 		= arma::norm(check - b_true);
+					_elapsed_arma 	= _timer.elapsed("arma::solve");
+					
+					std::cout << "Check (A * x):" << std::endl << check.as_row() << std::endl;
+					std::cout << "Expected b:" << std::endl << b_true.as_row() << std::endl;
+					std::cout << "Difference: " << _diff_arma << std::endl;
+					std::cout << "Time taken: " << _elapsed_arma << std::endl;
+					std::cout << "------------------------------------------------" << std::endl;
+				}
+
+				double _diff_solver = 0;
+				std::string _elapsed_solver;
+				{
+					_timer.checkpoint("solve");
+
+					// Solve for x in A * x = b
+					auto _f = [&A_true](const arma::Col<_T1>& _x, double _regs) -> arma::Col<_T1>
+					{ 
+						arma::Col<_T1> _out = A_true * _x;
+						if (_regs > 0.0)
+							return _out + _regs * _x;
+						return _out;
+					};
+					bool _s 			= true;
+					arma::Col<_T1> _x0 	= arma::Col<_T1>(A_true.n_cols, arma::fill::zeros);
+					auto x 				= algebra::Solvers::General::solve<_T1, _symmetric>(_type, _f, b_true, &_x0, _preconditioner, _eps, _max_iter, &_s, _reg);
+
+					// Output the result
+					arma::Col<_T1> check = A_true * x;
+					_diff_solver 		= arma::norm(check - b_true);
+					_elapsed_solver 	= _timer.elapsed("solve");
+					
+					std::cout << "(" 	<< name(_type) << ") Solution x:" << std::endl << x.as_row() << std::endl;
+					std::cout << "Check (A * x):" << std::endl << check.as_row() << std::endl;
+					std::cout << "Expected b:" << std::endl << b_true.as_row() << std::endl;
+					std::cout << "Difference: " << _diff_solver << std::endl;
+					std::cout << "Time taken: " << _timer.elapsed("solve") << std::endl;
+					std::cout << "------------------------------------------------" << std::endl;
+				}
+				std::cout << "ARMA (time, diff)" << _elapsed_arma << ", " << _diff_arma << std::endl;
+				std::cout << "Solver (time, diff)" << _elapsed_solver << ", " << _diff_solver << std::endl;
+				std::cout << 	"------------------------------------------------" << 
+								"------------------------------------------------" << std::endl;
+			}
+			
+			// true
+			template void solve_test<double, true>(Solvers::General::Type _type, double _eps, int _max_iter, double _reg, Preconditioners::Preconditioner<double, true>* _preconditioner);
+			template void solve_test<std::complex<double>, true>(Solvers::General::Type _type, double _eps, int _max_iter, double _reg, Preconditioners::Preconditioner<std::complex<double>, true>* _preconditioner);
+			// false 
+			template void solve_test<double, false>(Solvers::General::Type _type, double _eps, int _max_iter, double _reg, Preconditioners::Preconditioner<double, false>* _preconditioner);
+			template void solve_test<std::complex<double>, false>(Solvers::General::Type _type, double _eps, int _max_iter, double _reg, Preconditioners::Preconditioner<std::complex<double>, false>* _preconditioner);
 
             // -----------------------------------------------------------------------------------------------------------------------------------------
 
