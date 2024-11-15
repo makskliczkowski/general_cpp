@@ -432,16 +432,11 @@ namespace algebra
 
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 
-			template <typename _T1, bool _symmetric>
-			void solve_test(Solvers::General::Type _type, double _eps, int _max_iter, double _reg, Preconditioners::Preconditioner<_T1, _symmetric>* _preconditioner)
+			template <typename _T1>
+			std::pair<arma::Mat<_T1>, arma::Col<_T1>> solve_test_mat_vec()
 			{
-				Timer _timer;
-				_timer.start();
-
-				// Define complex symmetric matrix A (4x4) and vector b (4x1)
-				arma::cx_mat A(4, 4, arma::fill::zeros);
-				arma::cx_vec b(4);
-
+				arma::Mat<std::complex<double>> A(4, 4, arma::fill::zeros);
+				arma::Col<std::complex<double>> b(4);
 				// Initialize symmetric matrix A
 				A(0, 0) = arma::cx_double(1, 0);
 				A(0, 1) = arma::cx_double(2, -1);
@@ -471,10 +466,8 @@ namespace algebra
 				b(2) = arma::cx_double(3, -1);
 				b(3) = arma::cx_double(2, 3);
 
-				// setup the matrices for real or complex
 				arma::Mat<_T1> A_true;
 				arma::Col<_T1> b_true;
-
 				if constexpr (std::is_same<_T1, double>::value)
 				{
 					A_true = arma::real(A);
@@ -485,38 +478,59 @@ namespace algebra
 					A_true = arma::conv_to<arma::Mat<_T1>>::from(A);
 					b_true = arma::conv_to<arma::Col<_T1>>::from(b);
 				}
+
+				return std::make_pair(A_true, b_true);
+			}
+
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+
+			template <typename _T1, bool _symmetric>
+			void solve_test(Solvers::General::Type _type, double _eps, int _max_iter, double _reg, Preconditioners::Preconditioner<_T1, _symmetric>* _preconditioner)
+			{
+				Timer _timer;
+				_timer.reset();
+
+				const auto [A_true, b_true] = solve_test_mat_vec<_T1>();
+
+				// Start logging for the method being tested
 				std::cout << "------------------------------------------------" << std::endl;
-				std::cout << "Test for " << name(_type) << " solver" << std::endl;
+				std::cout << "Test for solver: " << name(_type) << std::endl;
 				std::cout << "Matrix A:" << std::endl << A_true << std::endl;
 				std::cout << "------------------------------------------------" << std::endl;
 
+				// ARMA Solve
 				double _diff_arma = 0;
 				std::string _elapsed_arma;
-				{
+				try {
 					_timer.checkpoint("arma::solve");
 
-					// Solve for x in A * x = b
+					// Solve using ARMA
 					auto x = arma::solve(A_true, b_true);
-
-					// Output the result
-					std::cout 		<< "(ARMA) Solution x:" << std::endl << x.as_row() << std::endl;
-					arma::Col<_T1> check = A_true * x;
-					_diff_arma 		= arma::norm(check - b_true);
-					_elapsed_arma 	= _timer.elapsed("arma::solve");
 					
+					// Check result
+					arma::Col<_T1> check = A_true * x;
+					_diff_arma = arma::norm(check - b_true);
+					_elapsed_arma = _timer.elapsed("arma::solve");
+
+					// Output ARMA results
+					std::cout << "(ARMA) Solution x:" << std::endl << x.as_row() << std::endl;
 					std::cout << "Check (A * x):" << std::endl << check.as_row() << std::endl;
 					std::cout << "Expected b:" << std::endl << b_true.as_row() << std::endl;
 					std::cout << "Difference: " << _diff_arma << std::endl;
 					std::cout << "Time taken: " << _elapsed_arma << std::endl;
 					std::cout << "------------------------------------------------" << std::endl;
 				}
+				catch (const std::exception& e) {
+					std::cout << "ARMA solver exception: " << e.what() << std::endl;
+				}
 
-				double _diff_solver = 0;
+				// Custom Solver (MINRES or other)
+				double _diff_solver = -1;
 				std::string _elapsed_solver;
-				{
+				try {
 					_timer.checkpoint("solve");
 
-					// Solve for x in A * x = b
+					// Define the solver function
 					auto _f = [&A_true](const arma::Col<_T1>& _x, double _regs) -> arma::Col<_T1>
 					{ 
 						arma::Col<_T1> _out = A_true * _x;
@@ -524,34 +538,47 @@ namespace algebra
 							return _out + _regs * _x;
 						return _out;
 					};
-					bool _s 			= true;
-					arma::Col<_T1> _x0 	= arma::Col<_T1>(A_true.n_cols, arma::fill::zeros);
-					auto x 				= algebra::Solvers::General::solve<_T1, _symmetric>(_type, _f, b_true, &_x0, _preconditioner, _eps, _max_iter, &_s, _reg);
 
-					// Output the result
-					arma::Col<_T1> check = A_true * x;
-					_diff_solver 		= arma::norm(check - b_true);
-					_elapsed_solver 	= _timer.elapsed("solve");
+					bool _s = true;
+					arma::Col<_T1> _x0 = arma::Col<_T1>(A_true.n_cols, arma::fill::zeros);
 					
-					std::cout << "(" 	<< name(_type) << ") Solution x:" << std::endl << x.as_row() << std::endl;
+					// Solve using custom solver
+					auto x = algebra::Solvers::General::solve<_T1, _symmetric>(_type, _f, b_true, &_x0, _preconditioner, _eps, _max_iter, &_s, _reg);
+
+					// Check result
+					arma::Col<_T1> check = A_true * x;
+					_diff_solver = arma::norm(check - b_true);
+					_elapsed_solver = _timer.elapsed("solve");
+
+					// Output custom solver results
+					std::cout << "(" + name(_type) + ") Solution x:" << std::endl << x.as_row() << std::endl;
 					std::cout << "Check (A * x):" << std::endl << check.as_row() << std::endl;
 					std::cout << "Expected b:" << std::endl << b_true.as_row() << std::endl;
 					std::cout << "Difference: " << _diff_solver << std::endl;
-					std::cout << "Time taken: " << _timer.elapsed("solve") << std::endl;
+					std::cout << "Time taken: " << _elapsed_solver << std::endl;
 					std::cout << "------------------------------------------------" << std::endl;
 				}
-				std::cout << "ARMA (time, diff)" << _elapsed_arma << ", " << _diff_arma << std::endl;
-				std::cout << "Solver (time, diff)" << _elapsed_solver << ", " << _diff_solver << std::endl;
-				std::cout << 	"------------------------------------------------" << 
-								"------------------------------------------------" << std::endl;
+				catch (const std::exception& e) {
+					std::cout << "Solver exception: " << e.what() << std::endl;
+				}
+
+				// Final comparison
+				std::cout << "ARMA (time, diff): " << _elapsed_arma << ", " << _diff_arma << std::endl;
+				std::cout << "Solver (time, diff): " << _elapsed_solver << ", " << _diff_solver << std::endl;
+				std::cout << "------------------------------------------------" << std::endl;
+				std::cout << "------------------------------------------------" << std::endl;
 			}
-			
+		
 			// true
 			template void solve_test<double, true>(Solvers::General::Type _type, double _eps, int _max_iter, double _reg, Preconditioners::Preconditioner<double, true>* _preconditioner);
 			template void solve_test<std::complex<double>, true>(Solvers::General::Type _type, double _eps, int _max_iter, double _reg, Preconditioners::Preconditioner<std::complex<double>, true>* _preconditioner);
 			// false 
 			template void solve_test<double, false>(Solvers::General::Type _type, double _eps, int _max_iter, double _reg, Preconditioners::Preconditioner<double, false>* _preconditioner);
 			template void solve_test<std::complex<double>, false>(Solvers::General::Type _type, double _eps, int _max_iter, double _reg, Preconditioners::Preconditioner<std::complex<double>, false>* _preconditioner);
+
+			// matrix 
+			template std::pair<arma::Mat<double>, arma::Col<double>> solve_test_mat_vec<double>();
+			template std::pair<arma::Mat<std::complex<double>>, arma::Col<std::complex<double>>> solve_test_mat_vec<std::complex<double>>();
 
             // -----------------------------------------------------------------------------------------------------------------------------------------
 

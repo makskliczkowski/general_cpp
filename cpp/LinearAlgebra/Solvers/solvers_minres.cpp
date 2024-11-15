@@ -88,45 +88,62 @@ namespace algebra
 				arma::Col<_T1> minres(SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(_T1, true))
 				{
 					if (_preconditioner == nullptr)
-						return Solvers::General::MINRES::minres<_T1>(_matrixFreeMultiplication, _F, _x0, _eps, _max_iter, _converged, _reg);
-   		 			// Initialize solution x, setting it to zero if _x0 is nullptr (no initial guess)
-					arma::Col<_T1> x 		= (_x0 == nullptr) ? arma::Col<_T1>(_F.n_elem, arma::fill::zeros) : *_x0;
-					arma::Col<_T1> r 		= _F;
-					if (_x0 != nullptr) r 	-= _matrixFreeMultiplication(x, _reg);							// Initial residual r = b - A*x
+						return minres<_T1>(_matrixFreeMultiplication, _F, _x0, _eps, _max_iter, _converged, _reg);
 
-					_T1 beta_old 			= 0.0;
-					_T1 alpha 				= 0.0;
+					// Initialize solution x, setting it to zero if _x0 is nullptr (no initial guess)
+					arma::Col<_T1> x = (_x0 == nullptr) ? arma::Col<_T1>(_F.n_elem, arma::fill::zeros) : *_x0;
+					arma::Col<_T1> r = _F;
+					if (_x0 != nullptr) r -= _matrixFreeMultiplication(x, _reg); // Initial residual r = b - A*x
 
-					arma::Col<_T1> z 		= _preconditioner->apply(r);
-					arma::Col<_T1> pkm1 	= z, pk = pkm1;													// Variables for Krylov subspace basis and matrix-vector product results
-					arma::Col<_T1> Ap_kp1;																	// matrix-vector multiplication result - is the same as s_0 in the MINRES algorithm
-					_T1 _rnorm 				= arma::norm(r);												// the norm of the residual - is the same as beta_0 in the MINRES algorithm
+					arma::Col<_T1> pkm1 = r, pk = pkm1, pkp1; // is A^0 * r
+					arma::Col<_T1> Ap_km1 = _matrixFreeMultiplication(pkm1, _reg), Ap_k = Ap_km1, Ap_kp1; // matrix-vector multiplication result - is the same as s_0 in the MINRES algorithm
 
-					for (size_t i = 0; i < _max_iter; ++i)													// iterate until convergence
+					_T1 _rnorm = arma::norm(r); // the norm of the residual - is the same as beta_0 in the MINRES algorithm
+
+					for (size_t i = 0; i < _max_iter; ++i) // iterate until convergence
 					{
-						// Apply the matrix vector multiplication
-						Ap_kp1         		= _matrixFreeMultiplication(pk, _reg);							// is A^k * p_{k}
-						
-						// compute alpha and update the residual
-						alpha 				= arma::cdot(pk, Ap_kp1);										// is the overlap of r and Ap so that x can be updated with the correct step
-						Ap_kp1 				-= alpha * pk + beta_old * pkm1;								
+						// Apply preconditioner to the residual and search directions
+						arma::Col<_T1> r_precond = _preconditioner->apply(r);  // Preconditioned residual
+						arma::Col<_T1> pk_precond = _preconditioner->apply(pk); // Preconditioned search direction
+						arma::Col<_T1> pkm1_precond = _preconditioner->apply(pkm1); // Preconditioned previous search direction
 
-						// update solution
-						_T1 beta 			= arma::norm(Ap_kp1);											// is the norm of the residual
+						// Ensure the preconditioned vectors match the original sizes
+						if (r_precond.n_elem != r.n_elem || pk_precond.n_elem != pk.n_elem || pkm1_precond.n_elem != pkm1.n_elem) {
+							LOGINFO("Preconditioner applied to a vector with incompatible dimensions.", LOG_TYPES::ERROR, 3);
+							if (_converged != nullptr)
+								*_converged = false;
+							return x;
+						}
+
+						// Update the search direction
+						pkp1 = pk; pk = pkm1; // update search directions using the Lanczos coefficients
+						Ap_kp1 = Ap_k; Ap_k = Ap_km1; // update the matrix-vector multiplication result
+						_T1 alpha = arma::cdot(r_precond, Ap_k) / arma::cdot(Ap_k, Ap_k); // overlap of preconditioned r and Ap so that x can be updated with the correct step
+						x += alpha * pk; // update the solution
+						r -= alpha * Ap_k; // update the residual
+
+						_T1 beta = arma::norm(r) / _rnorm; // norm of the residual
 						if (std::abs(beta) < _eps) {
-							if (_converged != nullptr)														// Check for convergence
+							if (_converged != nullptr) // Check for convergence
 								*_converged = true;
 							return x;
 						}
 
-						_T1 omega			= _rnorm / alpha;
-						x 					+= omega * pk;													// update the solution
-						_rnorm         		= beta * omega;													// update the residual norm
+						// Update the search direction
+						pkm1 = Ap_k; // update the search direction - p_{k-1} = Ap_k
+						Ap_km1 = _matrixFreeMultiplication(Ap_k, _reg); // update the matrix-vector multiplication result
+						beta = arma::cdot(Ap_km1, Ap_k) / arma::cdot(Ap_k, Ap_k); // overlap of Ap_km1 and Ap_k
 
-						// prepare for the next iteration
-						pkm1 				= pk; 
-						pk 					= Ap_kp1 / beta;
-						beta_old 			= beta;
+						// Update the search direction
+						pkm1 -= beta * pk;
+						Ap_km1 -= beta * Ap_k;
+
+						if (i > 0) // Update the second Lanczos vector
+						{
+							beta = arma::cdot(Ap_km1, Ap_kp1) / arma::cdot(Ap_kp1, Ap_kp1);
+							pkm1 -= beta * pkp1;
+							Ap_km1 -= beta * Ap_kp1;
+						}
 					}
 
 					LOGINFO("MINRES solver did not converge.", LOG_TYPES::WARNING, 3);

@@ -95,20 +95,9 @@ inline double toType(double _r, double _i) {
 
 // #################################################################
 
-/*
-* @brief Defines an euclidean modulo denoting also the negative sign
-* @param a left side of modulo
-* @param b right side of modulo
-* @return euclidean a%b
-* @link https://en.wikipedia.org/wiki/Modulo_operation
-*/
 template <typename _T>
-inline _T modEUC(_T a, _T b)
-{
-	_T m = a % b;
-	if (m < 0) m = (b < 0) ? m - b : m + b;
-	return m;
-}
+typename std::enable_if<std::is_integral<_T>::value, _T>::type
+modEUC(_T a, _T b);
 
 // ###############################################################################
 
@@ -331,12 +320,37 @@ namespace algebra {
 	inline auto norm(_Ts... y)														-> double	{ return std::sqrt(algebra::norm(y...)); };
 	
 	// -----------------------------------------------------------------------------------------------------------------------------------------
-	template <typename _T, typename... _Ts>
-	inline auto maximum(_T x, _Ts... y) -> double;
-
-	// -----------------------------------------------------------------------------------------------------------------------------------------
-	template <typename _T, typename... _Ts>
-	inline auto minimum(_T x, _Ts... y) -> double;
+    /** 
+    * @brief Check the maximum value of a set of values of a given type.
+    * @param x first value
+    * @param y... rest of the values
+    * @returns maximum value
+    */
+    template <typename _T, typename... _Ts>
+    inline auto maximum(_T x, _Ts... y) -> double
+    {
+        if constexpr (std::is_same_v<_T, std::complex<double>>) {
+            return std::max({std::abs(x), std::abs(y)...});
+        } else {
+            return std::max({x, y...});
+        }
+    }
+    
+    /**
+    * @brief Check the minimum value of a set of values of a given type.
+    * @param x first value
+    * @param y... rest of the values
+    * @returns minimum value
+    */
+    template <typename _T, typename... _Ts>
+    inline auto minimum(_T x, _Ts... y) -> double
+    {
+        if constexpr (std::is_same_v<_T, std::complex<double>>) {
+            return std::min({std::abs(x), std::abs(y)...});
+        } else {
+            return std::min({static_cast<double>(x), static_cast<double>(y)...});
+        }
+    }
 
 	// -----------------------------------------------------------------------------------------------------------------------------------------
 

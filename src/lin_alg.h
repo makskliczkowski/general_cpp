@@ -1146,6 +1146,8 @@ namespace algebra
 			template <typename _T1, bool _symmetric = true>
 			arma::Col<_T1> solve(int _type, SOLVE_SPMAT_ARG_TYPESD(_T1));
 			// -----------------------------------------------------------------------------------------------------------------------------------------
+			template <typename _T1>
+			std::pair<arma::Mat<_T1>, arma::Col<_T1>> solve_test_mat_vec();
 			template <typename _T1, bool _symmetric = true>
 			void solve_test(Solvers::General::Type _type, double _eps, int _max_iter, double _reg, Preconditioners::Preconditioner<_T1, _symmetric>* _preconditioner);
 			// -----------------------------------------------------------------------------------------------------------------------------------------
