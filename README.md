@@ -142,16 +142,16 @@ src/
 
 ## Documentation
 
-Detailed documentation is available in the `docs` directory. You can also find examples and API references.
+Detailed documentation is available in the `docs` directory. You can also find examples and API references. !NOT YET IMPLEMENTED!
 
 ## Contributing
 
-Contributions are welcome! Please read the `CONTRIBUTING.md` file for guidelines on how to contribute to this project.
+Contributions are welcome! Please read the `CONTRIBUTING.md` file for guidelines on how to contribute to this project. !NOT YET IMPLEMENTED!
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for more details.
+This project is licensed under the MIT License. See the `LICENSE` file for more details. !NOT YET IMPLEMENTED!
 
 ## Contact
 
-For any questions or issues, please open an issue on GitHub or contact the maintainer at [your-email@example.com].
+For any questions or issues, please open an issue on GitHub or contact the maintainer at [maksymilian.kliczkowski@pwr.edu.pl] or [maxgrom97@gmail.com]. 
