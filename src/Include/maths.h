@@ -329,32 +329,16 @@ namespace algebra {
 	inline auto norm(_T x, _Ts... y)												-> double	{ return algebra::norm(x) + norm(y...); };
 	template <typename ..._Ts>
 	inline auto norm(_Ts... y)														-> double	{ return std::sqrt(algebra::norm(y...)); };
+	
+	// -----------------------------------------------------------------------------------------------------------------------------------------
+	template <typename _T, typename... _Ts>
+	inline auto maximum(_T x, _Ts... y) -> double;
 
-	template <typename _T>
-	inline auto max(_T x)															-> double	{ return x; };
-	template <>
-	inline auto max(std::complex<double> x)											-> double 	{ return std::abs(x); };
-	template <typename _T>
-	inline auto max(_T x, _T y)														-> double	{ return std::max(x, y); };
-	template <>
-	inline auto max(std::complex<double> x, std::complex<double> y)					-> double 	{ return std::max(std::abs(x), std::abs(y)); };
-	template <typename _T, typename ... _Ts>
-	inline auto max(_T x, _Ts... y)													-> double	{ return algebra::max(x, algebra::max(y...)); };
-	template <typename ..._Ts>
-	inline auto max(_Ts... y)														-> double	{ return algebra::max(y...); };
+	// -----------------------------------------------------------------------------------------------------------------------------------------
+	template <typename _T, typename... _Ts>
+	inline auto minimum(_T x, _Ts... y) -> double;
 
-	template <typename _T>
-	inline auto min(_T x)															-> double	{ return x; };
-	template <>
-	inline auto min(std::complex<double> x)											-> double 	{ return std::abs(x); };
-	template <typename _T>
-	inline auto min(_T x, _T y)														-> double	{ return std::min(x, y); };
-	template <>
-	inline auto min(std::complex<double> x, std::complex<double> y)					-> double 	{ return std::min(std::abs(x), std::abs(y)); };
-	template <typename _T, typename ... _Ts>
-	inline auto min(_T x, _Ts... y)													-> double	{ return algebra::min(x, algebra::min(y...)); };
-	template <typename ..._Ts>
-	inline auto min(_Ts... y)														-> double	{ return algebra::min(y...); };
+	// -----------------------------------------------------------------------------------------------------------------------------------------
 
 	template <typename _T, typename _T2>
 	inline bool gr(_T x, _T2 y)														{ return x > y; };

@@ -490,6 +490,8 @@ namespace algebra
 
 	namespace Solvers
 	{	
+		constexpr double TINY = 1.0e-16;		// a small number
+
 		// #################################################################################################################################################
 
 		template <typename _T1>

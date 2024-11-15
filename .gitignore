@@ -1,1 +1,10 @@
 .vs
+*/build
+*/CMakeFiles
+# exclude all files in the build directory
+*.so*
+*.a
+# makes sure that the CMakeLists.txt file is not ignored
+*Makefile
+*.cmake
+
