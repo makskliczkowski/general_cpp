@@ -311,13 +311,13 @@ namespace algebra {
 	inline auto imag(double x)														-> double	{ return 0.0; };
 	
 	template <typename _T>
-	inline auto norm(_T x)															-> double	{ return std::norm(x); };
+	inline auto norm(_T x)															-> double	{ return algebra::real(x * algebra::conjugate(x)); };	
 	template <>
 	inline auto norm(double x)														-> double	{ return x * x; };
 	template <typename _T, typename ... _Ts>
-	inline auto norm(_T x, _Ts... y)												-> double	{ return algebra::norm(x) + norm(y...); };
+	inline auto norm(_T x, _Ts... y)												-> double	{ return algebra::norm(x) + algebra::norm(y...); };
 	template <typename ..._Ts>
-	inline auto norm(_Ts... y)														-> double	{ return std::sqrt(algebra::norm(y...)); };
+	inline auto norm(_Ts... y)														-> double	{ return algebra::norm(y...); };
 	
 	// -----------------------------------------------------------------------------------------------------------------------------------------
     /** 
@@ -330,7 +330,7 @@ namespace algebra {
     inline auto maximum(_T x, _Ts... y) -> double
     {
         if constexpr (std::is_same_v<_T, std::complex<double>>) {
-            return std::max({std::abs(x), std::abs(y)...});
+            return std::max({std::real(x), std::real(y)...});
         } else {
             return std::max({x, y...});
         }
@@ -346,7 +346,7 @@ namespace algebra {
     inline auto minimum(_T x, _Ts... y) -> double
     {
         if constexpr (std::is_same_v<_T, std::complex<double>>) {
-            return std::min({std::abs(x), std::abs(y)...});
+            return std::min({std::real(x), std::real(y)...});
         } else {
             return std::min({static_cast<double>(x), static_cast<double>(y)...});
         }
@@ -359,22 +359,22 @@ namespace algebra {
 	template <typename _T>
 	inline bool gr(_T x, _T y)														{ return x > y; };
 	template <>
-	inline bool gr(std::complex<double> x, std::complex<double> y)					{ return std::abs(x) > std::abs(y); };
+	inline bool gr(std::complex<double> x, std::complex<double> y)					{ return std::real(x) > std::real(y); };
 	template <>
-	inline bool gr(double x, std::complex<double> y)								{ return x > std::abs(y); };
+	inline bool gr(double x, std::complex<double> y)								{ return x > std::real(y); };
 	template <>
-	inline bool gr(std::complex<double> x, double y)								{ return std::abs(x) > y; };
+	inline bool gr(std::complex<double> x, double y)								{ return std::real(x) > y; };
 
 	template <typename _T1, typename _T2>
 	inline bool ls(_T1 x, _T2 y)													{ return x > y; };
 	template <typename _T>
 	inline bool ls(_T x, _T y)														{ return x < y; };
 	template <>
-	inline bool ls(std::complex<double> x, std::complex<double> y)					{ return std::abs(x) < std::abs(y); };
+	inline bool ls(std::complex<double> x, std::complex<double> y)					{ return std::real(x) < std::real(y); };
 	template <>
-	inline bool ls(double x, std::complex<double> y)								{ return x < std::abs(y); };
+	inline bool ls(double x, std::complex<double> y)								{ return x < std::real(y); };
 	template <>
-	inline bool ls(std::complex<double> x, double y)								{ return std::abs(x) < y; };
+	inline bool ls(std::complex<double> x, double y)								{ return std::real(x) < y; };
 
 	template <typename _T1, typename _T2>
 	inline bool eq(_T1 x, _T2 y)													{ return x == y; };
@@ -403,22 +403,22 @@ namespace algebra {
 	template <typename _T>
 	inline bool geq(_T x, _T y)														{ return x >= y; };
 	template <>
-	inline bool geq(std::complex<double> x, std::complex<double> y)					{ return std::abs(x) >= std::abs(y); };
+	inline bool geq(std::complex<double> x, std::complex<double> y)					{ return std::real(x) >= std::real(y); };
 	template <>
-	inline bool geq(double x, std::complex<double> y)								{ return x >= std::abs(y); };
+	inline bool geq(double x, std::complex<double> y)								{ return x >= std::real(y); };
 	template <>
-	inline bool geq(std::complex<double> x, double y)								{ return std::abs(x) >= y; };
+	inline bool geq(std::complex<double> x, double y)								{ return std::real(x) >= y; };
 
 	template <typename _T1, typename _T2>
 	inline bool leq(_T1 x, _T2 y)													{ return x <= y; };
 	template <typename _T>
 	inline bool leq(_T x, _T y)														{ return x <= y; };
 	template <>
-	inline bool leq(std::complex<double> x, std::complex<double> y)					{ return std::abs(x) <= std::abs(y); };
+	inline bool leq(std::complex<double> x, std::complex<double> y)					{ return std::real(x) <= std::real(y); };
 	template <>
-	inline bool leq(double x, std::complex<double> y)								{ return x <= std::abs(y); };
+	inline bool leq(double x, std::complex<double> y)								{ return x <= std::real(y); };
 	template <>
-	inline bool leq(std::complex<double> x, double y)								{ return std::abs(x) <= y; };
+	inline bool leq(std::complex<double> x, double y)								{ return std::real(x) <= y; };
 	
 	// ###################################################################### CAST #####################################################################
 

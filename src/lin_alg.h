@@ -510,7 +510,8 @@ namespace algebra
 				const bool isPositiveSemidefinite_ 	= _isPositiveSemidefinite;	// is the matrix positive semidefinite
 				bool isGram_ 						= false;					// is the matrix a Gram matrix
 				double sigma_ 						= 0.0;						// regularization parameter
-			
+				int type_ 							= 0;						// type of the preconditioner
+
 				// -----------------------------------------------------------------------------------------------------------------------------------------
 			public:
 				virtual ~Preconditioner() = default;
@@ -533,6 +534,10 @@ namespace algebra
 				void set(bool _isGram, double _sigma = 0.0) { this->isGram_ = _isGram; this->sigma_ = _sigma; }
 				virtual void set(const arma::Mat<T>& A, bool isGram = true, double _sigma = 0.0) = 0;		// set the preconditioner
 				virtual void set(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0) = 0;	// set the preconditioner
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+				
+				int type() const { return this->type_; }													// get the type of the preconditioner
 
 				// -----------------------------------------------------------------------------------------------------------------------------------------
 				
@@ -605,6 +610,7 @@ namespace algebra
 				T  bigVal_			= 1e-10;	// treated as zero for 1/value
 				double tolSmall_ 	= 1.0e-10; 	// if the value is smaller than this, then 1/value is big and we create cut-off
 				T  smallVal_		= 1e10;		// treated as zero for 1/value
+				int type_ 			= 1;		// type of the preconditioner
 			public:
 
 				JacobiPreconditioner() 
@@ -627,7 +633,8 @@ namespace algebra
 					if (!isGram)
 					{
 						arma::Col<T> diag 	= arma::diagvec(A);
-						diag 				+= (T)this->sigma_;
+						if (_sigma > 0.0)
+							diag += (T)this->sigma_;
 						this->diaginv_ 		= 1.0 / diag;
 						this->diaginv_ 		= arma::clamp(this->diaginv_, -1.0e10, 1.0e10);
 					}
@@ -668,6 +675,7 @@ namespace algebra
 			private:
 				arma::Mat<T> L_;     // lower triangular incomplete Cholesky factor
 				bool success_ 	= false;
+				int type_ 		= 2;	// type of the preconditioner
 			public:
 				IncompleteCholeskyPreconditioner()
 					: Preconditioner<T, _T>()
@@ -771,6 +779,8 @@ namespace algebra
 			class BinormalizationPreconditioner : public Preconditioner<T, _T> {
 			private:
 				bool success_ 	= false;
+				int type_ 		= 3;	// type of the preconditioner
+
 			public:
 				BinormalizationPreconditioner()
 					: Preconditioner<T, _T>()
@@ -823,6 +833,7 @@ namespace algebra
 				arma::Mat<T> U_;     // upper triangular incomplete Cholesky factor
 				arma::Col<arma::uword> P_; // permutation vector
 				bool success_ 	= false;
+				int type_ 		= 3;	// type of the preconditioner
 			public:
 				IncompleteLUPreconditioner()
 					: Preconditioner<T, _T>()
@@ -983,7 +994,7 @@ namespace algebra
 		#define SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(_T1, _T2) Solvers::_AX_fun<_T1> _matrixFreeMultiplication, SOLVE_GENERAL_ARG_TYPES_PRECONDITIONER(_T1, _T2)
 		#define SOLVE_MATMUL_ARG_TYPESD(_T1) Solvers::_AX_fun<_T1> _matrixFreeMultiplication, SOLVE_GENERAL_ARG_TYPESD(_T1)
 		#define SOLVE_MATMUL_ARG_TYPESD_PRECONDITIONER(_T1, _T2) Solvers::_AX_fun<_T1> _matrixFreeMultiplication, SOLVE_GENERAL_ARG_TYPESD_PRECONDITIONER(_T1, _T2)
-		
+
 		// #################################################################################################################################################
 		namespace General { 
 			// #################################################################################################################################################
@@ -1072,9 +1083,9 @@ namespace algebra
 			*/
 			namespace MINRES_QLP {
 				template<typename _T1>
-				arma::Col<_T1> minres_qlp(SOLVE_MATMUL_ARG_TYPESD(_T1));
-				template<typename _T1>
 				arma::Col<_T1> minres_qlp(SOLVE_MATMUL_ARG_TYPESD_PRECONDITIONER(_T1, true));
+				template<typename _T1>
+				arma::Col<_T1> minres_qlp(SOLVE_MATMUL_ARG_TYPESD(_T1));
 				template<typename _T1>
 				arma::Col<_T1> minres_qlp(SOLVE_MAT_ARG_TYPESD(_T1)) { MAKE_MATRIX_FREE_MULT(_T1); return minres_qlp<_T1>(_f, _x0, _eps, _max_iter, _converged, _reg); }
 				template<typename _T1>
@@ -1145,16 +1156,38 @@ namespace algebra
 			arma::Col<_T1> solve(Solvers::General::Type _type, SOLVE_SPMAT_ARG_TYPESD(_T1));
 			template <typename _T1, bool _symmetric = true>
 			arma::Col<_T1> solve(int _type, SOLVE_SPMAT_ARG_TYPESD(_T1));
-			// -----------------------------------------------------------------------------------------------------------------------------------------
-			template <typename _T1>
-			std::pair<arma::Mat<_T1>, arma::Col<_T1>> solve_test_mat_vec();
-			template <typename _T1, bool _symmetric = true>
-			void solve_test(Solvers::General::Type _type, double _eps, int _max_iter, double _reg, Preconditioners::Preconditioner<_T1, _symmetric>* _preconditioner);
+			
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 			std::string name(Solvers::General::Type _type);
 			std::string name(int _type);
+
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+			namespace Tests
+			{
+				template <typename _T1, bool _symmetric = true>
+				std::pair<arma::Mat<_T1>, arma::Col<_T1>> solve_test_mat_vec(bool _makeRandom = true);
+				
+				template <typename _T1, bool _symmetric = true>
+				void solve_test(const arma::Mat<_T1>& _A, const arma::Col<_T1>& _b, Solvers::General::Type _type, double _eps, int _max_iter, double _reg, int _preconditionertype = -1);
+				template <typename _T1, bool _symmetric = true>
+				void solve_test(Solvers::General::Type _type, double _eps, int _max_iter, double _reg, int _preconditionertype = -1, bool _makeRandom = false);
+				
+				template <typename _T1, bool _symmetric = true>
+				void solve_test_multiple(const arma::Mat<_T1>& A_true, const arma::Col<_T1>& b_true, double _eps, int _max_iter, double _reg, int _preconditionertype = -1);
+				template <typename _T1, bool _symmetric = true>
+				void solve_test_multiple(double _eps, int _max_iter, double _reg, int _preconditionertype = -1, bool _makeRandom = false);
+			};
 		};
 		// #################################################################################################################################################
+		
+		#define SOLVE_FISHER_MATRIX(_T1) 						const arma::Mat<_T1>& _DeltaO
+		#define SOLVE_FISHER_MATRICES(_T1) 						const arma::Mat<_T1>& _DeltaO, const arma::Mat<_T1>& _DeltaOConjT
+		#define SOLVE_FISHER_ARG_TYPES(_T1) 					SOLVE_FISHER_MATRICES(_T1), SOLVE_GENERAL_ARG_TYPES(_T1)
+		#define SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(_T1) 		SOLVE_FISHER_MATRICES(_T1), SOLVE_GENERAL_ARG_TYPES_PRECONDITIONER(_T1, true)
+		// with default values
+		#define SOLVE_FISHER_ARG_TYPESD(_T1) 					SOLVE_FISHER_MATRICES(_T1), SOLVE_GENERAL_ARG_TYPESD(_T1)
+		#define SOLVE_FISHER_ARG_TYPESD_PRECONDITIONER(_T1) 	SOLVE_FISHER_MATRICES(_T1), SOLVE_GENERAL_ARG_TYPESD_PRECONDITIONER(_T1, true)
+		#define MAKE_MATRIX_FREE_MULT_FISHER(_T) auto _f = [&](const arma::Col<_T>& _x, double _reg) -> arma::Col<_T> { return FisherMatrix::matrixFreeMultiplication<_T>(_DeltaO, _DeltaOConjT, _x, _reg); };
 		namespace FisherMatrix 
 		{	
 			/*
@@ -1165,13 +1198,6 @@ namespace algebra
 			* @equation S_{ij} = <\Delta O^*_i \Delta O_j> / N 
 			*/
 
-			#define SOLVE_FISHER_MATRIX(_T1) 						const arma::Mat<_T1>& _DeltaO
-			#define SOLVE_FISHER_MATRICES(_T1) 						const arma::Mat<_T1>& _DeltaO, const arma::Mat<_T1>& _DeltaOConjT
-			#define SOLVE_FISHER_ARG_TYPES(_T1) 					SOLVE_FISHER_MATRICES(_T1), SOLVE_GENERAL_ARG_TYPES(_T1)
-			#define SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(_T1) 		SOLVE_FISHER_MATRICES(_T1), SOLVE_GENERAL_ARG_TYPES_PRECONDITIONER(_T1, true)
-			// with default values
-			#define SOLVE_FISHER_ARG_TYPESD(_T1) 					SOLVE_FISHER_MATRICES(_T1), SOLVE_GENERAL_ARG_TYPESD(_T1)
-			#define SOLVE_FISHER_ARG_TYPESD_PRECONDITIONER(_T1) 	SOLVE_FISHER_MATRICES(_T1), SOLVE_GENERAL_ARG_TYPESD_PRECONDITIONER(_T1, true)
 
 			template <typename _T>
 			arma::Col<_T> matrixFreeMultiplication(const arma::Mat<_T>& _DeltaO, const arma::Col<_T>& _x, const double _reg = 0.0);
@@ -1179,7 +1205,6 @@ namespace algebra
 			template <typename _T>
 			arma::Col<_T> matrixFreeMultiplication(const arma::Mat<_T>& _DeltaO, const arma::Mat<_T>& _DeltaOConjT, const arma::Col<_T>& x, const double _reg = 0.0);
 			
-			#define MAKE_MATRIX_FREE_MULT_FISHER(_T) auto _f = [&](const arma::Col<_T>& _x, double _reg) -> arma::Col<_T> { return FisherMatrix::matrixFreeMultiplication<_T>(_DeltaO, _DeltaOConjT, _x, _reg); };
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 
 			// Conjugate gradient solver for the Fisher matrix inversion
@@ -1267,6 +1292,78 @@ namespace algebra
 		};
 		
 		// #################################################################################################################################################
+
+		/**
+		* @brief Arnoldi method for solving eigenvalue problems. Computes V and H such that :math:`AV_n=V_{n+1}\\underline{H}_n`.  If
+        * the Krylov subspace becomes A-invariant then V and H are truncated such
+        * that :math:`AV_n = V_n H_n`.
+
+		*/
+		template <typename _T, bool _symmetric = true, bool _reorthogonalize = false>
+		class Arnoldi
+		{
+		private:
+			bool reorthogonalize_ 		= _reorthogonalize;		// reorthogonalize the vectors
+			bool isSymmetric_ 			= _symmetric;			// is the matrix symmetric
+			bool isGram_ 				= false;				// is the matrix a Gram matrix 
+			bool converged_ 			= false;				// has the method converged
+			bool invariant_ 			= false;				// is the Krylov subspace A-invariant
+			double reg_ 				= -1.0;					// regularization parameter
+			size_t iter_				= 0; 					// current iteration
+			size_t krylovDim_ 			= 0;					// dimension of the Krylov subspace
+			size_t max_iter_			= 1000;					// maximum number of iterations
+			double eps_					= 1e-10;				// convergence criterion
+			size_t N_;											// size of the matrix
+			_AX_fun<_T> matVecFun_;								// matrix-vector multiplication
+			bool isPreconditioned_		= false;				// is the matrix preconditioned
+			Precond<_T, _symmetric>* preconditioner_;			// a self-adjoined preconditioner. If exists, the second basis is preconditioned
+																// as V_n = M * P_n, where M is the preconditioner and P_n is the original basis
+			arma::Mat<_T> V_;									// basis (reorthogonalized or not)
+			arma::Mat<_T> P_; 									// basis (preconditioned)
+			arma::Mat<_T> H_;									// Hessenberg matrix - or Lanczos matrix (if symmetric)
+			arma::Col<_T> p_;									// preconditioned vector - maybe unnecessary
+			arma::Col<_T> v_;									// original vector
+			arma::Col<_T> Av_; 									// A * v
+			arma::Col<_T> MAv_; 								// M * A * v
+			double vnorm_ 				= 0.0;					// norm of the original vector
+
+		public:
+			void init(const arma::Col<_T>& _F);
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+			~Arnoldi() 					{ if (preconditioner_) delete preconditioner_; }
+			Arnoldi() 					= default;
+			Arnoldi(SOLVE_MATMUL_ARG_TYPESD_PRECONDITIONER(_T, _symmetric));
+			Arnoldi(SOLVE_MATMUL_ARG_TYPESD(_T));
+			Arnoldi(SOLVE_MAT_ARG_TYPESD_PRECONDITIONER(_T, _symmetric));
+			Arnoldi(SOLVE_MAT_ARG_TYPESD(_T));
+			Arnoldi(SOLVE_SPMAT_ARG_TYPESD_PRECONDITIONER(_T, _symmetric));
+			Arnoldi(SOLVE_SPMAT_ARG_TYPESD(_T));
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+			Arnoldi(SOLVE_FISHER_ARG_TYPESD_PRECONDITIONER(_T));
+			Arnoldi(SOLVE_FISHER_ARG_TYPESD(_T));
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+		
+			// single Arnoldi iteration
+			void advance();
+			// full Arnoldi iteration
+			void iterate();
+
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+			// getters
+			inline const arma::Mat<_T>& getV() const { return V_; }
+			inline const arma::Mat<_T>& getP() const { return P_; }
+			inline const arma::Mat<_T>& getH() const { return H_; }
+			inline const arma::Col<_T>& getAv() const { return Av_; }
+			inline const arma::Col<_T>& getMAv() const { return MAv_; }
+			inline const arma::subview_col<_T> getV(size_t _i) const { return V_.col(_i); }
+			inline const arma::subview_col<_T> getP(size_t _i) const { return P_.col(_i); }
+			inline const arma::subview_col<_T> getH(size_t _i) const { return H_.col(_i); }
+			
+		
+		};
+
+		// #################################################################################################################################################
+	
 	};
 
 

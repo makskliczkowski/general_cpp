@@ -1,6 +1,7 @@
 #include "../../../src/lin_alg.h"
 #include "../../../src/flog.h"
 #include "../../../src/common.h"
+#include <cmath>
 
 // #################################################################################################################################################
 
@@ -43,20 +44,15 @@ namespace algebra
                     "System appears to be singular or badly scaled.",  									// Case 9
 					"Preconditioner is indefinite or singular."										 	// Case 10
 				};
-                constexpr std::string convergence_message(MINRES_QLP_FLAGS _flag) { return MINRES_QLP_MESSAGES[(int)_flag + (int)MINRES_QLP_FLAGS::PROCESSING]; }
+                static inline std::string convergence_message(MINRES_QLP_FLAGS _flag) 
+				{ 
+					auto _idx = static_cast<int>(_flag) + (0 - static_cast<int>(MINRES_QLP_FLAGS::PROCESSING));
+					return  MINRES_QLP_MESSAGES[_idx]; 
+				}
 				constexpr double MAXXNORM [[maybe_unused]]	= 1.0e+7;	// maximum norm of the solution
 				constexpr double CONLIM [[maybe_unused]] 	= 1.0e+15;	// maximum condition number of the matrix
 				constexpr double TRANSCOND [[maybe_unused]]	= 1.0e+7;	// condition number for the transposed matrix
 				constexpr double MINNORM [[maybe_unused]]	= 1.0e-14;	// minimum norm of the solution
-
-                // -----------------------------------------------------------------------------------------------------------------------------------------
-                
-                template <typename _T1>
-				arma::Col<_T1> minres_qlp(SOLVE_MATMUL_ARG_TYPES(_T1))
-                {
-					// !TODO: Implement the MINRES_QLP solver
-					return General::CG::conjugate_gradient<_T1>(_matrixFreeMultiplication, _F, _x0, _eps, _max_iter, _converged, _reg);
-				}
                 
                 // -----------------------------------------------------------------------------------------------------------------------------------------
 				
@@ -85,68 +81,72 @@ namespace algebra
 				template <typename _T1>
 				arma::Col<_T1> minres_qlp(SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(_T1, true))
 				{
-					if (_preconditioner == nullptr)
-						return Solvers::General::MINRES_QLP::minres_qlp<_T1>(_matrixFreeMultiplication, _F, _x0, _eps, _max_iter, _converged, _reg);
-					
-					const size_t _n 	= _F.n_elem;										// number of elements			
-					if (_max_iter == 0) _max_iter = _n;										// maximum number of iterations
+					const bool _precnd 	= _preconditioner != nullptr;							// flag for the preconditioner					
+					const size_t _n 	= _F.n_elem;											// number of elements			
+					if (_max_iter == 0) 
+						_max_iter = _n;															// maximum number of iterations
                     
-					bool _rnormvec 		= true;												// flag for the norm of the residual vector
-					v_1d<_T1> _resvec, _Aresvec;											// vectors for the residuals
+					bool _rnormvec 		= false;												// flag for the norm of the residual vector
+					v_1d<_T1> _resvec, _Aresvec;												// vectors for the residuals
 
-                    auto _flag0 = MINRES_QLP_FLAGS::PROCESSING, _flag = _flag0;				// flags for the convergence criterion
+                    auto _flag0 = MINRES_QLP_FLAGS::PROCESSING, _flag = _flag0;					// flags for the convergence criterion
 
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 					// Lanczos' algorithm for the tridiagonalization of the matrix - vectors that are used in the algorithm
-					arma::Col<_T1> z_km2 = arma::Col<_T1>(_n, arma::fill::zeros);			// initial vector z0 - is r1
-					arma::Col<_T1> z_km1 = _F; 												// initial vector z1 - is r2
-					arma::Col<_T1> z_k	 = _preconditioner->apply(z_km1); 					// initial vector z2 - is r3 - also preconditioned
-					_T1 _beta1 = arma::cdot(_F, z_k), _beta_km1 = 0.0;						// _beta1 = F'*inv(M)*F - if preconditioner is identity beta_k isnorm of F - save the initial value of beta
-					// check if M is indefinite
-					if (algebra::real(_beta1) < 0.0)
-						_flag		= MINRES_QLP_FLAGS::INDEFINITE_PREC;
-					else if (EQP(algebra::real(_beta1), 0.0, MINNORM)) 						// if beta_k = 0			
-						_flag 	= MINRES_QLP_FLAGS::VALUE_BETA_ZERO;						// beta_k = 0 - F and X are eigenvectors of (A - sigma*I)
-					else
-						_beta1	= std::sqrt(_beta1);										// beta_k = sqrt(F'*inv(M)*F)
-					_T1 _beta_k = _beta1;													// initial value of beta_k - is betan, bet_km1 is beta
-					arma::Col<_T1> v   	= arma::Col<_T1>(_n, arma::fill::zeros);			// vector v - is qn
+					arma::Col<_T1> z_km2 = arma::Col<_T1>(_n, arma::fill::zeros);				// initial vector z0 - is r1
+					arma::Col<_T1> z_km1 = _F; 													// initial vector z1 - is r2
+					arma::Col<_T1> z_k	 = _precnd ? _preconditioner->apply(z_km1) : z_km1; 	// initial vector z2 - is r3 - also preconditioned
+					_T1 _beta1 			 = arma::cdot(_F, z_k), _beta_km1 = 0.0;				// _beta1 = F'*inv(M)*F - if preconditioner is identity beta_k isnorm of F - save the initial value of beta
+					
+					if (_precnd)
+					{
+						// check if M is indefinite
+						if (algebra::real(_beta1) < 0.0)
+							_flag		= MINRES_QLP_FLAGS::INDEFINITE_PREC;
+						else if (EQP(algebra::real(_beta1), 0.0, MINNORM)) 						// if beta_k = 0			
+							_flag 	= MINRES_QLP_FLAGS::VALUE_BETA_ZERO;						// beta_k = 0 - F and X are eigenvectors of (A - sigma*I)
+						else	
+							_beta1	= std::sqrt(_beta1);										// beta_k = sqrt(F'*inv(M)*F)
+					} else  	
+						_beta1 = std::sqrt(_beta1);												// beta_k = sqrt(F'*F)
 
-					// create phi
-					_T1 _phi_k = _beta_k;
+					_T1 _beta_k 		= _beta1, _phi_k = _beta_k;								// initial value of beta_k - is betan, bet_km1 is beta
+					arma::Col<_T1> v   	= arma::Col<_T1>(_n, arma::fill::zeros);				// vector v - is qn
+
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 					// Previous left reflection
-					_T1 _delta_k = 0.0;														// delta_k - is delta new
-					_T1 _c_km1_1 = -1.0, _c_km1_2 [[maybe_unused]] = -1.0, _c_km1_3 [[maybe_unused]] = -1.0, _c_k_1, _c_k_2, _c_k_3; 	// is cs in the algorithm
-					_T1 _s_km1_1 = 0.0, _s_km1_2 [[maybe_unused]] = 0.0, _s_km1_3 [[maybe_unused]] = 0.0, _s_k_1, _s_k_2, _s_k_3; 		// is sn in the algorithm
+					_T1 _delta_k = 0.0;															// delta_k - is delta new
+					_T1 _c_k_1 = -1.0, _c_k_2 = -1.0, _c_k_3 = -1.0; 							// is cs in the algorithm, cr2, cr1 - cosines
+					_T1 _s_k_1 = 0.0, _s_k_2 = 0.0, _s_k_3 = 0.0; 		// is sn in the algorithm
 					_T1 _gamma_k = 0.0, _gamma_km1 = 0.0, _gamma_km2 = 0.0, _gamma_km3 = 0.0, _gamma_min = 0.0, _gamma_min_km1, _gamma_min_km2; // is gamma, gammal, gammal2, gammal3 
-					_T1 _tau_k = 0.0, _tau_km1 = 0.0, _tau_km2 = 0.0;						// use them as previous values of tau's - is tau, taul, taul2 in the algorithm
+					_T1 _tau_k = 0.0, _tau_km1 = 0.0, _tau_km2 = 0.0;							// use them as previous values of tau's - is tau, taul, taul2 in the algorithm
 					_T1 _eps_k[[maybe_unused]] = 0.0, _eps_k_p1 = 0.0;								
-					_T1 _Ax_norm_k = 0.0;													// use them as previous values of Ax_norm's - norm of the matrix-vector multiplication
+					_T1 _Ax_norm_k = 0.0;														// use them as previous values of Ax_norm's - norm of the matrix-vector multiplication
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 					// Previous right reflection
-					_T1 _theta_k = 0.0, _theta_km1 = 0.0, _theta_km2 = 0.0;					// use them as previous values of theta's, is theta, thetal, thetal2 in the algorithm
+					_T1 _theta_k = 0.0, _theta_km1 = 0.0, _theta_km2 = 0.0;						// use them as previous values of theta's, is theta, thetal, thetal2 in the algorithm
 					_T1 _eta_k = 0.0, _eta_km1 = 0.0, _eta_km2 = 0.0;	
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-					_T1 _xnorm_k = 0.0, _xnorm_km1 = 0.0;										// is xi in the algorithm - norm of the solution vector, is also xnorm, xnorml
+					_T1 _xnorm_k = 0.0;															// is xi in the algorithm - norm of the solution vector, is also xnorm, xnorml
 					_T1 _xl2norm_k = 0.0;														// is xil in the algorithm : xl2norm
-					_T1 _mu_k = 0.0, _mu_km1 = 0.0, _mu_km2 = 0.0, _mu_km3 = 0.0, _mu_km4 = 0.0;	// use them as previous values of mu'
+					_T1 _mu_k = 0.0, _mu_km1 = 0.0, _mu_km2 = 0.0, _mu_km3 = 0.0, _mu_km4 = 0.0;// use them as previous values of mu'
 					_T1 _relres_km1 = 0.0, _relAres_km1 = 0.0;									// use them as previous values of relative residuals
 					_T1 _rnorm = _beta_k, _rnorm_km1 = _beta_k, _rnorm_km2[[maybe_unused]] = _beta_k;		// use them as previous values of rnorm's
 					_T1 _relres = _rnorm / (_beta_k + 1e-10), _relAres = 0.0;					// relative residual with a safety margin for beta_k = 0
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 					// Regarding the wektor w and the solution vector x
 					arma::Col<_T1> x_k	= (_x0) ? *_x0 : arma::Col<_T1>(_n, arma::fill::zeros);	// final solution vector
-					arma::Col<_T1> x_km1= arma::Col<_T1>(_n, arma::fill::zeros);				// for minres_qlp - x_{k-1}
+					arma::Col<_T1> x_km1= x_k;													// for minres_qlp - x_{k-1}
 					arma::Col<_T1> _w_k(_n, arma::fill::zeros), _w_km1 = _w_k, _w_km2 = _w_k; 	// use them as previous values of w's
-					_T1 _Anorm = 0.0, _Anorm_km1 = 0.0, _Acond = 0.0, _Acond_km1 = 0.0;			// use them as previous values of A's norm and condition number
+					_T1 _Anorm = 0.0, _Anorm_km1 = 0.0; 
+					_T1 _Acond = 1.0, _Acond_km1 = 1.0;											// use them as previous values of A's norm and condition number
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 					// Regarding the QLP method
 					_T1 _gammaqlp_k = 0.0, _gammaqlp_km1 = 0.0;
 					_T1 _thetaqlp_k = 0.0;
 					_T1 _muqlp_k = 0.0, _muqlp_km1 = 0.0;
-					_T1 _root_k [[maybe_unused]]= 0.0, _root_km1 = 0.0;
-					int _QLP_iter = 0;														// number of QLP iterations
+					_T1 _root_km1 = 0.0;
+					int _QLP_iter = 0;															// number of QLP iterations
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 					// iterate until convergence, if the value is k+1 in the algorithm, we update the corresponding variables.
@@ -171,14 +171,36 @@ namespace algebra
 							z_km2 = z_km1; z_km1 = z_k;														// update the previous vectors									
 
 							// apply the preconditioner - can be updated now as is not used anymore - otherwise is same as z_k
-							z_k 			= _preconditioner->apply(z_km1);								// is q_{k+1} - apply the preconditioner
+							if (_precnd) 
+								z_k = _preconditioner->apply(z_k); 											// is q_{k+1} - apply the preconditioner
 							_beta_k			= arma::cdot(z_km1, z_k);										// beta_{k+1} = q_k' * z_k - at each iteration
-							
-							if (algebra::real(_beta_k) > 0)
+							if (_precnd)
+							{
+								if (algebra::real(_beta_k) > 0)
+									_beta_k 	= std::sqrt(_beta_k);										// beta_{k+1} = sqrt(q_k, z_k) - defined here, beta needs to be updated at each iteration
+								else
+									_flag		= MINRES_QLP_FLAGS::INDEFINITE_PREC;						// the preconditioner is indefinite
+							} else {
 								_beta_k 	= std::sqrt(_beta_k);											// beta_{k+1} = sqrt(q_k, z_k) - defined here, beta needs to be updated at each iteration
-							else
-								_flag		= MINRES_QLP_FLAGS::INDEFINITE_PREC;
-							_pnorm_rho_k 	= algebra::norm(_beta_last, _alpha, _beta_k);					// ||[βk αk βk+1]|| - local variable
+								// check if we already have the solution
+								if (k == 0)
+								{
+									if (EQP(algebra::real(_beta_k), 0.0, MINNORM))							// if beta_k = 0
+									{
+										if (EQP(algebra::real(_alpha), 0, MINNORM)){
+											_flag 	= MINRES_QLP_FLAGS::SOLUTION_X_ZERO;					// X = 0 was found as F = 0 (beta_km1 = 0)
+											break;
+										}																	// if alpha_k = 0
+										else
+										{
+											_flag 	= MINRES_QLP_FLAGS::VALUE_BETA_ZERO;					// Value: beta_k = 0. F and X are eigenvectors of (A - sigma*I)
+											x_k 	= _F / _alpha;											// X = F / alpha_k
+											break;
+										}
+									}
+								}
+							}
+							_pnorm_rho_k 	= std::sqrt(algebra::norm(_beta_last, _alpha, _beta_k));		// ||[βk αk βk+1]|| - local variable
 #ifdef _DEBUG
 							LOGINFO("MINRES_QLP solver (Lanczos iteration): Iteration " + std::to_string(k) + " - ||[βk αk βk+1]|| = " + STRS(_pnorm_rho_k), LOG_TYPES::DEBUG, 3);
 							LOGINFO("MINRES_QLP solver (Lanczos iteration): Iteration " + std::to_string(k) + " - beta_k = " + STRS(_beta_k) + ", alpha = " + STRS(_alpha), LOG_TYPES::DEBUG, 3);
@@ -190,11 +212,11 @@ namespace algebra
 						// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 						_T1 _delta = 0.0, _deltaqlp = 0.0, _dbar = 0.0, _gammabar = 0.0;
 						{
-							_dbar 				= _delta_k; 												// [to zero out δ(2)k]
-							_delta				= (_c_km1_1 * _dbar) + (_s_km1_1 * _alpha); 				
-							_eps_k = _eps_k_p1; _eps_k_p1 = _s_km1_1 * _beta_k; 							// [produces first two entries in Tk+1ek+1] - local variable
-							_gammabar 			= (_s_km1_1 * _dbar) - (_c_km1_1 * _alpha);
-							_delta_k 			= -_c_km1_1 * _beta_k; 										// update delta after the reflection - is deltan
+							_dbar 				= _delta_k; 											// [to zero out δ(2)k]
+							_delta				= (_c_k_1 * _dbar) + (_s_k_1 * _alpha); 				
+							_eps_k = _eps_k_p1; _eps_k_p1 = _s_k_1 * _beta_k; 							// [produces first two entries in Tk+1ek+1] - local variable
+							_gammabar 			= (_s_k_1 * _dbar) - (_c_k_1 * _alpha);
+							_delta_k 			= -_c_k_1 * _beta_k; 									// update delta after the reflection - is deltan
 							_deltaqlp			= _delta;
 #ifdef _DEBUG 
 							LOGINFO("MINRES_QLP solver (Previous left reflection): Iteration " + STR(k) + " - delta_k = " + STRS(_delta_k) + ", gamma_k = " + STRS(_gamma_k), LOG_TYPES::DEBUG, 3);
@@ -213,7 +235,7 @@ namespace algebra
 							_tau_km2 = _tau_km1; _tau_km1 = _tau_k; 										// update the previous values of tau's
 							_tau_k 				= _c_k_1 * _phi_k; 											// [Last element of tk]
 							_phi_k 				= _s_k_1 * _phi_k; 											// 
-							_Ax_norm_k			= norm(_Ax_norm_k, _tau_k); 								// [Update ‖Axk‖]
+							_Ax_norm_k			= std::sqrt(algebra::norm(_Ax_norm_k, _tau_k)); 						// [Update ‖Axk‖]
 #ifdef _DEBUG
 							LOGINFO("MINRES_QLP solver (New left reflection): Iteration " + STR(k) + " - gamma_k = " + STRS(_gamma_k) + ", tau_k = " + STRS(_tau_k), LOG_TYPES::DEBUG, 3);
 							LOGINFO("MINRES_QLP solver (New left reflection): Iteration " + STR(k) + " - phi_k = " + STRS(_phi_k) + ", Ax_norm_k = " + STRS(_Ax_norm_k), LOG_TYPES::DEBUG, 3);
@@ -236,7 +258,7 @@ namespace algebra
 							// calculate the new value of eta_k
 							_eta_k 				= _s_k_2 * _gamma_k; 										// use gamma from (2) stage
 							// update _gamma_k ((3) third stage)
-							_gamma_k 			= -_c_k_2 * _gamma_k;
+							_gamma_k 			= (-_c_k_2) * _gamma_k;
 #ifdef _DEBUG
 							LOGINFO("MINRES_QLP solver (Previous right reflection): Iteration " + STR(k) + " - delta_k = " + STRS(_delta_k) + ", theta_km1 = " + STRS(_theta_km1), LOG_TYPES::DEBUG, 3);
 							LOGINFO("MINRES_QLP solver (Previous right reflection): Iteration " + STR(k) + " - eta_k = " + STRS(_eta_k) + ", gamma_k = " + STRS(_gamma_k), LOG_TYPES::DEBUG, 3);
@@ -251,7 +273,7 @@ namespace algebra
 							algebra::Solvers::sym_ortho(_gamma_km1, _delta, _c_k_3, _s_k_3, _gamma_km1);		// [Second right reflection]
 							_theta_k 			= _s_k_3 * _gamma_k;
 							// update _gamma_k ((4) fourth stage)
-							_gamma_k 			= -_c_k_3 * _gamma_k;
+							_gamma_k 			= (-_c_k_3) * _gamma_k;
 #ifdef _DEBUG
 							LOGINFO("MINRES_QLP solver (New right reflection): Iteration " + std::to_string(k) + " - theta_k = " + STRS(_theta_k) + ", gamma_k = " + STRS(_gamma_k), LOG_TYPES::DEBUG, 3);
 #endif
@@ -261,18 +283,17 @@ namespace algebra
 						// update the xnorm
 						// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 						{
-							_xnorm_km1  = _xnorm_k; 															// update the previous value of xnorm
 							_mu_km4 = _mu_km3; _mu_km3 = _mu_km2;												// update the previous values of mu's
 							if (k > 1) 
 								_mu_km2 = (_tau_km2 - _eta_km2 * _mu_km4 - _theta_km2 * _mu_km3) / _gamma_km2;	// [Update µk−2]
 							if (k > 0)
 								_mu_km1 = (_tau_km1 - _eta_km1 * _mu_km3 - _theta_km1 * _mu_km2) / _gamma_km1;	// [Update µk−1]
 
-							_T1 _xnorm_tmp 	= norm(_xnorm_km1, _mu_km2, _mu_km1);								// [Update ‖xk−2‖]
+							_T1 _xnorm_tmp 	= std::sqrt(algebra::norm(_xl2norm_k, _mu_km2, _mu_km1));								// [Update ‖xk−2‖]
 							if (std::abs(_gamma_k) > MINNORM && algebra::ls(_xnorm_tmp, MAXXNORM))
 							{
 								_mu_k 		= (_tau_k - _eta_k * _mu_km2 - _theta_k * _mu_km1) / _gamma_k;		// [Update µk]
-								if (norm(_xnorm_tmp, _mu_k) > MAXXNORM) {
+								if (std::sqrt(algebra::norm(_xnorm_tmp, _mu_k)) > MAXXNORM) {
 									_mu_k 	= 0.0;
 									_flag = MINRES_QLP_FLAGS::MAXXNORM;											// [X converged as an eigenvector of (A - sigma*I)]
 								}
@@ -282,8 +303,8 @@ namespace algebra
 							}
 
 							// update the xnorm
-							_xl2norm_k 		= norm(_xnorm_tmp, _mu_km2);										// update xi_km2 - norm of the solution vector
-							_xnorm_k 		= norm(_xl2norm_k, _mu_km1, _mu_k);									// update xi_k - norm of the solution vector
+							_xl2norm_k 		= std::sqrt(algebra::norm(_xl2norm_k, _mu_km2));					// update xi_km2 - norm of the solution vector
+							_xnorm_k 		= std::sqrt(algebra::norm(_xl2norm_k, _mu_km1, _mu_k));				// update xi_k - norm of the solution vector
 						}
 
 						// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -294,7 +315,7 @@ namespace algebra
 							if (algebra::real(_Acond) < TRANSCOND && _flag != _flag0 && _QLP_iter == 0)			// MINRES updates
 							{
 								_w_km2 = _w_km1; _w_km1 = _w_k;													// update the previous values of w's
-								_w_k 		= (v - _eps_k * _w_km2 - _eta_km2 * _mu_km3) / _gamma_km2;			// [Update wk]
+								_w_k 		= (v - _eps_k * _w_km2 - _deltaqlp * _w_km1) / _gamma_k_tmp;			// [Update wk]
 								if (algebra::real(_xnorm_k) < MAXXNORM)
 									x_k 	+= _tau_k * _w_k;													// [Update xk]
 								else 
@@ -306,12 +327,12 @@ namespace algebra
 								_QLP_iter++;
 								if (_QLP_iter == 1) {
 									if (k > 0) {																// construct w_km3, w_km2, w_km1
-										if (k > 3) 																// w_km3 exists
-											_w_km2 = _gamma_km3 * _w_km2 + _theta_km2 * _w_km1 + _eta_km1 * _w_k;
-										if (k > 2) 																// w_km2 exists
-											_w_km1 = _gammaqlp_km1 * _w_km1 + _thetaqlp_k * _w_k;
+										if (k > 2) 																// w_km3 exists
+											_w_km2	= _gamma_km3 * _w_km2 + _theta_km2 * _w_km1 + _eta_km1 * _w_k;
+										if (k > 1) 																// w_km2 exists
+											_w_km1 	= (_gammaqlp_km1 * _w_km1) + (_thetaqlp_k * _w_k);
 										_w_k 		= _gammaqlp_k * _w_k;												
-										x_km1 		= x_k - _w_km1 * _muqlp_km1 - _w_k * _muqlp_k;
+										x_km1 		= x_k - (_w_km1 * _muqlp_km1) - (_w_k * _muqlp_k);
 									}
 								}
 								_w_km2 		= _w_km1;
@@ -365,7 +386,7 @@ namespace algebra
 						{
 							auto _abs_gamma = std::abs(_gamma_k);		// absolute value of gamma_k
 							_Anorm_km1 		= _Anorm;					// update the previous value of Anorm	
-							_Anorm 			= algebra::maximum(_Anorm, _gamma_km1, _abs_gamma, _pnorm_rho_k);
+							_Anorm 			= algebra::maximum(_Anorm, algebra::real(_gamma_km1), _abs_gamma, _pnorm_rho_k);
 							if (k == 0)
 							{
 								_gamma_min 		= _gamma_k;
@@ -381,9 +402,10 @@ namespace algebra
 							_Acond 			= _Anorm / _gamma_min;
 							_rnorm_km1 		= _rnorm;
 							_relres_km1 	= _relres;
-							if (_flag != MINRES_QLP_FLAGS::SINGULAR) _rnorm = _phi_k;
-							_relres 		= _rnorm / (_Anorm * _xnorm_k + _beta_k + algebra::Solvers::TINY);
-							_root_km1   	= algebra::norm(_gammabar, _delta_k);
+							if (_flag != MINRES_QLP_FLAGS::SINGULAR) 
+								_rnorm 		= _phi_k;
+							_relres 		= _rnorm / (_Anorm * _xnorm_k + _beta1 + algebra::Solvers::TINY);
+							_root_km1   	= std::sqrt(algebra::norm(_gammabar, _delta_k));
 							_Anorm_km1  	= _rnorm_km1 * _root_km1;
 							_relAres_km1	= _root_km1 / _Anorm;
 						}
@@ -396,14 +418,14 @@ namespace algebra
 							if (_flag == _flag0 || _flag == MINRES_QLP_FLAGS::SINGULAR)
 							{
 								_T1 t1 		= 1.0 + _relres;
-								_T1 t2 		= 1.0 + _relAres;
+								_T1 t2 		= 1.0 + _relAres_km1;
 								if (k >= _max_iter - 1) 					_flag = MINRES_QLP_FLAGS::MAXITER;
 								if (algebra::gr(_Acond, TRANSCOND)) 		_flag = MINRES_QLP_FLAGS::ACOND;
 								if (algebra::geq(_xnorm_k, MAXXNORM)) 		_flag = MINRES_QLP_FLAGS::MAXXNORM;
 								if (algebra::geq(_epsx, _beta1))			_flag = MINRES_QLP_FLAGS::SOLUTION_EIGEN;
 								if (algebra::leq(t2, 1.0)) 					_flag = MINRES_QLP_FLAGS::SOLUTION_EPS_AR;
 								if (algebra::leq(t1, 1.0)) 					_flag = MINRES_QLP_FLAGS::SOLUTION_EPS;
-								if (algebra::leq(_relAres, _eps)) 			_flag = MINRES_QLP_FLAGS::SOLUTION_AR;
+								if (algebra::leq(_relAres_km1, _eps)) 		_flag = MINRES_QLP_FLAGS::SOLUTION_AR;
 								if (algebra::leq(_relres, _eps)) 			_flag = MINRES_QLP_FLAGS::SOLUTION_RTOL;
 							#ifdef _DEBUG
 								LOGINFO("MINRES_QLP solver: Iteration " + STR(k) + " - relres = " + STRS(_relres) + ", relAres = " + STRS(_relAres), LOG_TYPES::DEBUG, 3);
@@ -428,43 +450,41 @@ namespace algebra
 									_Aresvec.push_back(_Anorm_km1);
 								}
 							}
-						}
-
-						// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-						// What to do next?
-						// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-						if (_QLP_iter == 0)
-							LOGINFO("QLP", LOG_TYPES::DEBUG, 3);
-						else
-							LOGINFO("MINRES", LOG_TYPES::DEBUG, 3);
-
-						// final quantities
-						z_km2 	= _F - _matrixFreeMultiplication(x_k, _reg);					// update the residual vector
-						_rnorm 	= arma::cdot(z_km2, z_km2);										// update the norm of the residual vector
-						_Anorm 	= arma::norm(_matrixFreeMultiplication(z_km2, _reg));			// update the norm of the matrix-vector multiplication
-						_xnorm_k= arma::norm(x_k);												// update the norm of the solution vector
-						_relres = _rnorm / (_Anorm * _xnorm_k + _beta_k + algebra::Solvers::TINY);	// update the relative residual
-						_relAres= 0;
-						if (algebra::gr(_rnorm, algebra::Solvers::TINY))
-							_relAres = _Anorm / _rnorm;											// update the relative residual of the matrix-vector multiplication
-						
-						if (_rnormvec)
-						{
-							_Aresvec.push_back(_Anorm);
-							return x_k;
-						}
-					
+						}					
 					}
 
+					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+					// What to do next?
+					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+					if (_QLP_iter == 1)
+						LOGINFO("QLP", LOG_TYPES::DEBUG, 3);
+					else
+						LOGINFO("MINRES", LOG_TYPES::DEBUG, 3);
+
+					// final quantities
+					z_km2 	= _F - _matrixFreeMultiplication(x_k, _reg);						// update the residual vector
+					_rnorm 	= std::sqrt(arma::norm(z_km2));										// update the norm of the residual vector
+					_Anorm 	= std::sqrt(arma::norm(_matrixFreeMultiplication(z_km2, _reg)));	// update the norm of the matrix-vector multiplication
+					_xnorm_k= std::sqrt(arma::norm(x_k));										// update the norm of the solution vector
+					_relres = _rnorm / (_Anorm * _xnorm_k + _beta_k + algebra::Solvers::TINY);	// update the relative residual
+					_relAres= 0;
+					if (algebra::gr(_rnorm, algebra::Solvers::TINY))
+						_relAres = _Anorm / _rnorm;												// update the relative residual of the matrix-vector multiplication
+					
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 					// Check for convergence
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 					auto _msg = convergence_message(_flag);
-					LOGINFO("MINRES_QLP solver: " + _msg, LOG_TYPES::ERROR, 3);
+					LOGINFO("MINRES_QLP solver: " + _msg, LOG_TYPES::INFO, 3);
+					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+					
 					if (_converged != nullptr)
 						*_converged = _flag != MINRES_QLP_FLAGS::MAXITER && _flag != MINRES_QLP_FLAGS::MAXXNORM && _flag != MINRES_QLP_FLAGS::SINGULAR;
-					return x_k;
+					
+					if (_rnormvec)
+						_Aresvec.push_back(_Anorm);
+					return x_k;			
 				}
                 
                 // -----------------------------------------------------------------------------------------------------------------------------------------
@@ -478,6 +498,13 @@ namespace algebra
                 template arma::Col<std::complex<double>> minres_qlp(SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(std::complex<double>, true));
 
                 // -----------------------------------------------------------------------------------------------------------------------------------------
+                
+                template <typename _T1>
+				arma::Col<_T1> minres_qlp(SOLVE_MATMUL_ARG_TYPES(_T1))
+                {					
+					return algebra::Solvers::General::MINRES_QLP::minres_qlp<_T1>(_matrixFreeMultiplication, _F, _x0, nullptr, _eps, _max_iter, _converged, _reg);
+				}
+
 			};
         };
     };
