@@ -104,18 +104,18 @@ namespace algebra
             }
             else if (_absb > _absa)
             {
-                std::complex<double> tau = _absa / _absb;
+                std::complex<double> tau = a / b;
                 c       = 1.0 / std::sqrt(1.0 + tau * tau); // temporary 
-                s 		= c * algebra::conjugate(_sgnb / _sgna);
-                c       = c * tau;
-                r       = b / algebra::conjugate(s);
+                s 		= _sgnb * c;
+                c       = s * tau;
+                r       = b / s;
             }
             else 
             {
-                std::complex<double> tau = _absb / _absa;
-                c       = 1.0 / std::sqrt(1.0 + tau * tau);
-                s 		= c * algebra::conjugate(_sgnb / _sgna) * tau;
-                r       = a / c;
+                std::complex<double> tau = b / a;
+				c 		= _sgna / std::sqrt(1.0 + tau * tau); // temporary
+				s 		= c * tau;
+				r 		= a / c;
             }
         }
 
