@@ -5,6 +5,7 @@
 #include "armadillo"
 #include <cassert>
 #include <complex>
+#include <cstddef>
 #include <memory>
 #include <stdexcept>
 #include <stdlib.h>
@@ -134,11 +135,11 @@ namespace algebra
 	};
 };
 
-// #################################################################################################################################################
+// #########################################################################################################################################################
 
 // FOR GENERAL TYPES 
 
-// #################################################################################################################################################
+// #########################################################################################################################################################
 
 namespace algebra
 {
@@ -189,9 +190,9 @@ namespace algebra
 	};
 };
 
-// *************************************************************************************************************************************************
+// *********************************************************************************************************************************************************
 
-// #################################################################################################################################################
+// #########################################################################################################################################################
 
 // METHODS FOR GENERAL SOLVERS
 
@@ -510,6 +511,187 @@ namespace algebra
 			std::string name(int _type) { return name(static_cast<Type>(_type)); } 
 
 			// -----------------------------------------------------------------------------------------------------------------------------------------
+		};
+	};
+};
+
+// #########################################################################################################################################################
+
+// SOLVER CLASS
+
+// #########################################################################################################################################################
+
+namespace algebra
+{
+	namespace Solvers
+	{
+		namespace General 
+		{
+			// *********************************************************************************************************************************************
+
+			template <typename _T1, bool _symmetric>
+			Solver<_T1, _symmetric>::Solver(size_t _N, double _eps, size_t _max_iter, double _reg, Precond<_T1, _symmetric>* _preconditioner)
+				: N_(_N), max_iter_(_max_iter), eps_(_eps), reg_(_reg), precond_(_preconditioner)
+			{
+				this->isPreconditioned_ = (_preconditioner != nullptr);
+			}
+
+			// *********************************************************************************************************************************************
+
+			template <typename _T, bool _symmetric>
+			void Solver<_T, _symmetric>::init(const arma::Mat<_T>& _A, const arma::Col<_T>& _F, arma::Col<_T>* _x0)
+			{
+				this->matVecFun_ 	= [&_A](const arma::Col<_T>& _x, double _sig) { return matrixFreeMultiplication<_T>(_A, _x, _sig); };
+				this->init(_F, _x0);
+			}
+
+			template <typename _T, bool _symmetric>
+			void Solver<_T, _symmetric>::init(const arma::SpMat<_T>& _A, const arma::Col<_T>& _F, arma::Col<_T>* _x0)
+			{
+				this->matVecFun_ 	= [&_A](const arma::Col<_T>& _x, double _sig) { return matrixFreeMultiplication<_T>(_A, _x, _sig); };
+				this->init(_F, _x0);
+			}
+
+			template <typename _T, bool _symmetric>
+			void Solver<_T, _symmetric>::init(const arma::Mat<_T>& _S, const arma::Mat<_T>& _Sp, const arma::Col<_T>& _F, arma::Col<_T>* _x0)
+			{
+				this->isGram_ 		= true;
+				this->matVecFun_ 	= [&_S, &_Sp](const arma::Col<_T>& _x, double _sig) { return FisherMatrix::matrixFreeMultiplication<_T>(_S, _Sp, _x, _sig); };
+				this->init(_F, _x0);
+			}
+
+			template <typename _T, bool _symmetric>
+			void Solver<_T, _symmetric>::init(const arma::SpMat<_T>& _S, const arma::SpMat<_T>& _Sp, const arma::Col<_T>& _F, arma::Col<_T>* _x0)
+			{
+				this->isGram_ 		= true;
+				this->matVecFun_ 	= [&_S, &_Sp](const arma::Col<_T>& _x, double _sig) { return FisherMatrix::matrixFreeMultiplication<_T>(_S, _Sp, _x, _sig); };
+				this->init(_F, _x0);
+			}
+
+			template <typename _T, bool _symmetric>
+			void Solver<_T, _symmetric>::init(_AX_fun<_T> _A, const arma::Col<_T>& _F, arma::Col<_T>* _x0)
+			{
+				this->matVecFun_ 	= _A;
+				this->init(_F, _x0);
+			}
+
+			// *********************************************************************************************************************************************
+
+			template <typename _T, bool _symmetric>
+			void Solver<_T, _symmetric>::solve(const arma::Mat<_T>& _A, const arma::Col<_T>& _F, arma::Col<_T>* _x0, Precond<_T, _symmetric>* _precond)
+			{
+				if (_precond != nullptr)
+				{
+					this->precond_ 			= _precond;
+					this->isPreconditioned_ = true;
+				}
+				this->matVecFun_ 	= [&_A](const arma::Col<_T>& _x, double _sig) { return matrixFreeMultiplication<_T>(_A, _x, _sig); };
+				this->solve(_F, _x0, this->precond_);
+			}
+
+			template <typename _T, bool _symmetric>
+			void Solver<_T, _symmetric>::solve(const arma::SpMat<_T>& _A, const arma::Col<_T>& _F, arma::Col<_T>* _x0, Precond<_T, _symmetric>* _precond)
+			{
+				if (_precond != nullptr)
+				{
+					this->precond_ 			= _precond;
+					this->isPreconditioned_ = true;
+				}
+				this->matVecFun_ 	= [&_A](const arma::Col<_T>& _x, double _sig) { return matrixFreeMultiplication<_T>(_A, _x, _sig); };
+				this->solve(_F, _x0, this->precond_);
+			}
+
+
+			template <typename _T, bool _symmetric>
+			void Solver<_T, _symmetric>::solve(const arma::Mat<_T>& _S, const arma::Mat<_T>& _Sp, const arma::Col<_T>& _F, arma::Col<_T>* _x0, Precond<_T, _symmetric>* _precond)
+			{
+				if (_precond != nullptr)
+				{
+					this->precond_ 			= _precond;
+					this->isPreconditioned_ = true;
+				}
+				this->isGram_ 		= true;
+				this->matVecFun_ 	= [&_S, &_Sp](const arma::Col<_T>& _x, double _sig) { return FisherMatrix::matrixFreeMultiplication<_T>(_S, _Sp, _x, _sig); };
+				this->solve(_F, _x0, this->precond_);
+			}
+
+			template <typename _T, bool _symmetric>
+			void Solver<_T, _symmetric>::solve(const arma::SpMat<_T>& _S, const arma::SpMat<_T>& _Sp, const arma::Col<_T>& _F, arma::Col<_T>* _x0, Precond<_T, _symmetric>* _precond)
+			{
+				if (_precond != nullptr)
+				{
+					this->precond_ 			= _precond;
+					this->isPreconditioned_ = true;
+				}
+				this->isGram_ 		= true;
+				this->matVecFun_ 	= [&_S, &_Sp](const arma::Col<_T>& _x, double _sig) { return FisherMatrix::matrixFreeMultiplication<_T>(_S, _Sp, _x, _sig); };
+				this->solve(_F, _x0, this->precond_);
+			}
+
+			template <typename _T, bool _symmetric>
+			void Solver<_T, _symmetric>::solve(_AX_fun<_T> _A, const arma::Col<_T>& _F, arma::Col<_T>* _x0, Precond<_T, _symmetric>* _precond)
+			{
+				if (_precond != nullptr)
+				{
+					this->precond_ 			= _precond;
+					this->isPreconditioned_ = true;
+				}
+				this->matVecFun_ 	= _A;
+				this->solve(_F, _x0, this->precond_);
+			}
+
+			// template specializations
+			template class Solver<double, true>;
+			template class Solver<std::complex<double>, true>;
+			template class Solver<double, false>;
+			template class Solver<std::complex<double>, false>;
+
+			// #################################################################################################################################################
+
+			template <typename _T1, bool _symmetric>
+			Solver<_T1, _symmetric>* choose(Solvers::General::Type _type, size_t _N, double _eps, size_t _max_iter, double _reg, Precond<_T1, _symmetric>* _preconditioner)
+			{
+				switch (_type) 
+				{
+				case Solvers::General::Type::ARMA:
+					return new ARMA::ARMA_s<_T1, _symmetric>(_N, _eps, _max_iter, _reg, _preconditioner);
+				case Solvers::General::Type::ConjugateGradient:
+					return new CG::ConjugateGradient_s<_T1, _symmetric>(_N, _eps, _max_iter, _reg, _preconditioner);
+				case Solvers::General::Type::MINRES:
+					return new MINRES::MINRES_s<_T1, _symmetric>(_N, _eps, _max_iter, _reg, _preconditioner);
+				case Solvers::General::Type::MINRES_QLP:
+					return new MINRES_QLP::MINRES_QLP_s<_T1, _symmetric>(_N, _eps, _max_iter, _reg, _preconditioner);
+				case Solvers::General::Type::PseudoInverse:
+					return new PseudoInverse::PseudoInverse_s<_T1, _symmetric>(_N, _eps, _max_iter, _reg, _preconditioner);
+				case Solvers::General::Type::Direct:
+					return new Direct::Direct_s<_T1, _symmetric>(_N, _eps, _max_iter, _reg, _preconditioner);
+				default:
+					return new CG::ConjugateGradient_s<_T1, _symmetric>(_N, _eps, _max_iter, _reg, _preconditioner);
+				}
+			}
+
+			template <typename _T1, bool _symmetric>
+			Solver<_T1, _symmetric>* choose(int _type, size_t _N, double _eps, size_t _max_iter, double _reg, Precond<_T1, _symmetric>* _preconditioner) 
+			{ 
+				return choose<_T1, _symmetric>(static_cast<Solvers::General::Type>(_type), _N, _eps, _max_iter, _reg, _preconditioner); 
+			}
+
+			// #################################################################################################################################################
+
+			// define the template specializations
+			// double
+			template Solver<double, true>* choose<double, true>(Solvers::General::Type _type, size_t _N, double _eps, size_t _max_iter, double _reg, Precond<double, true>* _preconditioner);
+			template Solver<double, true>* choose<double, true>(int _type, size_t _N, double _eps, size_t _max_iter, double _reg, Precond<double, true>* _preconditioner);
+			template Solver<double, false>* choose<double, false>(Solvers::General::Type _type, size_t _N, double _eps, size_t _max_iter, double _reg, Precond<double, false>* _preconditioner);
+			template Solver<double, false>* choose<double, false>(int _type, size_t _N, double _eps, size_t _max_iter, double _reg, Precond<double, false>* _preconditioner);
+
+			// complex double
+			template Solver<std::complex<double>, true>* choose<std::complex<double>, true>(Solvers::General::Type _type, size_t _N, double _eps, size_t _max_iter, double _reg, Precond<std::complex<double>, true>* _preconditioner);
+			template Solver<std::complex<double>, true>* choose<std::complex<double>, true>(int _type, size_t _N, double _eps, size_t _max_iter, double _reg, Precond<std::complex<double>, true>* _preconditioner);
+			template Solver<std::complex<double>, false>* choose<std::complex<double>, false>(Solvers::General::Type _type, size_t _N, double _eps, size_t _max_iter, double _reg, Precond<std::complex<double>, false>* _preconditioner);
+			template Solver<std::complex<double>, false>* choose<std::complex<double>, false>(int _type, size_t _N, double _eps, size_t _max_iter, double _reg, Precond<std::complex<double>, false>* _preconditioner);
+
+			// #################################################################################################################################################
 		};
 	};
 };
@@ -853,6 +1035,25 @@ namespace algebra {
 				// no regularization
 				return (_DeltaOConjT * _intermediate) / static_cast<_T>(_N);    // Calculate \Delta O^* * (\Delta O * v) / N
 			}
+
+			/** 
+			* @brief Same as the above method, but with the conjugate transpose of the matrix \Delta O. 
+			*/
+			template <typename _T>
+			arma::Col<_T> matrixFreeMultiplication(const arma::SpMat<_T>& _DeltaO, const arma::SpMat<_T>& _DeltaOConjT, const arma::Col<_T>& x, const double _reg)
+			{
+				const size_t _N 			= _DeltaO.n_rows;               	// Number of samples (rows)
+				arma::Col<_T> _intermediate = _DeltaO * x;     					// Calculate \Delta O * x
+
+				// apply regularization on the diagonal
+				if (_reg > 0.0)
+					return (_DeltaOConjT * _intermediate) / static_cast<_T>(_N)  + _reg * x;
+				
+				// no regularization
+				return (_DeltaOConjT * _intermediate) / static_cast<_T>(_N);    // Calculate \Delta O^* * (\Delta O * v) / N
+			}
+
+			// #################################################################################################################################################
 
 			// template specializations
 			template arma::Col<double> matrixFreeMultiplication(SOLVE_FISHER_MATRIX(double), const arma::Col<double>& _x, const double _reg);

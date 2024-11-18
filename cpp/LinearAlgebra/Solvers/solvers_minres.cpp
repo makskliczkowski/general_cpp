@@ -211,7 +211,7 @@ namespace algebra
 					return yk;
 				}
 
-				// #################################################################################################################################################
+				// ############################################################################################################################################
 
 				// define the template specializations
 				template arma::Col<double> minres(SOLVE_MATMUL_ARG_TYPES(double));
@@ -219,6 +219,100 @@ namespace algebra
 				// with preconditioner
 				template arma::Col<double> minres(SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(double, true));
 				template arma::Col<std::complex<double>> minres(SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(std::complex<double>, true));
+			};
+
+			// #################################################################################################################################################
+
+			namespace MINRES
+			{
+				// ############################################################################################################################################
+			
+				template <typename _T1, bool _symmetric>
+				void MINRES_s<_T1, _symmetric>::init(const arma::Col<_T1>& _F, arma::Col<_T1>* _x0)
+				{
+					this->converged_ = false;
+					if (this->N_ != _F.n_elem)
+						this->N_ = _F.n_elem;
+
+					this->x_ = (_x0 == nullptr) ? arma::Col<_T1>(_F.n_elem, arma::fill::zeros) : *_x0;
+					this->r  = _F;
+					if (_x0 != nullptr) this->r -= this->matVecFun_(this->x_, this->reg_);
+
+					// calculate the norms
+					this->beta0_ 	=	arma::norm(this->r);
+					if (std::abs(this->beta0_) < this->eps_) {
+						this->converged_ = true;
+						return;
+					}
+
+					// initialize the multiplications 
+					this->pkm1 		= this->r / this->beta0_;
+					this->pk 		= this->pkm1;
+					this->Ap_km1    = this->matVecFun_(this->pkm1, this->reg_);
+					this->Ap_k 		= this->Ap_km1;
+				}
+
+				// ############################################################################################################################################
+
+				template <typename _T1, bool _symmetric>
+				void MINRES_s<_T1, _symmetric>::solve(const arma::Col<_T1>& _F, arma::Col<_T1>* _x0, Precond<_T1, _symmetric>* _preconditioner)
+				{
+					if (!this->matVecFun_)
+						throw std::runtime_error("MINRES solver: matrix-vector multiplication function is not set.");
+
+					if (_preconditioner != nullptr) {
+						this->precond_ = _preconditioner;
+						this->isPreconditioned_ = true;
+					}
+
+					// Initialize solution x, setting it to zero if _x0 is nullptr (no initial guess)
+					this->init(_F, _x0);
+
+					// check the convergence
+					if (this->converged_)
+						return;
+
+					// GO!
+					for (size_t i = 0; i < this->max_iter_; ++i)													// iterate until convergence
+					{
+						// update the search direction
+						this->pkp1 = this->pk; this->pk = this->pkm1;																
+						this->Ap_kp1 = this->Ap_k; this->Ap_k = this->Ap_km1;										// update the matrix-vector multiplication result
+						_T1 alpha 			= arma::cdot(this->r, this->Ap_k) / arma::cdot(this->Ap_k, this->Ap_k);	// is the overlap of r and Ap so that x can be updated with the correct step, previous vector
+						this->x_			+= alpha * this->pk;													// update the solution
+						this->r 			-= alpha * this->Ap_k;													// update the residual
+						_T1 beta 			= arma::norm(this->r);													// is the norm of the residual
+						if (std::abs(beta) < this->eps_) {
+							this->converged_ = true;
+							return;
+						}
+
+						// update the search direction
+						this->pkm1 			= this->Ap_k;															// update the search direction - p_{k-1} = Ap_k
+						this->Ap_km1 		= this->matVecFun_(this->Ap_k, this->reg_);								// update the matrix-vector multiplication result
+						_T1 beta1 			= arma::cdot(this->Ap_km1, this->Ap_k) / arma::cdot(this->Ap_k, this->Ap_k); // is the overlap of Ap_km1 and Ap_k
+						// update the search direction													
+						this->pkm1 			-= beta1 * this->pk;
+						this->Ap_km1 		-= beta1 * this->Ap_k;
+
+						if (i > 0)																					// Update the second Lanczos vector
+						{
+							_T1 beta2 		= arma::cdot(this->Ap_km1, this->Ap_kp1) / arma::cdot(this->Ap_kp1, this->Ap_kp1);
+							this->pkm1 		-= beta2 * this->pkp1;
+							this->Ap_km1 	-= beta2 * this->Ap_kp1;
+						}
+					}
+					
+					LOGINFO("MINRES solver did not converge.", LOG_TYPES::WARNING, 3);
+					this->converged_ = false;
+				}
+				// ############################################################################################################################################
+			
+				// define the template specializations
+				template class MINRES_s<double, true>;
+				template class MINRES_s<std::complex<double>, true>;
+				template class MINRES_s<double, false>;
+				template class MINRES_s<std::complex<double>, false>;
 			};
         };
     };

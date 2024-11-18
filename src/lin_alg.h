@@ -996,6 +996,80 @@ namespace algebra
 		#define SOLVE_MATMUL_ARG_TYPESD_PRECONDITIONER(_T1, _T2) Solvers::_AX_fun<_T1> _matrixFreeMultiplication, SOLVE_GENERAL_ARG_TYPESD_PRECONDITIONER(_T1, _T2)
 
 		// #################################################################################################################################################
+		namespace General {
+			// #################################################################################################################################################
+			enum class Type {
+				ARMA				= 0,				// Armadillo solver
+				PseudoInverse		= 4,				// Pseudo Inverse - minimum norm solution
+				Direct				= 5,				// Direct solver - may not be s
+				// SYMMETRIC
+				ConjugateGradient	= 1,				// Conjugate Gradient Method
+				MINRES				= 2,				// Minimum Residual Method
+				MINRES_QLP			= 3					// Minimum Residual Method with QLP
+			};
+			// #############################################################################################################################################
+						
+			template <typename _T, bool _symmetric = true>
+			class Solver 
+			{
+			protected:
+				Type type_ 				= Type::Direct;	// type of the solver
+				bool isSymmetric_ 		= _symmetric;	// is the matrix symmetric
+				bool converged_ 		= false;		// has the method converged
+				bool isGram_			= false;		// is the matrix a Gram matrix
+				size_t N_				= 1;			// size of the matrix
+				size_t iter_ 			= 0; 			// current iteration - [[maybe_unused]]
+				size_t max_iter_ 		= 1000;			// maximum number of iterations
+				double eps_ 			= 1e-10;		// convergence criterion
+				double reg_ 			= -1.0;			// regularization parameter (if needed)
+				Precond<_T, _symmetric>* precond_;		// preconditioner (if exists) - this is used to solve the system M^{-1}Ax = M^{-1}b
+				bool isPreconditioned_ 	= false;		// is the matrix preconditioned (reffers to the preconditioner_ field)
+				_AX_fun<_T> matVecFun_;					// matrix-vector multiplication function such that Ax = b (if exists)
+				arma::Col<_T> x_;						// solution vector
+
+			public:
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+				virtual ~Solver()		= default;
+				Solver() 				= default;
+				Solver(size_t _N, double _eps = 1e-10, size_t _max_iter = 1000, double _reg = -1.0, Precond<_T, _symmetric>* _preconditioner = nullptr);
+
+				virtual void init(const arma::Mat<_T>& _A, const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr);
+				virtual void init(const arma::SpMat<_T>& _A, const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr);
+				virtual void init(const arma::Mat<_T>& _S, const arma::Mat<_T>& _Sp, const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr);
+				virtual void init(const arma::SpMat<_T>& _S, const arma::SpMat<_T>& _Sp, const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr);
+				virtual void init(_AX_fun<_T> _A, const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr);
+				virtual void init(const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr) = 0;
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+				// getters
+				inline const arma::Col<_T>& solution() 					const { return this->x_; };			
+				inline _T solution(size_t _i) 							const { return this->x_(_i); }
+				inline size_t getN() 									const { return this->N_; }
+				inline size_t getIter() 								const { return this->iter_; }
+				inline size_t getMaxIter() 								const { return this->max_iter_; }
+				inline double getEps() 									const { return this->eps_; }
+				inline double getReg() 									const { return this->reg_; }
+				inline bool isConverged() 								const { return this->converged_; }
+				inline bool isPreconditioned() 							const { return this->isPreconditioned_; }
+				inline Precond<_T, _symmetric>* getPreconditioner() 	const { return this->precond_; }
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+				// setters
+				inline void setMaxIter(size_t _max_iter) 				{ this->max_iter_ = _max_iter; }
+				inline void setEps(double _eps) 						{ this->eps_ = _eps; }
+				inline void setReg(double _reg) 						{ this->reg_ = _reg; }
+				inline void setPreconditioner(Precond<_T, _symmetric>* _precond) { this->precond_ = _precond; isPreconditioned_ = (_precond != nullptr); }
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+
+				virtual void solve(const arma::Mat<_T>& _A, const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr, Precond<_T, _symmetric>* _precond = nullptr);							// if we want to use a dense matrix
+				virtual void solve(const arma::SpMat<_T>& _A, const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr, Precond<_T, _symmetric>* _precond = nullptr);							// if we want to use a sparse matrix
+				virtual void solve(const arma::Mat<_T>& _S, const arma::Mat<_T>& _Sp, const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr, Precond<_T, _symmetric>* _precond = nullptr);	// if we want to use a Fisher matrix
+				virtual void solve(const arma::SpMat<_T>& _S, const arma::SpMat<_T>& _Sp, const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr, Precond<_T, _symmetric>* _precond = nullptr);	// if we want to use a Fisher matrix
+				virtual void solve(_AX_fun<_T> _A, const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr, Precond<_T, _symmetric>* _precond = nullptr);										// if we want to use a matrix-vector multiplication function
+				virtual void solve(const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr, Precond<_T, _symmetric>* _precond = nullptr) = 0;													// if the matrix multiplication function is set
+			};	
+			// #############################################################################################################################################
+		};
+		// #################################################################################################################################################
 		namespace General { 
 			// #################################################################################################################################################
 			// with a signle matrix
@@ -1029,8 +1103,33 @@ namespace algebra
 				arma::Col<_T1> conjugate_gradient(SOLVE_SPMAT_ARG_TYPESD(_T1)) { MAKE_MATRIX_FREE_MULT(_T1); return conjugate_gradient<_T1>(_f, _F, _x0, _eps, _max_iter, _converged, _reg); } 
 				template<typename _T1>
 				arma::Col<_T1> conjugate_gradient(SOLVE_SPMAT_ARG_TYPESD_PRECONDITIONER(_T1, true)) { MAKE_MATRIX_FREE_MULT(_T1); return conjugate_gradient<_T1>(_f, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg); }
+			
+				// --------------------------------------------------------------------------------------------------------------------------------------------
+				template<typename _T1, bool _symmetric = true>
+				class ConjugateGradient_s : virtual public Solver<_T1, _symmetric> 
+				{
+				protected:
+					arma::Col<_T1> r, p, Ap;
+					// for preconditioned only
+					arma::Col<_T1> z;
+					_T1 rs_old;
+				public:
+					ConjugateGradient_s(size_t _N, double _eps = 1e-10, size_t _max_iter = 1000, double _reg = -1.0, Precond<_T1, _symmetric>* _preconditioner = nullptr)
+						: Solver<_T1, _symmetric>(_N, _eps, _max_iter, _reg, _preconditioner)
+					{
+						this->type_ = Type::ConjugateGradient;
+						if (!_symmetric) 
+							throw std::invalid_argument("Conjugate Gradient method is only for symmetric matrices.");
+					}
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+					void init(const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override final;
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+					void solve(const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override final;
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+				};
+				// ############################################################################################################################################
 			};
-			// -----------------------------------------------------------------------------------------------------------------------------------------
+			// ------------------------------------------------------------------------------------------------------------------------------------------------
 			namespace MINRES {
 				template<typename _T1>
 				arma::Col<_T1> minres(SOLVE_MATMUL_ARG_TYPESD(_T1));
@@ -1044,8 +1143,33 @@ namespace algebra
 				arma::Col<_T1> minres(SOLVE_SPMAT_ARG_TYPESD(_T1)) { MAKE_MATRIX_FREE_MULT(_T1); return minres<_T1>(_f, _x0, _eps, _max_iter, _converged, _reg); }
 				template<typename _T1>
 				arma::Col<_T1> minres(SOLVE_SPMAT_ARG_TYPESD_PRECONDITIONER(_T1, true)) { MAKE_MATRIX_FREE_MULT(_T1); return minres<_T1>(_f, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg); }
+				// -------------------------------------------------------------------------------------------------------------------------------------------
+				template<typename _T1, bool _symmetric = true>
+				class MINRES_s : virtual public Solver<_T1, _symmetric> 
+				{
+				protected:
+					arma::Col<_T1> r, pkm1, pk, pkp1, Ap_km1, Ap_k, Ap_kp1;
+
+					_T1 beta0_;
+
+				public:
+					MINRES_s(size_t _N, double _eps = 1e-10, size_t _max_iter = 1000, double _reg = -1.0, Precond<_T1, _symmetric>* _preconditioner = nullptr)
+						: Solver<_T1, _symmetric>(_N, _eps, _max_iter, _reg, _preconditioner)
+					{
+						this->type_ = Type::MINRES;
+						if(!_symmetric) 
+							throw std::invalid_argument("MINRES method is only for symmetric matrices.");
+					}
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+					void init(const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override final;
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+					void solve(const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override final;
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+				};
+			
 			};
-			// -----------------------------------------------------------------------------------------------------------------------------------------
+			// ------------------------------------------------------------------------------------------------------------------------------------------------
+			
 			/**
 			* % MINRES-QLP: Minimum Residual QLP Method - minimal leng solution to symmetric (possibly singular) Ax = b or min ||Ax - b||
 			* ---------
@@ -1094,32 +1218,165 @@ namespace algebra
 				arma::Col<_T1> minres_qlp(SOLVE_SPMAT_ARG_TYPESD(_T1)) { MAKE_MATRIX_FREE_MULT(_T1); return minres_qlp<_T1>(_f, _x0, _eps, _max_iter, _converged, _reg); }
 				template<typename _T1>
 				arma::Col<_T1> minres_qlp(SOLVE_SPMAT_ARG_TYPESD_PRECONDITIONER(_T1, true)) { MAKE_MATRIX_FREE_MULT(_T1); return minres_qlp<_T1>(_f, _F, _x0, _preconditioner, _eps, _max_iter, _converged, _reg); }
-			};
-			// -----------------------------------------------------------------------------------------------------------------------------------------
-			namespace PseudoInverse {
+				// --------------------------------------------------------------------------------------------------------------------------------------------
+				template<typename _T1, bool _symmetric = true>
+				class MINRES_QLP_s : public Solver<_T1, _symmetric> 
+				{
+				protected:
+					bool rnormvec_ = false;
+					std::vector<_T1> resvec_, Aresvec_;			// residuals
+					// Lanczos vectors and scalars
+					arma::Col<_T1> z_km2, z_km1, z_k;
+					_T1 _beta1, _beta_km1, _beta_k, _phi_k;
+					arma::Col<_T1> v;
+					// !!!!!!!!! Previous left reflection 
+					_T1 _delta_k;
+					_T1 _c_k_1, _c_k_2, _c_k_3; 							// is cs in the algorithm, cr2, cr1 - cosines
+					_T1 _s_k_1, _s_k_2, _s_k_3; 							// is sn in the algorithm
+					_T1 _gamma_k, _gamma_km1, _gamma_km2, _gamma_km3;
+					_T1 _gamma_min, _gamma_min_km1, _gamma_min_km2; 		// is gamma, gammal, gammal2, gammal3 
+					_T1 _tau_k, _tau_km1, _tau_km2;							// use them as previous values of tau's - is tau, taul, taul2 in the algorithm
+					_T1 _eps_k, _eps_k_p1;								
+					_T1 _Ax_norm_k;												
+					// !!!!!!!!!! Previous right reflection
+					_T1 _theta_k, _theta_km1, _theta_km2;					// use them as previous values of theta's, is theta, thetal, thetal2 in the algorithm
+					_T1 _eta_k, _eta_km1, _eta_km2;	
+					// !!!!!!!!!! 
+					_T1 _xnorm_k;											// is xi in the algorithm - norm of the solution vector, is also xnorm, xnorml
+					_T1 _xl2norm_k;											// is xil in the algorithm : xl2norm
+					_T1 _mu_k, _mu_km1, _mu_km2, _mu_km3, _mu_km4;			// use them as previous values of mu'
+					_T1 _relres_km1, _relAres_km1;							// use them as previous values of relative residuals
+					_T1 _rnorm, _rnorm_km1, _rnorm_km2;						// use them as previous values of rnorm's
+					_T1 _relres, _relAres;									// relative residual with a safety margin for beta_k = 0
+					// !!!!!!!!! Regarding the wektor w and the solution vector x
+					arma::Col<_T1> _w_k, _w_km1, _w_km2;
+					arma::Col<_T1> x_km1;
+					_T1 _Anorm, _Anorm_km1; 
+					_T1 _Acond, _Acond_km1;									// use them as previous values of A's norm and condition number
+					// !!!!!!!!! QLP part
+					_T1 _gammaqlp_k, _gammaqlp_km1;
+					_T1 _thetaqlp_k;
+					_T1 _muqlp_k, _muqlp_km1;
+					_T1 _root_km1;
+					int _QLP_iter;											// number of QLP iterations
+					// !!!!!!!!!
+					int flag_ = -2;											// flag for convergence
 
+				public:
+					MINRES_QLP_s(size_t _N, double _eps = 1e-10, size_t _max_iter = 1000, double _reg = -1.0, Precond<_T1, _symmetric>* _preconditioner = nullptr)
+						: Solver<_T1, _symmetric>(_N, _eps, _max_iter, _reg, _preconditioner)
+					{
+						this->type_ = Type::MINRES_QLP;
+						if(!_symmetric) 
+							throw std::invalid_argument("MINRES_QLP_s: The MINRES_QLP method is only for symmetric matrices.");
+					}
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+					void init(const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override;
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+					void solve(const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override;
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+				};
+				// ############################################################################################################################################
 			};
-			// -----------------------------------------------------------------------------------------------------------------------------------------
+			// ------------------------------------------------------------------------------------------------------------------------------------------------
+			namespace PseudoInverse {
+				template<typename _T1, bool _symmetric = true>
+				class PseudoInverse_s : public Solver<_T1, _symmetric> 
+				{
+				protected:
+					arma::Mat<_T1> Amat_;
+				public:
+					PseudoInverse_s(size_t _N, double _eps = 1e-10, size_t _max_iter = 1000, double _reg = -1.0, Precond<_T1, _symmetric>* _preconditioner = nullptr)
+						: Solver<_T1, _symmetric>(_N, _eps, _max_iter, _reg, _preconditioner)
+					{
+						this->type_ = Type::PseudoInverse;
+					}
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+					void init(const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override;
+					void init(const arma::Mat<_T1>& _A, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override;
+					void init(const arma::SpMat<_T1>& _A, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override;
+					void init(const arma::Mat<_T1>& _S, const arma::Mat<_T1>& _Sp, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override;
+					void init(const arma::SpMat<_T1>& _S, const arma::SpMat<_T1>& _Sp, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override;
+
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+					void solve(const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override;
+					void solve(const arma::Mat<_T1>& _A, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override;
+					void solve(const arma::SpMat<_T1>& _A, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override;
+					void solve(const arma::Mat<_T1>& _S, const arma::Mat<_T1>& _Sp, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override;
+					void solve(const arma::SpMat<_T1>& _S, const arma::SpMat<_T1>& _Sp, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override;
+
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+				};
+				// ############################################################################################################################################
+			};
+			// ------------------------------------------------------------------------------------------------------------------------------------------------
 			namespace Direct {
-				
+				// --------------------------------------------------------------------------------------------------------------------------------------------
+				template<typename _T1, bool _symmetric = true>
+				class Direct_s : public Solver<_T1, _symmetric> 
+				{
+				protected:
+					arma::Mat<_T1> Amat_;
+				public:
+					Direct_s(size_t _N, double _eps = 1e-10, size_t _max_iter = 1000, double _reg = -1.0, Precond<_T1, _symmetric>* _preconditioner = nullptr)
+						: Solver<_T1, _symmetric>(_N, _eps, _max_iter, _reg, _preconditioner)
+					{
+						this->type_ = Type::Direct;
+					}
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+					void init(const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override;
+					void init(const arma::Mat<_T1>& _A, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override;
+					void init(const arma::SpMat<_T1>& _A, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override;
+					void init(const arma::Mat<_T1>& _S, const arma::Mat<_T1>& _Sp, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override;
+					void init(const arma::SpMat<_T1>& _S, const arma::SpMat<_T1>& _Sp, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override;
+
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+					void solve(const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override;
+					void solve(const arma::Mat<_T1>& _A, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override;
+					void solve(const arma::SpMat<_T1>& _A, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override;
+					void solve(const arma::Mat<_T1>& _S, const arma::Mat<_T1>& _Sp, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override;
+					void solve(const arma::SpMat<_T1>& _S, const arma::SpMat<_T1>& _Sp, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override;
+
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+				};
+				// ############################################################################################################################################
 			};
-			// -----------------------------------------------------------------------------------------------------------------------------------------
+			// ------------------------------------------------------------------------------------------------------------------------------------------------
 			namespace ARMA {
 				template<typename _T1>
 				arma::Col<_T1> arma_solve(SOLVE_MAT_ARG_TYPESD(_T1)) { return arma::solve(_A, _F); }
 				template<typename _T1>
 				arma::Col<_T1> arma_solve(SOLVE_MAT_ARG_TYPESD_PRECONDITIONER(_T1, true)) { return arma::solve(_A, _F); }
+				// --------------------------------------------------------------------------------------------------------------------------------------------
+				template<typename _T1, bool _symmetric = true>
+				class ARMA_s : public Solver<_T1, _symmetric> 
+				{
+				protected:
+					arma::Mat<_T1> Amat_;
+				public:
+					ARMA_s(size_t _N, double _eps = 1e-10, size_t _max_iter = 1000, double _reg = -1.0, Precond<_T1, _symmetric>* _preconditioner = nullptr)
+						: Solver<_T1, _symmetric>(_N, _eps, _max_iter, _reg, _preconditioner)
+					{
+						this->type_ = Type::ARMA;
+					}
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+					void init(const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override;
+					void init(const arma::Mat<_T1>& _A, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override;
+					void init(const arma::SpMat<_T1>& _A, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override;
+					void init(const arma::Mat<_T1>& _S, const arma::Mat<_T1>& _Sp, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override;
+					void init(const arma::SpMat<_T1>& _S, const arma::SpMat<_T1>& _Sp, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override;
+
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+					void solve(const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* = nullptr) override;
+					void solve(const arma::Mat<_T1>& _A, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* = nullptr) override;
+					void solve(const arma::SpMat<_T1>& _A, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* = nullptr) override;
+					void solve(const arma::Mat<_T1>& _S, const arma::Mat<_T1>& _Sp, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* = nullptr) override;
+					void solve(const arma::SpMat<_T1>& _S, const arma::SpMat<_T1>& _Sp, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* = nullptr) override;
+
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+				};
 			};
-			// #################################################################################################################################################
-			enum class Type {
-				ARMA,						// Armadillo solver
-				ConjugateGradient,			// Conjugate Gradient Method
-				MINRES,						// Minimum Residual Method
-				MINRES_QLP, 				// Minimum Residual Method with QLP
-				PseudoInverse,				// Pseudo Inverse - minimum norm solution
-				Direct						// Direct solver
-			};
-			// -----------------------------------------------------------------------------------------------------------------------------------------
+			// ------------------------------------------------------------------------------------------------------------------------------------------------
 			
 			// with matrix multiplication function and preconditioner
 			template <typename _T1, bool _symmetric = true>
@@ -1157,6 +1414,11 @@ namespace algebra
 			template <typename _T1, bool _symmetric = true>
 			arma::Col<_T1> solve(int _type, SOLVE_SPMAT_ARG_TYPESD(_T1));
 			
+			// ------------------------------------------------------------------------------------------------------------------------------------------------
+			template <typename _T1, bool _symmetric = true>
+			Solver<_T1, _symmetric>* choose(Solvers::General::Type _type, size_t _N, double _eps = 1e-10, size_t _max_iter = 1000, double _reg = -1.0, Precond<_T1, _symmetric>* _preconditioner = nullptr);
+			template <typename _T1, bool _symmetric = true>
+			Solver<_T1, _symmetric>* choose(int _type, size_t _N, double _eps = 1e-10, size_t _max_iter = 1000, double _reg = -1.0, Precond<_T1, _symmetric>* _preconditioner = nullptr);
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 			std::string name(Solvers::General::Type _type);
 			std::string name(int _type);
@@ -1204,6 +1466,9 @@ namespace algebra
 
 			template <typename _T>
 			arma::Col<_T> matrixFreeMultiplication(const arma::Mat<_T>& _DeltaO, const arma::Mat<_T>& _DeltaOConjT, const arma::Col<_T>& x, const double _reg = 0.0);
+			
+			template <typename _T>
+			arma::Col<_T> matrixFreeMultiplication(const arma::SpMat<_T>& _DeltaO, const arma::SpMat<_T>& _DeltaOConjT, const arma::Col<_T>& x, const double _reg = 0.0);
 			
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -1291,7 +1556,7 @@ namespace algebra
 			// #################################################################################################################################################
 		};
 		
-		// #################################################################################################################################################
+		// ################################################################### ARNOLDI #####################################################################
 
 		/**
 		* @brief Arnoldi method for solving eigenvalue problems. Computes V and H such that :math:`AV_n=V_{n+1}\\underline{H}_n`.  If
@@ -1300,23 +1565,13 @@ namespace algebra
 
 		*/
 		template <typename _T, bool _symmetric = true, bool _reorthogonalize = false>
-		class Arnoldi
+		class Arnoldi : public General::Solver<_T, _symmetric>
 		{
-		private:
+		protected:
 			bool reorthogonalize_ 		= _reorthogonalize;		// reorthogonalize the vectors
-			bool isSymmetric_ 			= _symmetric;			// is the matrix symmetric
 			bool isGram_ 				= false;				// is the matrix a Gram matrix 
-			bool converged_ 			= false;				// has the method converged
 			bool invariant_ 			= false;				// is the Krylov subspace A-invariant
-			double reg_ 				= -1.0;					// regularization parameter
-			size_t iter_				= 0; 					// current iteration
 			size_t krylovDim_ 			= 0;					// dimension of the Krylov subspace
-			size_t max_iter_			= 1000;					// maximum number of iterations
-			double eps_					= 1e-10;				// convergence criterion
-			size_t N_;											// size of the matrix
-			_AX_fun<_T> matVecFun_;								// matrix-vector multiplication
-			bool isPreconditioned_		= false;				// is the matrix preconditioned
-			Precond<_T, _symmetric>* preconditioner_;			// a self-adjoined preconditioner. If exists, the second basis is preconditioned
 																// as V_n = M * P_n, where M is the preconditioner and P_n is the original basis
 			arma::Mat<_T> V_;									// basis (reorthogonalized or not)
 			arma::Mat<_T> P_; 									// basis (preconditioned)
@@ -1328,19 +1583,12 @@ namespace algebra
 			double vnorm_ 				= 0.0;					// norm of the original vector
 
 		public:
-			void init(const arma::Col<_T>& _F);
+			void init(const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr) override final;
 			// -----------------------------------------------------------------------------------------------------------------------------------------
-			~Arnoldi() 					{ if (preconditioner_) delete preconditioner_; }
+			~Arnoldi() 					{};
 			Arnoldi() 					= default;
-			Arnoldi(SOLVE_MATMUL_ARG_TYPESD_PRECONDITIONER(_T, _symmetric));
-			Arnoldi(SOLVE_MATMUL_ARG_TYPESD(_T));
-			Arnoldi(SOLVE_MAT_ARG_TYPESD_PRECONDITIONER(_T, _symmetric));
-			Arnoldi(SOLVE_MAT_ARG_TYPESD(_T));
-			Arnoldi(SOLVE_SPMAT_ARG_TYPESD_PRECONDITIONER(_T, _symmetric));
-			Arnoldi(SOLVE_SPMAT_ARG_TYPESD(_T));
-			// -----------------------------------------------------------------------------------------------------------------------------------------
-			Arnoldi(SOLVE_FISHER_ARG_TYPESD_PRECONDITIONER(_T));
-			Arnoldi(SOLVE_FISHER_ARG_TYPESD(_T));
+			Arnoldi(size_t _N, double _eps = 1e-10, size_t _max_iter = 1000, double _reg = -1.0, Precond<_T, _symmetric>* _preconditioner = nullptr);
+
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 		
 			// single Arnoldi iteration
@@ -1350,16 +1598,18 @@ namespace algebra
 
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 			// getters
-			inline const arma::Mat<_T>& getV() const { return V_; }
-			inline const arma::Mat<_T>& getP() const { return P_; }
-			inline const arma::Mat<_T>& getH() const { return H_; }
-			inline const arma::Col<_T>& getAv() const { return Av_; }
-			inline const arma::Col<_T>& getMAv() const { return MAv_; }
-			inline const arma::subview_col<_T> getV(size_t _i) const { return V_.col(_i); }
-			inline const arma::subview_col<_T> getP(size_t _i) const { return P_.col(_i); }
-			inline const arma::subview_col<_T> getH(size_t _i) const { return H_.col(_i); }
+			inline const arma::Mat<_T>& getV() 					const { return this->V_; }
+			inline const arma::Mat<_T>& getP() 					const { return this->P_; }
+			inline const arma::Mat<_T>& getH() 					const { return this->H_; }
+			inline const arma::Col<_T>& getAv() 				const { return this->Av_; }
+			inline const arma::Col<_T>& getMAv() 				const { return this->MAv_; }
+			inline const arma::subview_col<_T> getV(size_t _i) 	const { return this->V_.col(_i); }
+			inline const arma::subview_col<_T> getP(size_t _i) 	const { return this->P_.col(_i); }
+			inline const arma::subview_col<_T> getH(size_t _i) 	const { return this->H_.col(_i); }
 			
-		
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+			void solve(const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr, Precond<_T, _symmetric>* _precond = nullptr) override final;
+			// -----------------------------------------------------------------------------------------------------------------------------------------
 		};
 
 		// #################################################################################################################################################

@@ -128,6 +128,102 @@ namespace algebra
                 // with preconditioner
                 template arma::Col<double> conjugate_gradient(SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(double, true));
                 template arma::Col<std::complex<double>> conjugate_gradient(SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(std::complex<double>, true));
+			
+				// #################################################################################################################################################
+
+			};
+			// FOR THE CLASS
+			namespace CG
+			{
+				// ----------------------------------------------------------------------------------------------------------------------------------------
+
+				template <typename _T, bool _symmetric>
+				void ConjugateGradient_s<_T, _symmetric>::init(const arma::Col<_T>& _F, arma::Col<_T>* _x0)
+				{
+					this->converged_ = false;
+					if (this->N_ != _F.n_elem)
+						this->N_ = _F.n_elem;
+
+					this->x_ 		= (_x0 == nullptr) ? arma::Col<_T>(_F.n_elem, arma::fill::zeros) : *_x0;
+					this->r 		= _F;
+					if (_x0 != nullptr)
+						this->r -= this->matVecFun_(this->x_, this->reg_);
+					
+					// check the preconditioner
+					if (this->precond_ != nullptr)
+					{
+						this->z 		= this->precond_->apply(this->r);
+						this->p 		= this->z;
+						this->rs_old 	= arma::cdot(this->r, this->z);
+					}
+					else
+					{
+						this->rs_old 	= arma::cdot(this->r, this->r);
+						this->p 		= this->r;
+					}
+					
+					// check the convergence
+					if (std::abs(this->rs_old) < this->eps_)
+						this->converged_ = true;
+				}
+
+				// ----------------------------------------------------------------------------------------------------------------------------------------
+
+				template <typename _T, bool _symmetric>
+				void ConjugateGradient_s<_T, _symmetric>::solve(const arma::Col<_T>& _F, arma::Col<_T>* _x0, Precond<_T, _symmetric>* _precond)
+				{
+					if (!this->matVecFun_)
+						throw std::runtime_error("Conjugate gradient solver: matrix-vector multiplication function is not set.");
+					
+					if (_precond != nullptr)
+					{
+						this->precond_ 			= _precond;
+						this->isPreconditioned_ = true;
+					}
+
+					// initialize the solver
+					this->init(_F, _x0);
+
+					// check the convergence
+					if (this->converged_)
+						return;
+
+					// iterate until convergence
+					for (size_t i = 0; i < this->max_iter_; ++i)
+					{
+						this->Ap 				= this->matVecFun_(this->p, this->reg_);
+						_T alpha 				= this->rs_old / arma::cdot(this->p, this->Ap);
+						this->x_ 				+= alpha * this->p;
+						this->r 				-= alpha * this->Ap;
+						_T rs_new 				= arma::cdot(r, r);
+						// Check for convergence
+						if (std::abs(rs_new) < this->eps_) {
+							this->converged_ = true;
+							return;
+						}
+
+						if (this->precond_ != nullptr)
+						{
+							this->z 				= this->precond_->apply(this->r);
+							rs_new 					= arma::cdot(this->r, this->z);
+							this->p 				= this->z + (rs_new / this->rs_old) * this->p;
+						}
+						else
+							this->p 				= this->r + (rs_new / this->rs_old) * this->p;
+						this->rs_old 			= rs_new;
+					}
+					// check the convergence
+					LOGINFO("Conjugate gradient solver did not converge.", LOG_TYPES::WARNING, 3);
+					this->converged_ = false;
+				}
+
+				// ############################################################################################################################################
+
+				// define the template specializations
+				template class ConjugateGradient_s<double, true>;
+				template class ConjugateGradient_s<std::complex<double>, true>;
+				template class ConjugateGradient_s<double, false>;
+				template class ConjugateGradient_s<std::complex<double>, false>;
 			};
         };
     };

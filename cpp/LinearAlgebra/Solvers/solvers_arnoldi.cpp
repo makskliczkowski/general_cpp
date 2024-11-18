@@ -25,7 +25,7 @@ namespace algebra
         // #################################################################################################################################################
 
         template <typename _T, bool _symmetric, bool _reorthogonalize>
-        void Arnoldi<_T, _symmetric, _reorthogonalize>::init(const arma::Col<_T>& _F)
+        void Arnoldi<_T, _symmetric, _reorthogonalize>::init(const arma::Col<_T>& _F, arma::Col<_T>* _x0)
         {
             this->N_    = _F.n_elem;
             if (this->N_ == 0)
@@ -36,7 +36,7 @@ namespace algebra
             
             // initialize the basis
             this->V_ = arma::zeros<arma::Mat<_T>>(this->N_, this->max_iter_ + 1);
-            if (this->preconditioner_ != nullptr)
+            if (this->precond_ != nullptr)
             {
                 this->isPreconditioned_ = true;
                 this->P_ = arma::zeros<arma::Mat<_T>>(this->N_, this->max_iter_ + 1);
@@ -47,10 +47,10 @@ namespace algebra
 
             // generate the first basis vector
             this->v_ = _F;
-            if (this->isPreconditioned_)
+            if (this->precond_ != nullptr)
             {
                 this->p_        = this->v_;
-                this->v_        = this->preconditioner_->apply(this->v_, this->reg_);
+                this->v_        = this->precond_->apply(this->v_, this->reg_);
                 this->vnorm_    = arma::norm(this->v_);
                 if (this->vnorm_ > 0)
                     this->P_.col(0) = this->p_ / this->vnorm_;
@@ -71,107 +71,26 @@ namespace algebra
         // #################################################################################################################################################
 
         template <typename _T, bool _symmetric, bool _reorthogonalize>
-        Arnoldi<_T, _symmetric, _reorthogonalize>::Arnoldi(SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(_T, _symmetric))
-            : matVecFun_(_matrixFreeMultiplication), 
-            preconditioner_(_preconditioner), eps_(_eps), max_iter_(_max_iter)
+        Arnoldi<_T, _symmetric, _reorthogonalize>::Arnoldi(size_t _N, double _eps, size_t _max_iter, double _reg, Precond<_T, _symmetric>* _preconditioner)
+            : General::Solver<_T, _symmetric>(_N, _eps, _max_iter, _reg, _preconditioner)
         {
-            this->init(_F);
+            this->isPreconditioned_ = (_preconditioner != nullptr);
         }
 
         // #################################################################################################################################################
 
         template <typename _T, bool _symmetric, bool _reorthogonalize>
-        Arnoldi<_T, _symmetric, _reorthogonalize>::Arnoldi(SOLVE_MATMUL_ARG_TYPES(_T))
-            : matVecFun_(_matrixFreeMultiplication), eps_(_eps), max_iter_(_max_iter)
+        void Arnoldi<_T, _symmetric, _reorthogonalize>::solve(const arma::Col<_T>& _F, arma::Col<_T>* _x0, Precond<_T, _symmetric>* _precond)
         {
-            this->init(_F);
+            if (_precond != nullptr)
+            {
+                this->precond_          = _precond;
+                this->isPreconditioned_ = true;
+            }
+            this->init(_F, _x0);
+            this->iterate();
         }
 
-        // #################################################################################################################################################
-
-        template <typename _T, bool _symmetric, bool _reorthogonalize>
-        Arnoldi<_T, _symmetric, _reorthogonalize>::Arnoldi(SOLVE_MAT_ARG_TYPES_PRECONDITIONER(_T, _symmetric))
-            : preconditioner_(_preconditioner), eps_(_eps), max_iter_(_max_iter)
-        {
-            this->matVecFun_ = [this, &_A](const arma::Col<_T>& _x, double _reg) 
-                { 
-                    arma::Col<_T> _out = _A * _x;
-                    if (_reg > 0.0)
-                        return _out + _reg * _x;
-                    return _out; 
-                };
-            this->init(_F);
-        }
-
-        // #################################################################################################################################################
-    
-        template <typename _T, bool _symmetric, bool _reorthogonalize>
-        Arnoldi<_T, _symmetric, _reorthogonalize>::Arnoldi(SOLVE_MAT_ARG_TYPES(_T))
-            : eps_(_eps), max_iter_(_max_iter)
-        {
-            this->matVecFun_ = [this, &_A](const arma::Col<_T>& _x, double _reg) 
-                { 
-                    arma::Col<_T> _out = _A * _x;
-                    if (_reg > 0.0)
-                        return _out + _reg * _x;
-                    return _out; 
-                };
-            this->init(_F);
-        }
-        
-        // #################################################################################################################################################
-
-        template <typename _T, bool _symmetric, bool _reorthogonalize>
-        Arnoldi<_T, _symmetric, _reorthogonalize>::Arnoldi(SOLVE_SPMAT_ARG_TYPES_PRECONDITIONER(_T, _symmetric))
-            : matVecFun_([this, &_A](const arma::Col<_T>& _x, double _reg) 
-                { 
-                    arma::Col<_T> _out = _A * _x;
-                    if (_reg > 0.0)
-                        return _out + _reg * _x;
-                    return _out; 
-                }), preconditioner_(_preconditioner), eps_(_eps), max_iter_(_max_iter)
-        {
-            this->init(_F);
-        }
-
-        // #################################################################################################################################################
-
-        template <typename _T, bool _symmetric, bool _reorthogonalize>
-        Arnoldi<_T, _symmetric, _reorthogonalize>::Arnoldi(SOLVE_SPMAT_ARG_TYPES(_T))
-            : matVecFun_([this, &_A](const arma::Col<_T>& _x, double _reg) 
-                { 
-                    arma::Col<_T> _out = _A * _x;
-                    if (_reg > 0.0)
-                        return _out + _reg * _x;
-                    return _out; 
-                }), eps_(_eps), max_iter_(_max_iter)
-        {
-            this->init(_F);
-        }
-
-        // #################################################################################################################################################
-
-        template <typename _T, bool _symmetric, bool _reorthogonalize>
-        Arnoldi<_T, _symmetric, _reorthogonalize>::Arnoldi(SOLVE_FISHER_ARG_TYPES(_T))
-            : matVecFun_([this, &_DeltaO, &_DeltaOConjT](const arma::Col<_T>& _x, double _reg) 
-                { 
-                    return FisherMatrix::matrixFreeMultiplication<_T>(_DeltaO, _DeltaOConjT, _x, _reg); 
-                }), eps_(_eps), max_iter_(_max_iter)
-        {
-            this->init(_F);
-        }
-
-        // #################################################################################################################################################
-
-        template <typename _T, bool _symmetric, bool _reorthogonalize>
-        Arnoldi<_T, _symmetric, _reorthogonalize>::Arnoldi(SOLVE_FISHER_ARG_TYPES_PRECONDITIONER(_T))
-            : matVecFun_([this, &_DeltaO, &_DeltaOConjT](const arma::Col<_T>& _x, double _reg) 
-                { 
-                    return FisherMatrix::matrixFreeMultiplication<_T>(_DeltaO, _DeltaOConjT, _x, _reg); 
-                }), preconditioner_(_preconditioner), eps_(_eps), max_iter_(_max_iter)
-        {
-            this->init(_F);
-        }
         // #################################################################################################################################################
 
         /**
@@ -205,7 +124,7 @@ namespace algebra
                 if (k > 0)
                 {
                     this->H_(k - 1, k) = this->H_(k, k - 1);                    // copy the last element
-                    if (this->isPreconditioned_)
+                    if (this->precond_ != nullptr)
                     {
                         this->Av_ -= this->H_(k, k - 1) * this->P_.col(k - 1);  // subtract the last element of the last column
                     } else {
@@ -236,9 +155,9 @@ namespace algebra
             }
 
             // check the final preconditioned vector
-            if (this->isPreconditioned_)
+            if (this->precond_ != nullptr)
             {
-                this->MAv_          = this->preconditioner_->apply(this->Av_, this->reg_);
+                this->MAv_          = this->precond_->apply(this->Av_, this->reg_);
                 this->vnorm_        = arma::norm(this->MAv_);
             } else {
                 this->vnorm_ = arma::norm(this->Av_);
@@ -252,7 +171,7 @@ namespace algebra
                 return;
             }
             else {
-                if (this->isPreconditioned_)
+                if (this->precond_ != nullptr)
                 {
                     this->P_.col(k + 1) = this->Av_ / this->vnorm_;
                     this->V_.col(k + 1) = this->MAv_ / this->vnorm_;
