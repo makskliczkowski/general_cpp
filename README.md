@@ -117,25 +117,51 @@ echo $HDF5_INCL_DIR
 echo $HDF5_LIB_DIR
 echo $ARMADILLO_INCL_DIR
 ```
-```
-src/
-├── user_interface/
-│   ├── ui_check_eth.cpp
-│   ├── ui_check_nqs.cpp
-│   ├── ui_check_quadratic.cpp
-│   └── ui_check_symmetries.cpp
-├── LinearAlgebra/
-│   ├── Solvers/
-│   │   ├── solvers_cg.cpp
-│   │   ├── solvers_minres.cpp
-│   │   └── solvers_minresqlp.cpp
-│   ├── preconditioners.cpp
-│   └── pfaffian.cpp
-├── Lattices/
-│   ├── hexagonal.cpp
-│   └── square.cpp
-├── nqs.cpp
-└── operator_parser.cpp
+```plaintext
+│   ├── src/                   # Source files from the external library
+│   │   ├── binary.h
+│   │   ├── lin_alg.h
+│   │   ├── plotter.h
+│   │   ├── lattices.h
+│   │   ├── xoshiro_pp.h
+│   │   ├── Include/
+│   │   │   ├── random.h
+│   │   │   ├── str.h
+│   │   │   ├── directories.h
+│   │   │   ├── linalg/
+│   │   │   │   ├── generalized_matrix.h
+│   │   │   │   ├── diagonalizers.h
+│   │   │   └── exceptions.h
+│   │   ├── flog.h
+│   │   ├── Lattices/
+│   │   │   ├── square.h
+│   │   │   └── hexagonal.h
+│   │   ├── UserInterface/ui.h
+│   │   └── common.h
+│   └── cpp/
+│       ├── time.cpp
+│       ├── signatures.cpp
+│       ├── exceptions.cpp
+│       ├── str.cpp
+│       ├── ui.cpp
+│       ├── LinearAlgebra/
+│       │   ├── preconditioners.cpp
+│       │   ├── pfaffian.cpp
+│       │   ├── Solvers/
+│       │   │   ├── solvers_pseudo.cpp
+│       │   │   ├── solvers_direct.cpp
+│       │   │   ├── solvers_minres.cpp
+│       │   │   ├── solvers_arma.cpp
+│       │   │   ├── solvers_minresqlp.cpp
+│       │   │   ├── solvers_arnoldi.cpp
+│       │   │   └── solvers_cg.cpp
+│       │   └── solvers.cpp
+│       ├── directories.cpp
+│       ├── Lattices/
+│       │   ├── square.cpp
+│       │   └── hexagonal.cpp
+│       ├── common.cpp
+│       └── maths.cpp
 ```
 ## Usage
 
