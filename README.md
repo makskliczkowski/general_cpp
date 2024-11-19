@@ -6,25 +6,38 @@ This repository is a C++ project that involves linear algebra utilities, random 
 This library provides a set of tools and functions to solve eigenvalue problems in quantum mechanics using C++.
 
 ## Features
+Features
 
-- Efficient algorithms for solving eigenvalue problems
-- Support for various matrix types and sizes
-- Easy-to-use API for integrating into your projects
-- Easy-to-use tools for various .cpp implementations
-- Easy-to-translate methods for other languages
-- Heavily templated
+- Linear Algebra Utilities: Includes solvers, preconditioners, and tools for handling generalized matrices.
+- Random Number Generators: High-quality pseudo-random number generation, including implementations like xoshiro.
+- Lattice Structures: Support for defining and working with square and hexagonal lattice configurations.
+- Templated Design: Enables flexible integration and extensibility for a variety of use cases.
+- Helper Functions: For operations such as string manipulation, directory handling, and mathematical utilities.
+- Scalable and Efficient: Utilizes modern C++ techniques and libraries (e.g., Armadillo, Intel MKL) for high performance.
 
 ## TODO
 
-- Implement this as a shared library
+- Add support to build and distribute as a shared library.
+- Improve and extend the documentation.
+- Implement automated tests.
+- Move some of the files to .cpp sources
+- Extend linear algebra utilities
+- Extend lattice functionality
+- Efficiency improvements
+- Add suport to plain MKL and add more generalized templates
 
 ## Installation
 
 To install the library, clone the repository and build it using CMake:
 
 ### From the QuantumEigenSolver
+
+The repository is already integrated as a submodule in the [QuantumEigenSolver](https://github.com/makskliczkowski/QuantumEigenSolver) project. To use it within QuantumEigenSolver, simply clone the main repository with submodules enabled:
 ```sh
-git clone https://github.com/makskliczkowski/QuantumEigenSolver.git
+git clone --recurse-submodules https://github.com/makskliczkowski/QuantumEigenSolver.git
+```
+and 
+```sh
 cd QuantumEigenSolver
 mkdir build
 cd build
@@ -106,6 +119,14 @@ The following environment variables need to be set in your system to help the bu
     export ARMADILLO_INCL_DIR=/usr/include
     ```
 
+| Variable           | Description                | Example Path                                   |
+|--------------------|----------------------------|-----------------------------------------------|
+| `MKL_INCL_DIR`     | Intel MKL include directory | `/opt/intel/oneapi/mkl/latest/include`         |
+| `MKL_LIB_DIR`      | Intel MKL library directory | `/opt/intel/oneapi/mkl/latest/lib/intel64`     |
+| `HDF5_INCL_DIR`    | HDF5 include directory      | `/usr/include/hdf5/serial`                    |
+| `HDF5_LIB_DIR`     | HDF5 library directory      | `/usr/lib/x86_64-linux-gnu/hdf5/serial`       |
+| `ARMADILLO_INCL_DIR` | Armadillo include directory | `/usr/include`                                |
+
 #### Verify the Setup
 
 To verify that the necessary environmental variables are set, you can check each variable by running:
@@ -164,16 +185,50 @@ echo $ARMADILLO_INCL_DIR
 │       └── maths.cpp
 ```
 ## Usage
+Integrate the headers and source files into your project, link against the required libraries, and include the headers as needed. For example:
+```cpp
+#include "src/Include/linalg/generalized_matrix.h"
+#include "src/Include/lin_alg.h"
+#include "src/Lattices/square.h"
+#include "src/Include/random.h"
 
+int main() {
+    // test the solvers
+    auto _eps 				= 1e-13;
+    auto _max_iter 			= 1000;
+    auto _reg 				= 1e-15;
+
+    auto _preconditionerType = -1;
+    LOGINFO("Using real now...", LOG_TYPES::TRACE, 50, 'x', 0);
+    // real 
+    {
+        algebra::Solvers::General::Tests::solve_test_multiple<double, true>(_eps, _max_iter, _reg, _preconditionerType, false);
+        LOGINFO(5);
+        // make random
+        algebra::Solvers::General::Tests::solve_test_multiple<double, true>(_eps, _max_iter, _reg, _preconditionerType, true);
+        LOGINFO(5);
+    }
+    // add preconditioner
+    _preconditionerType = 1;
+    // real with preconditioner
+    {
+        algebra::Solvers::General::Tests::solve_test_multiple<double, true>(_eps, _max_iter, _reg, _preconditionerType, false);
+        LOGINFO(5);
+        // make random with preconditioner
+        algebra::Solvers::General::Tests::solve_test_multiple<double, true>(_eps, _max_iter, _reg, _preconditionerType, true);
+        LOGINFO(5);
+    }
+    // Your simulation code here
+}
+```
 
 ## Documentation
 
-Detailed documentation is available in the `docs` directory. You can also find examples and API references. !NOT YET IMPLEMENTED!
+Comprehensive documentation is in progress and will be added under the docs/ directory.
 
 ## Contributing
 
-Contributions are welcome! Please read the `CONTRIBUTING.md` file for guidelines on how to contribute to this project. !NOT YET IMPLEMENTED!
-
+Contributions are welcome! Please submit issues or pull requests to improve the library. Guidelines will be outlined in a CONTRIBUTING.md file (coming soon).
 ## License
 
 This project is licensed under the MIT License. See the `LICENSE` file for more details. !NOT YET IMPLEMENTED!
