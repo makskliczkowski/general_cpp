@@ -8,8 +8,8 @@ HexagonalLattice::HexagonalLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 {
 	this->dim	= dim;
 	this->_BC	= static_cast<BoundaryConditions>(_BC);
-	this->type_	=		LatticeTypes::HEX;
-	this->type	=		SSTR(getSTR_LatticeTypes(this->type_));
+	this->type_	= LatticeTypes::HEX;
+	this->type	= SSTR(getSTR_LatticeTypes(this->type_));
 
 	// fix sites depending on _BC
 	switch (this->dim)

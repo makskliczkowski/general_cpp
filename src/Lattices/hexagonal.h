@@ -22,37 +22,35 @@ private:
 
 public:
 	// CONSTRUCTORS
-	~HexagonalLattice() {
-		LOGINFOG(this->get_info() + " is destroyed.", LOG_TYPES::INFO, 3);
-	}
-	HexagonalLattice() = default;
+	~HexagonalLattice() 										{ LOGINFOG(this->get_info() + " is destroyed.", LOG_TYPES::DEBUG, 3); }
+	HexagonalLattice() 											= default;
 	HexagonalLattice(int Lx, int Ly = 1, int Lz = 1, int dim = 1, int _BC = 0);											// general constructor
 
 	// GETTERS
-	int get_Lx()														const override { return this->Lx; };
-	int get_Ly()														const override { return this->Ly; };
-	int get_Lz()														const override { return this->Lz; };
-	int getNorm(int x, int y, int z)								const override { return this->spatialNorm[x][y][z]; };
+	int get_Lx()												const override { return this->Lx; };
+	int get_Ly()												const override { return this->Ly; };
+	int get_Lz()												const override { return this->Lz; };
+	int getNorm(int x, int y, int z)							const override { return this->spatialNorm[x][y][z]; };
 	int get_nn(int lat_site, direction d)						const override;
 	arma::vec getRealVec(int x, int y, int z)					const override;
 
-	// ----------------------- GETTERS NEI
-	v_1d<uint> get_nn_ForwardNum(int site, v_1d<uint>)		const override { if (this->dim == 1 || site % 2 == 0) return { 0 }; else return { 1, 2 }; };
-	v_1d<uint> get_nnn_ForwardNum(int site, v_1d<uint>)	const override { if (this->dim == 1 || site % 2 == 0) return { 0 }; else return { 1, 2 }; };
+	// GETTERS NEI
+	v_1d<uint> get_nn_ForwardNum(int site, v_1d<uint>)			const override { if (this->dim == 1 || site % 2 == 0) return { 0 }; else return { 1, 2 }; };
+	v_1d<uint> get_nnn_ForwardNum(int site, v_1d<uint>)			const override { if (this->dim == 1 || site % 2 == 0) return { 0 }; else return { 1, 2 }; };
 	uint get_nn_ForwardNum(int site, int num)					const override { return nnForward[num]; };
-	uint get_nnn_ForwardNum(int site, int num)				const override { return nnnForward[num]; };
+	uint get_nnn_ForwardNum(int site, int num)					const override { return nnnForward[num]; };
 
 	// CALCULATORS
 	// --- nn --- 
-	void calculate_nn_pbc()											override final;
-	void calculate_nn_obc()											override final;
-	void calculate_nn_mbc()											override final;
-	void calculate_nn_sbc()											override final;
-	// --- nnn --- 
-	void calculate_nnn_pbc()										override final;
-	void calculate_nnn_obc()										override final;
-	// --- coords --- 
-	void calculate_coordinates()									override final;
+	void calculate_nn_pbc()										override final;
+	void calculate_nn_obc()										override final;
+	void calculate_nn_mbc()										override final;
+	void calculate_nn_sbc()										override final;
+	// --- nnn ---
+	void calculate_nnn_pbc()									override final;
+	void calculate_nnn_obc()									override final;
+	// --- coords ---
+	void calculate_coordinates()								override final;
 
 	// SYMMETRIES
 	t_3d<int> getNumElems() override 
