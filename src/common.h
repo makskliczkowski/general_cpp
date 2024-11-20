@@ -28,7 +28,11 @@
 #	include "flog.h"
 #endif
 
-#include <omp.h>
+// !TODO fix this on APPLE SILICON
+#ifndef __APPLE__
+#	include <omp.h>
+#endif
+
 #include <thread>
 #include <iomanip>
 #include <iostream>

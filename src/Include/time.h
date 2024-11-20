@@ -17,8 +17,10 @@
 // ########################################################	T I M E   F U N C T I O N S ########################################################
 #if defined (_MSC_VER)
 	using clk					=				std::chrono::steady_clock;
-#else
+#elif defined (__GNUC__) and not defined (__clang__)
 	using clk					=				std::chrono::system_clock;
+#else
+	using clk 					=				std::chrono::steady_clock;
 #endif
 
 using clkS						=				std::chrono::system_clock;

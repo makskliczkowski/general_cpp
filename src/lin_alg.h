@@ -24,8 +24,11 @@ using uint = unsigned int;
 //#define ARMA_DONT_USE_WRAPPER
 //#define ARMA_USE_SUPERLU
 //#define ARMA_USE_ARPACK 
-#define ARMA_USE_MKL_ALLOC
-#define ARMA_USE_MKL_TYPES
+// check if we are using the MKL library - if the system is macos, we do not use it
+#ifndef __APPLE__
+#	define ARMA_USE_MKL_ALLOC
+#	define ARMA_USE_MKL_TYPES
+#endif
 #define ARMA_DONT_USE_OPENMP
 #define ARMA_USE_HDF5
 ////#define ARMA_USE_OPENMP
