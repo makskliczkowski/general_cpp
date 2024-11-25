@@ -50,10 +50,12 @@ protected:
 	
 	// --- nn --- 
 	v_2d<int> nn;											// vector of the nearest neighbors (for a given site, it creates a vector of all nn)
+	v_2d<int> nnF;											// vector of the nearest neighbors (for a given site, it creates a vector of all nn) - forward only
 	v_1d<uint> nnForward;									// number of nearest neighbors forward (not to include all the connections twice)
 	
 	// --- nnn --- 
 	v_2d<int> nnn;											// vector of the next nearest neighbors (for a given site, it creates a vector of all nnn)
+	v_2d<int> nnnF;											// vector of the next nearest neighbors (for a given site, it creates a vector of all nnn) - forward only
 	v_1d<uint> nnnForward;									// number of nearest neighbors forward (not to include all the connections twice)
 	
 	// --- coords ---
@@ -89,6 +91,7 @@ public:
 	virtual v_1d<uint> get_nn_ForwardNum(int, v_1d<uint>)	const = 0;													// with placeholder returns vector of nn
 	virtual v_1d<uint> get_nnn_ForwardNum(int, v_1d<uint>)	const = 0;													// with placeholder returns vector of nnn
 	virtual int get_nn(int site, direction d)				const = 0;													// retruns nn in a given direction x 
+	virtual int get_nnf(int site, int n) 					const { return this->nnF[site][n]; };						// returns the forward nn
 	
 	// ------------------------ GETTERS NEI ------------------------
 	auto get_nn_ForwardNum(int site)						const -> uint	{ return (uint)this->nnForward.size(); };	// with no placeholder returns number of nn
@@ -123,15 +126,19 @@ public:
 	void calculate_nnn();
 	void calculate_spatial_norm();
 	
+    // CALCULATORS
+    virtual void calculate_nn(bool pbcx, bool pbcy, bool pbcz)		{};
+    virtual void calculate_nnn(bool pbcx, bool pbcy, bool pbcz)     {};
+
 	// ------ nn ------
-	virtual void calculate_nn_pbc() = 0;
-	virtual void calculate_nn_obc() = 0;
-	virtual void calculate_nn_mbc() = 0;
-	virtual void calculate_nn_sbc() = 0;
+	virtual void calculate_nn_pbc()							{ this->calculate_nn(true, true, true); 	};
+	virtual void calculate_nn_obc()							{ this->calculate_nn(false, false, false); 	};
+	virtual void calculate_nn_mbc()							{ this->calculate_nn(true, false, false); 	};
+	virtual void calculate_nn_sbc()							{ this->calculate_nn(false, true, false); 	};		
 	
 	// ------ nnn ------ 
-	virtual void calculate_nnn_pbc() = 0;
-	virtual void calculate_nnn_obc() = 0;
+	virtual void calculate_nnn_pbc()  						{ this->calculate_nnn(true, true, true); 	};
+	virtual void calculate_nnn_obc()						{ this->calculate_nnn(false, false, false); };
 	
 	// ------ coords ------ 
 	virtual void calculate_coordinates() = 0;

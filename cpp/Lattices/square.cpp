@@ -23,11 +23,11 @@ SquareLattice::SquareLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 		break;
 	case 2:
 		this->Lz = 1;
-		this->nnForward	= { 0,1 };
+		this->nnForward		= { 0,1 };
 		this->nnnForward	= { 0,1 };
 		break;
 	case 3:
-		this->nnForward	= { 0,1,2 };
+		this->nnForward		= { 0,1,2 };
 		this->nnnForward	= { 0,1,2 };
 		break;
 	default:
@@ -36,8 +36,8 @@ SquareLattice::SquareLattice(int Lx, int Ly, int Lz, int dim, int _BC)
 	this->Ns = this->Lx * this->Ly * this->Lz;
 
 	// neighbors
-	this->calculate_nn();
-	this->calculate_nnn();
+	Lattice::calculate_nn();
+	Lattice::calculate_nnn();
 
 	// coordinates
 	this->calculate_coordinates();
@@ -82,264 +82,174 @@ int SquareLattice::get_nn(int site, Lattice::direction d) const
 
 // ------------------------------------------------------------- nearest neighbors -------------------------------------------------------------
 
-/*
-* @brief Calculate the nearest neighbors with PBC
-*/
-void SquareLattice::calculate_nn_pbc()
+void SquareLattice::calculate_nn(bool pbcx, bool pbcy, bool pbcz)
 {
-	this->nn = v_2d<int>(this->Ns);
-	switch (this->dim)
-	{
-	case 1:
-		// One dimension 
-		for (auto i = 0; i < Lx; i++) {
-			this->nn[i] = v_1d<int>(2, 0);
-			this->nn[i][0] = modEUC<int>(i + 1, Lx);								// right
-			this->nn[i][1] = modEUC<int>(i - 1, Lx);								// left
-		}
-		break;
-	case 2:
-		// Two dimensions 
-		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
-		for (uint i = 0; i < this->Ns; i++) {
-			this->nn[i] = v_1d<int>(4, 0);
-			this->nn[i][0] = int(1.0 * i / Lx) * Lx + modEUC<int>(i + 1, Lx);		// right
-			this->nn[i][1] = modEUC<int>(i + Lx, Ns);								// top
-			this->nn[i][2] = int(1.0 * i / Lx) * Lx + modEUC<int>(i - 1, Lx);		// left
-			this->nn[i][3] = modEUC<int>(i - Lx, Ns);								// bottom
-		}
-		break;
-	case 3:
-		// Three dimensions
-		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
-		for (uint i = 0; i < Ns; i++) {
-			this->nn[i] = v_1d<int>(6, 0);
-			int x [[maybe_unused]] = i % Lx;
-			int y [[maybe_unused]] = int(1.0 * i / Lx) % Ly;
-			int z [[maybe_unused]] = int(1.0 * i / Lx / Ly) % Lz;
-			this->nn[i][0] = z * Lx * Ly + y * Lx + modEUC<int>(i + 1, Lx);			// right - x
-			this->nn[i][1] = z * Lx * Ly + modEUC<int>(i + Lx, Lx * Ly);			// right - y
-			this->nn[i][2] = modEUC<int>(i + Lx * Ly, Ns);							// right - z
+    auto _bcfun = [](int _i, int _L, bool _pbc) -> int
+    {
+        if (_pbc)
+            return modEUC<int>(_i, _L);
+        else
+            return (_i >= _L) ? -1 : ((_i < 0) ? -1 : _i);
+    };
 
-			this->nn[i][3] = z * Lx * Ly + y * Lx + modEUC<int>(i - 1, Lx);			// left - x
-			this->nn[i][4] = z * Lx * Ly + modEUC<int>(i - Lx, Lx * Ly);			// left - y
-			this->nn[i][5] = modEUC<int>(i - Lx * Ly, Ns);							// left - z
-		}
-		break;
-	default:
-		break;
-	}
+
+    switch (this->dim)
+    {
+    case 1:
+        {
+            this->nn = v_2d<int>(this->Ns, v_1d<int>(2, 0));
+            this->nnF = v_2d<int>(this->Ns, v_1d<int>(1, 0));
+            for (int i = 0; i < this->Ns; i++)
+            {
+                this->nn[i][0] = _bcfun(i + 1, this->Lx, pbcx);
+                this->nn[i][1] = _bcfun(i - 1, this->Lx, pbcx);
+                // forward
+                this->nnF[i][0] = this->nn[i][0];
+            }
+        }
+        break;
+    case 2:
+        {
+            this->nn 	= v_2d<int>(this->Ns, v_1d<int>(4, 0));
+            this->nnF 	= v_2d<int>(this->Ns, v_1d<int>(4, 0));
+            for (int i = 0; i < this->Ns; ++i)
+            {
+				// right 
+				this->nn[i][0] = _bcfun(i + 1, this->Lx, pbcx);
+				// top
+				this->nn[i][1] = _bcfun(i + this->Lx, this->Ns, pbcy);
+				// left
+				this->nn[i][2] = _bcfun(i - 1, this->Lx, pbcx);
+				// bottom
+				this->nn[i][3] = _bcfun(i - this->Lx, this->Ns, pbcy);
+
+				// forward
+				this->nnF[i][0] = this->nn[i][0];
+				this->nnF[i][1] = this->nn[i][1];
+				this->nnF[i][2] = -1;
+				this->nnF[i][3] = -1;
+			}	
+        }   
+        break;
+    case 3:
+        // in addition we have the z direction
+        this->nn = v_2d<int>(this->Ns, v_1d<int>(6, 0));
+		this->nnF = v_2d<int>(this->Ns, v_1d<int>(6, 0));
+        for (int i = 0; i < this->Ns; ++i)
+        {
+			// right
+			this->nn[i][0] = _bcfun(i + 1, this->Lx, pbcx);
+			// top
+			this->nn[i][1] = _bcfun(i + this->Lx, this->Ns, pbcy);
+			// up
+			this->nn[i][2] = _bcfun(i + this->Lx * this->Ly, this->Ns, pbcz);
+			// left
+			this->nn[i][3] = _bcfun(i - 1, this->Lx, pbcx);
+			// bottom
+			this->nn[i][4] = _bcfun(i - this->Lx, this->Ns, pbcy);
+			// down
+			this->nn[i][5] = _bcfun(i - this->Lx * this->Ly, this->Ns, pbcz);
+			// forward
+			this->nnF[i][0] = this->nn[i][0];
+			this->nnF[i][1] = this->nn[i][1];
+			this->nnF[i][2] = this->nn[i][2];
+			this->nnF[i][3] = -1;
+			this->nnF[i][4] = -1;
+			this->nnF[i][5] = -1;
+        }
+        break;
+    default:
+        break;
+    }
+    stoutd(this->nn);    
 }
 
-// ############################################################################################################################################
-
-/*
-* @brief Calculate the nearest neighbors with OBC
-*/
-void SquareLattice::calculate_nn_obc()
-{
-	this->nn = v_2d<int>(this->Ns);
-	switch (this->dim)
-	{
-	case 1:
-		//* One dimension 
-		for (auto i = 0; i < Lx; i++) {
-			this->nn[i] = v_1d<int>(2, 0);
-			this->nn[i][0] = (i + 1) >= Lx ? -1 : i + 1;								// right
-			this->nn[i][1] = (i - 1) < 0 ? -1 : i - 1;									// left
-		}
-		break;
-	case 2:
-		// Two dimensions 
-		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
-		for (int i = 0; i < (int)this->Ns; i++) {
-			this->nn[i] = v_1d<int>(4, 0);
-			int x [[maybe_unused]] = i % Lx;
-			int y [[maybe_unused]] = int(1.0 * i / Lx) % Ly;
-			this->nn[i][0] = (i + 1) < (y + 1) * Lx ? i + 1 : -1;						// right
-			this->nn[i][1] = i + Lx < (int)this->Ns ? i + Lx : -1;						// top
-			this->nn[i][2] = (i - 1) >= y * Lx ? i - 1 : -1;							// left
-			this->nn[i][3] = i - Lx >= 0 ? i - Lx : -1;									// bottom
-		}
-		break;
-	case 3:
-		// Three dimensions
-		// numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour
-		for (int i = 0; i < (int)Ns; i++) {
-			this->nn[i] = v_1d<int>(6, 0);
-			int x [[maybe_unused]] = i % Lx;
-			int y [[maybe_unused]] = int(1.0 * i / Lx) % Ly;
-			int z [[maybe_unused]] = int(1.0 * i / Lx / Ly) % Lz;
-			this->nn[i][0] = z * Lx * Ly + y * Lx + (i + 1 < (z * Lx * Ly + (y + 1) * Lx) ? i + 1 : -1);				// right - x
-			this->nn[i][1] = z * Lx * Ly + (i + Lx < ((z + 1)* Lx* Ly) ? i + Lx : -1);									// right - y
-			this->nn[i][2] = i + Lx * Ly < (int)this->Ns ? i + Lx * Ly : -1;											// right - z
-
-			this->nn[i][3] = z * Lx * Ly + y * Lx + (i - 1 >= (z * Lx * Ly + y * Lx) ? i - 1 : -1);						// left - x
-			this->nn[i][4] = z * Lx * Ly + (i - Lx >= (z * Lx * Ly) ? i - Lx : -1);										// left - y
-			this->nn[i][5] = i - Lx * Ly >= 0 ? i - Lx * Ly : -1;														// left - z
-		}
-	default:
-		break;
-	}
-}
-
-// ############################################################################################################################################
-
-/*
-* !TODO
-* @brief Calculate the nearest neighbors with MBC [PBC->x;OBC->y] TODEFINE
-*/
-void SquareLattice::calculate_nn_mbc()
-{
-	this->nn = v_2d<int>(this->Ns);
-	switch (this->dim)
-	{
-	case 1:
-		//* One dimension 
-		for (int i = 0; i < this->Lx; i++) {
-			this->nn[i] = v_1d<int>(2, 0);
-			this->nn[i][0] = (i + 1) >= Lx ? -1 : i + 1;							// right
-			this->nn[i][1] = (i - 1) == 0 ? -1 : i - 1;								// left
-		}
-		break;
-	case 2:
-		// Two dimensions 
-		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
-		for (int i = 0; i < (int)this->Ns; i++) {
-			this->nn[i] = v_1d<int>(4, 0);
-			int x = i % Lx;
-			int y = int(1.0 * i / Lx) % Ly;
-			this->nn[i][0] = (i + 1) < (y + 1) * Lx ? y * Lx + x + 1 : -1;			// right
-			this->nn[i][1] = i + Lx < (int)this->Ns ? i + Lx : -1;					// top
-			this->nn[i][2] = (i - 1) >= y * Lx ? y * Lx + x - 1 : -1;				// left
-			this->nn[i][3] = i - Lx >= 0 ? i - Lx : -1;								// bottom
-		}
-		break;
-	case 3:
-		/* Three dimensions */
-		break;
-	default:
-		break;
-	}
-}
-
-// ############################################################################################################################################
-
-/*
-* @brief Calculate the nearest neighbors with SBC [OBC->x;PBC->y,] TODEFINE
-*/
-void SquareLattice::calculate_nn_sbc()
-{
-	this->nn = v_2d<int>(this->Ns);
-	switch (this->dim)
-	{
-	case 1:
-		//* One dimension 
-		for (int i = 0; i < Lx; i++) {
-			this->nn[i] = v_1d<int>(2, 0);
-			this->nn[i][0] = (i + 1) >= Lx ? -1 : i + 1;							// right
-			this->nn[i][1] = (i - 1) == 0 ? -1 : i - 1;								// left
-		}
-		break;
-	case 2:
-		// Two dimensions 
-		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
-		for (uint i = 0; i < Ns; i++) {
-			this->nn[i] = v_1d<int>(2, 0);
-			int x [[maybe_unused]] = i % Lx;
-			int y [[maybe_unused]] = static_cast<int>(1.0 * i / Lx) % Ly;
-			//this->nn[i][0] = (i + 1) < (y + 1) * Lx ? y * Lx + x + 1 : -1;		// right
-			//this->nn[i][1] = i + Lx < Ns ? i + Lx : -1;							// top
-			//this->nn[i][2] = (i - 1) >= y * Lx ? y * Lx + x - 1 : -1;				// left
-			//this->nn[i][3] = i - Lx >= 0 ? i - Lx : -1;							// bottom
-		}
-		break;
-	case 3:
-		/* Three dimensions */
-		break;
-	default:
-		break;
-	}
-}
 // ------------------------------------------------------------- next nearest neighbors -------------------------------------------------------------
 
-/*
-* @brief Calculate the next nearest neighbors with PBC
-*/
-void SquareLattice::calculate_nnn_pbc()
+
+void SquareLattice::calculate_nnn(bool pbcx, bool pbcy, bool pbcz)
 {
-	this->nnn = v_2d<int>(this->Ns);
-	switch (this->dim)
-	{
-	case 1:
-		/* One dimension */
-		for (int i = 0; i < this->Lx; i++) {
-			this->nnn[i] = v_1d<int>(2, 0);
-			this->nnn[i][0] = modEUC<int>(i + 2, Lx);									// right
-			this->nnn[i][1] = modEUC<int>(i - 2, Lx);									// left
-		}
-		break;
-	case 2:
-		// Two dimensions 
-		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
-		for (uint i = 0; i < Ns; i++) {
-			this->nnn[i] = v_1d<int>(4, 0);
-			this->nnn[i][0] = int(1.0 * i / Lx) * Lx + modEUC<int>(i + 2, Lx);			// right
-			this->nnn[i][1] = modEUC<int>(i + 2 * Lx, Ns);								// top
-			this->nnn[i][2] = int(1.0 * i / Lx) * Lx + modEUC<int>(i - 2, Lx);			// left
-			this->nnn[i][3] = modEUC<int>(i - 2 * Lx, Ns);								// bottom
-		}
-		break;
-	case 3:
-		// Three dimensions
-		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
-		for (uint i = 0; i < this->Ns; i++) {
-			this->nnn[i] = v_1d<int>(6, 0);
+    auto _bcfun = [](int _i, int _L, bool _pbc) -> int
+    {
+        if (_pbc)
+            return modEUC<int>(_i, _L);
+        else
+            return (_i >= _L) ? -1 : ((_i < 0) ? -1 : _i);
+    };
 
-			int x [[maybe_unused]] = i % Lx;
-			int y [[maybe_unused]] = int(1.0 * i / Lx) % Ly;
-			int z [[maybe_unused]] = int(1.0 * i / Lx / Ly) % Lz;
-			this->nnn[i][0] = z * Lx * Ly + y * Lx + modEUC<int>(i + 2, Lx);			// right - x
-			this->nnn[i][1] = z * Lx * Ly + modEUC<int>(i + 2 * Lx, Lx * Ly);			// right - y
-			this->nnn[i][2] = modEUC<int>(i + 2 * Lx * Ly, Ns);							// right - z
 
-			this->nnn[i][3] = z * Lx * Ly + y * Lx + modEUC<int>(i - 2, Lx);			// left - x
-			this->nnn[i][4] = z * Lx * Ly + modEUC<int>(i - 2 * Lx, Lx * Ly);			// left - y
-			this->nnn[i][5] = modEUC<int>(i - 2 * Lx * Ly, Ns);							// left - z
-		}
-		break;
-	default:
-		break;
-	}
-}
+    switch (this->dim)
+    {
+    case 1:
+        {
+            this->nnn = v_2d<int>(this->Ns, v_1d<int>(2, 0));
+            this->nnF = v_2d<int>(this->Ns, v_1d<int>(2, 0));
+            for (int i = 0; i < this->Ns; i++)
+            {
+				// right
+				this->nnn[i][0] = _bcfun(i + 2, this->Lx, pbcx);
+				// left
+				this->nnn[i][1] = _bcfun(i - 2, this->Lx, pbcx);
+				// forward
+				this->nnF[i][0] = this->nn[i][0];
+				this->nnF[i][1] = -1;
+            }
+        }
+        break;
+    case 2:
+        {
+            this->nnn 	= v_2d<int>(this->Ns, v_1d<int>(4, 0));
+            this->nnnF 	= v_2d<int>(this->Ns, v_1d<int>(4, 0));
+            for (int i = 0; i < this->Ns; ++i)
+            {
+				// right 
+				this->nnn[i][0] = _bcfun(i + 1, this->Lx, pbcx);
+				// top
+				this->nnn[i][1] = _bcfun(i + this->Lx, this->Ns, pbcy);
+				// left
+				this->nnn[i][2] = _bcfun(i - 1, this->Lx, pbcx);
+				// bottom
+				this->nnn[i][3] = _bcfun(i - this->Lx, this->Ns, pbcy);
 
-/*
-* @brief Calculate the next nearest neighbors with OBC
-*/
-void SquareLattice::calculate_nnn_obc()
-{
-	this->nnn = v_2d<int>(this->Ns);
-	switch (this->dim)
-	{
-	case 1:
-		/* One dimension */
-		for (int i = 0; i < Lx; i++) {
-			this->nnn[i] = v_1d<int>(2, 0);
-			this->nnn[i][0] = (i + 2) >= Lx ? -1 : i + 2;										// right
-			this->nnn[i][1] = (i - 2) < 0 ? -1 : i - 2;										// left
-		}
-		break;
-	case 2:
-		// Two dimensions 
-		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
-		break;
-	case 3:
-		// Three dimensions
-		/* numeration begins from the bottom left as 0 to the top right as N-1 with a snake like behaviour */
-		break;
-	default:
-		break;
-	}
+				// forward
+				this->nnnF[i][0] = this->nn[i][0];
+				this->nnnF[i][1] = this->nn[i][1];
+				this->nnnF[i][2] = -1;
+				this->nnnF[i][3] = -1;
+			}	
+        }   
+        break;
+    case 3:
+        // in addition we have the z direction
+        this->nnn 	= v_2d<int>(this->Ns, v_1d<int>(6, 0));
+		this->nnnF 	= v_2d<int>(this->Ns, v_1d<int>(6, 0));
+        for (int i = 0; i < this->Ns; ++i)
+        {
+			// right
+			this->nnn[i][0] = _bcfun(i + 1, this->Lx, pbcx);
+			// top
+			this->nnn[i][1] = _bcfun(i + this->Lx, this->Ns, pbcy);
+			// up
+			this->nnn[i][2] = _bcfun(i + this->Lx * this->Ly, this->Ns, pbcz);
+			// left
+			this->nnn[i][3] = _bcfun(i - 1, this->Lx, pbcx);
+			// bottom
+			this->nnn[i][4] = _bcfun(i - this->Lx, this->Ns, pbcy);
+			// down
+			this->nnn[i][5] = _bcfun(i - this->Lx * this->Ly, this->Ns, pbcz);
+			// forward
+			this->nnnF[i][0] = this->nn[i][0];
+			this->nnnF[i][1] = this->nn[i][1];
+			this->nnnF[i][2] = this->nn[i][2];
+			this->nnnF[i][3] = -1;
+			this->nnnF[i][4] = -1;
+			this->nnnF[i][5] = -1;
+        }
+        break;
+    default:
+        break;
+    }
+    stoutd(this->nn);    
 }
 
 // ------------------------------------------------------------- coordinates -------------------------------------------------------------

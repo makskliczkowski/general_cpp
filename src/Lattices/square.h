@@ -45,13 +45,9 @@ public:
 
 	// ----------------------- CALCULATORS
 	// --- nn ---
-	void calculate_nn_pbc() override;
-	void calculate_nn_obc() override;
-	void calculate_nn_mbc() override;
-	void calculate_nn_sbc() override;
-	// --- nnn --- 
-	void calculate_nnn_pbc() override;
-	void calculate_nnn_obc() override;
+	void calculate_nn(bool pbcx, bool pbcy, bool pbcz)  override final;
+    void calculate_nnn(bool pbcx, bool pbcy, bool pbcz) override final;
+
 	// --- coords --- 
 	void calculate_coordinates() override;
 

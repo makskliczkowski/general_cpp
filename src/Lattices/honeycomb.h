@@ -49,17 +49,11 @@ public:
 	uint get_nn_ForwardNum(int site, int num)			const override { return this->nnForward[num]; };
 	uint get_nnn_ForwardNum(int site, int num)			const override { return this->nnnForward[num]; };
 
-    // CALCULATORS
-    void calculate_nn(bool pbcx, bool pbcy, bool pbcz);
-    void calculate_nnn(bool pbcx, bool pbcy, bool pbcz)                 {};
     // --- nn ---
-    void calculate_nn_pbc()                             override final  { this->calculate_nn(true, true, true);     };
-    void calculate_nn_obc()                             override final  { this->calculate_nn(false, false, false);  };
-    void calculate_nn_mbc()                             override final  { this->calculate_nn(true, false, false);   };
-    void calculate_nn_sbc()                             override final  { this->calculate_nn(false, true, false);   };
+    void calculate_nn(bool pbcx, bool pbcy, bool pbcz)  override final;
+    void calculate_nnn(bool pbcx, bool pbcy, bool pbcz) override final {};
     // --- nnn ---
-    void calculate_nnn_pbc()                            override final  { this->calculate_nnn(true, true, true);     };
-    void calculate_nnn_obc()                            override final  { this->calculate_nnn(false, false, false);  };
+
     // --- coords ---
     void calculate_coordinates()                        override final;
 

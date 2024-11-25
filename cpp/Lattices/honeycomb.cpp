@@ -108,37 +108,57 @@ void Honeycomb::calculate_nn(bool pbcx, bool pbcy, bool pbcz)
     case 1:
         {
             this->nn = v_2d<int>(this->Ns, v_1d<int>(2, 0));
+            this->nnF = v_2d<int>(this->Ns, v_1d<int>(1, 0));
             for (int i = 0; i < this->Ns; i++)
             {
                 this->nn[i][0] = _bcfun(i + 1, this->Lx, pbcx);
                 this->nn[i][1] = _bcfun(i - 1, this->Lx, pbcx);
+                // forward
+                this->nnF[i][0] = this->nn[i][0];
             }
         }
         break;
     case 2:
         {
-            this->nn = v_2d<int>(this->Ns, v_1d<int>(3, 0)); // x, y, z
+            this->nn = v_2d<int>(this->Ns, v_1d<int>(3, 0)); // z, y, x
+            this->nnF = v_2d<int>(this->Ns, v_1d<int>(3, 0));
             for (int i = 0; i < this->Ns; ++i)
             {
+
+
                 // get the site on the SQUARE LATTICE that encapsulates the honeycomb lattice (two nodes in one elementary cell)
                 int n   = i / 2;    // n is the site on the square lattice
                 int r   = i % 2;    // 0 or 1  - 0 is the first node in the elementary cell, 1 is the second node in the elementary cell
                 int X   = n % this->Lx;
                 int Y   = n / this->Lx;
+                const bool _even = (r == 0);
                 
                 // z bond
                 {
-                    int Yprime      = (r == 0) ? _bcfun(Y - 1, this->Ly, pbcy) : _bcfun(Y + 1, this->Ly, pbcy);
-                    this->nn[i][0]  = (Yprime * this->Lx + X) * 2 + ((r == 0));
+                    int Yprime      = _even ? _bcfun(Y - 1, this->Ly, pbcy) : _bcfun(Y + 1, this->Ly, pbcy);
+
+                    if (Yprime == -1)
+                        this->nn[i][0] = -1;
+                    else
+                        this->nn[i][0]  = (Yprime * this->Lx + X) * 2 + ((r == 0));
+                    
+                    this->nnF[i][0] = !_even ? this->nn[i][0] : -1;
                 }
                 // y bond - when i % 2 == 1 - we go right and when i % 2 == 0 we go left
                 {
-                    int Xprime      = (r == 0) ? _bcfun(X - 1, this->Lx, pbcx) : _bcfun(X + 1, this->Lx, pbcx);
-                    this->nn[i][1]  = (Y * this->Lx + Xprime) * 2 + ((r == 0));
+                    int Xprime      = _even ? _bcfun(X - 1, this->Lx, pbcx) : _bcfun(X + 1, this->Lx, pbcx);
+
+                    if (Xprime == -1)
+                        this->nn[i][1]  = -1;
+                    else 
+                        this->nn[i][1]  = (Y * this->Lx + Xprime) * 2 + ((r == 0));
+
+                    this->nnF[i][1] = !_even ? this->nn[i][1] : -1;
                 }
                 // x bond is always in the same cell
                 {
-                    this->nn[i][2]  = (r == 0) ? i + 1 : i - 1;
+                    this->nn[i][2]  = _even ? i + 1 : i - 1;
+                    this->nnF[i][2] = _even ? this->nn[i][2] : -1;
                 }
             }
         }   

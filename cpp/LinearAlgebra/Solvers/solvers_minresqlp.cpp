@@ -202,8 +202,8 @@ namespace algebra
 							}
 							_pnorm_rho_k 	= std::sqrt(algebra::norm(_beta_last, _alpha, _beta_k));		// ||[βk αk βk+1]|| - local variable
 #ifdef _DEBUG
-							LOGINFO("MINRES_QLP solver (Lanczos iteration): Iteration " + std::to_string(k) + " - ||[βk αk βk+1]|| = " + STRS(_pnorm_rho_k), LOG_TYPES::DEBUG, 3);
-							LOGINFO("MINRES_QLP solver (Lanczos iteration): Iteration " + std::to_string(k) + " - beta_k = " + STRS(_beta_k) + ", alpha = " + STRS(_alpha), LOG_TYPES::DEBUG, 3);
+							// LOGINFO("MINRES_QLP solver (Lanczos iteration): Iteration " + std::to_string(k) + " - ||[βk αk βk+1]|| = " + STRS(_pnorm_rho_k), LOG_TYPES::DEBUG, 3);
+							// LOGINFO("MINRES_QLP solver (Lanczos iteration): Iteration " + std::to_string(k) + " - beta_k = " + STRS(_beta_k) + ", alpha = " + STRS(_alpha), LOG_TYPES::DEBUG, 3);
 #endif
 						}
 						
@@ -219,8 +219,8 @@ namespace algebra
 							_delta_k 			= -_c_k_1 * _beta_k; 									// update delta after the reflection - is deltan
 							_deltaqlp			= _delta;
 #ifdef _DEBUG 
-							LOGINFO("MINRES_QLP solver (Previous left reflection): Iteration " + STR(k) + " - delta_k = " + STRS(_delta_k) + ", gamma_k = " + STRS(_gamma_k), LOG_TYPES::DEBUG, 3);
-							LOGINFO("MINRES_QLP solver (Previous left reflection): Iteration " + STR(k) + " - delta = " + STRS(_delta) + ", deltaqlp = " + STRS(_deltaqlp), LOG_TYPES::DEBUG, 3);
+							// LOGINFO("MINRES_QLP solver (Previous left reflection): Iteration " + STR(k) + " - delta_k = " + STRS(_delta_k) + ", gamma_k = " + STRS(_gamma_k), LOG_TYPES::DEBUG, 3);
+							// LOGINFO("MINRES_QLP solver (Previous left reflection): Iteration " + STR(k) + " - delta = " + STRS(_delta) + ", deltaqlp = " + STRS(_deltaqlp), LOG_TYPES::DEBUG, 3);
 #endif
 						}
 						// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -237,8 +237,8 @@ namespace algebra
 							_phi_k 				= _s_k_1 * _phi_k; 											// 
 							_Ax_norm_k			= std::sqrt(algebra::norm(_Ax_norm_k, _tau_k)); 						// [Update ‖Axk‖]
 #ifdef _DEBUG
-							LOGINFO("MINRES_QLP solver (New left reflection): Iteration " + STR(k) + " - gamma_k = " + STRS(_gamma_k) + ", tau_k = " + STRS(_tau_k), LOG_TYPES::DEBUG, 3);
-							LOGINFO("MINRES_QLP solver (New left reflection): Iteration " + STR(k) + " - phi_k = " + STRS(_phi_k) + ", Ax_norm_k = " + STRS(_Ax_norm_k), LOG_TYPES::DEBUG, 3);
+							// LOGINFO("MINRES_QLP solver (New left reflection): Iteration " + STR(k) + " - gamma_k = " + STRS(_gamma_k) + ", tau_k = " + STRS(_tau_k), LOG_TYPES::DEBUG, 3);
+							// LOGINFO("MINRES_QLP solver (New left reflection): Iteration " + STR(k) + " - phi_k = " + STRS(_phi_k) + ", Ax_norm_k = " + STRS(_Ax_norm_k), LOG_TYPES::DEBUG, 3);
 #endif
 						}
 
@@ -260,8 +260,8 @@ namespace algebra
 							// update _gamma_k ((3) third stage)
 							_gamma_k 			= (-_c_k_2) * _gamma_k;
 #ifdef _DEBUG
-							LOGINFO("MINRES_QLP solver (Previous right reflection): Iteration " + STR(k) + " - delta_k = " + STRS(_delta_k) + ", theta_km1 = " + STRS(_theta_km1), LOG_TYPES::DEBUG, 3);
-							LOGINFO("MINRES_QLP solver (Previous right reflection): Iteration " + STR(k) + " - eta_k = " + STRS(_eta_k) + ", gamma_k = " + STRS(_gamma_k), LOG_TYPES::DEBUG, 3);
+							// LOGINFO("MINRES_QLP solver (Previous right reflection): Iteration " + STR(k) + " - delta_k = " + STRS(_delta_k) + ", theta_km1 = " + STRS(_theta_km1), LOG_TYPES::DEBUG, 3);
+							// LOGINFO("MINRES_QLP solver (Previous right reflection): Iteration " + STR(k) + " - eta_k = " + STRS(_eta_k) + ", gamma_k = " + STRS(_gamma_k), LOG_TYPES::DEBUG, 3);
 #endif
 						}
 						
@@ -275,7 +275,7 @@ namespace algebra
 							// update _gamma_k ((4) fourth stage)
 							_gamma_k 			= (-_c_k_3) * _gamma_k;
 #ifdef _DEBUG
-							LOGINFO("MINRES_QLP solver (New right reflection): Iteration " + std::to_string(k) + " - theta_k = " + STRS(_theta_k) + ", gamma_k = " + STRS(_gamma_k), LOG_TYPES::DEBUG, 3);
+							// LOGINFO("MINRES_QLP solver (New right reflection): Iteration " + std::to_string(k) + " - theta_k = " + STRS(_theta_k) + ", gamma_k = " + STRS(_gamma_k), LOG_TYPES::DEBUG, 3);
 #endif
 						}			
 						
@@ -428,7 +428,7 @@ namespace algebra
 								if (algebra::leq(_relAres_km1, _eps)) 		_flag = MINRES_QLP_FLAGS::SOLUTION_AR;
 								if (algebra::leq(_relres, _eps)) 			_flag = MINRES_QLP_FLAGS::SOLUTION_RTOL;
 							#ifdef _DEBUG
-								LOGINFO("MINRES_QLP solver: Iteration " + STR(k) + " - relres = " + STRS(_relres) + ", relAres = " + STRS(_relAres), LOG_TYPES::DEBUG, 3);
+								// LOGINFO("MINRES_QLP solver: Iteration " + STR(k) + " - relres = " + STRS(_relres) + ", relAres = " + STRS(_relAres), LOG_TYPES::DEBUG, 3);
 							#endif
 							}
 
@@ -457,10 +457,10 @@ namespace algebra
 					// What to do next?
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-					if (_QLP_iter == 1)
-						LOGINFO("QLP", LOG_TYPES::DEBUG, 3);
-					else
-						LOGINFO("MINRES", LOG_TYPES::DEBUG, 3);
+					// if (_QLP_iter == 1)
+						// LOGINFO("QLP", LOG_TYPES::DEBUG, 3);
+					// else
+						// LOGINFO("MINRES", LOG_TYPES::DEBUG, 3);
 
 					// final quantities
 					z_km2 	= _F - _matrixFreeMultiplication(x_k, _reg);						// update the residual vector
@@ -476,7 +476,7 @@ namespace algebra
 					// Check for convergence
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 					auto _msg = convergence_message(_flag);
-					LOGINFO("MINRES_QLP solver: " + _msg, LOG_TYPES::INFO, 3);
+					// LOGINFO("MINRES_QLP solver: " + _msg, LOG_TYPES::INFO, 3);
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 					
 					if (_converged != nullptr)
@@ -659,8 +659,8 @@ namespace algebra
 							}
 							_pnorm_rho_k 	= std::sqrt(algebra::norm(_beta_last, _alpha, _beta_k));		// ||[βk αk βk+1]|| - local variable
 #ifdef _DEBUG
-							LOGINFO("MINRES_QLP solver (Lanczos iteration): Iteration " + std::to_string(k) + " - ||[βk αk βk+1]|| = " + STRS(_pnorm_rho_k), LOG_TYPES::DEBUG, 3);
-							LOGINFO("MINRES_QLP solver (Lanczos iteration): Iteration " + std::to_string(k) + " - beta_k = " + STRS(_beta_k) + ", alpha = " + STRS(_alpha), LOG_TYPES::DEBUG, 3);
+							// LOGINFO("MINRES_QLP solver (Lanczos iteration): Iteration " + std::to_string(k) + " - ||[βk αk βk+1]|| = " + STRS(_pnorm_rho_k), LOG_TYPES::DEBUG, 3);
+							// LOGINFO("MINRES_QLP solver (Lanczos iteration): Iteration " + std::to_string(k) + " - beta_k = " + STRS(_beta_k) + ", alpha = " + STRS(_alpha), LOG_TYPES::DEBUG, 3);
 #endif
 						}
 						
@@ -676,8 +676,8 @@ namespace algebra
 							_delta_k 			= -_c_k_1 * _beta_k; 									// update delta after the reflection - is deltan
 							_deltaqlp			= _delta;
 #ifdef _DEBUG 
-							LOGINFO("MINRES_QLP solver (Previous left reflection): Iteration " + STR(k) + " - delta_k = " + STRS(_delta_k) + ", gamma_k = " + STRS(_gamma_k), LOG_TYPES::DEBUG, 3);
-							LOGINFO("MINRES_QLP solver (Previous left reflection): Iteration " + STR(k) + " - delta = " + STRS(_delta) + ", deltaqlp = " + STRS(_deltaqlp), LOG_TYPES::DEBUG, 3);
+							// LOGINFO("MINRES_QLP solver (Previous left reflection): Iteration " + STR(k) + " - delta_k = " + STRS(_delta_k) + ", gamma_k = " + STRS(_gamma_k), LOG_TYPES::DEBUG, 3);
+							// LOGINFO("MINRES_QLP solver (Previous left reflection): Iteration " + STR(k) + " - delta = " + STRS(_delta) + ", deltaqlp = " + STRS(_deltaqlp), LOG_TYPES::DEBUG, 3);
 #endif
 						}
 						// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -694,8 +694,8 @@ namespace algebra
 							_phi_k 				= _s_k_1 * _phi_k; 											// 
 							_Ax_norm_k			= std::sqrt(algebra::norm(_Ax_norm_k, _tau_k)); 						// [Update ‖Axk‖]
 #ifdef _DEBUG
-							LOGINFO("MINRES_QLP solver (New left reflection): Iteration " + STR(k) + " - gamma_k = " + STRS(_gamma_k) + ", tau_k = " + STRS(_tau_k), LOG_TYPES::DEBUG, 3);
-							LOGINFO("MINRES_QLP solver (New left reflection): Iteration " + STR(k) + " - phi_k = " + STRS(_phi_k) + ", Ax_norm_k = " + STRS(_Ax_norm_k), LOG_TYPES::DEBUG, 3);
+							// LOGINFO("MINRES_QLP solver (New left reflection): Iteration " + STR(k) + " - gamma_k = " + STRS(_gamma_k) + ", tau_k = " + STRS(_tau_k), LOG_TYPES::DEBUG, 3);
+							// LOGINFO("MINRES_QLP solver (New left reflection): Iteration " + STR(k) + " - phi_k = " + STRS(_phi_k) + ", Ax_norm_k = " + STRS(_Ax_norm_k), LOG_TYPES::DEBUG, 3);
 #endif
 						}
 
@@ -717,8 +717,8 @@ namespace algebra
 							// update _gamma_k ((3) third stage)
 							_gamma_k 			= (-_c_k_2) * _gamma_k;
 #ifdef _DEBUG
-							LOGINFO("MINRES_QLP solver (Previous right reflection): Iteration " + STR(k) + " - delta_k = " + STRS(_delta_k) + ", theta_km1 = " + STRS(_theta_km1), LOG_TYPES::DEBUG, 3);
-							LOGINFO("MINRES_QLP solver (Previous right reflection): Iteration " + STR(k) + " - eta_k = " + STRS(_eta_k) + ", gamma_k = " + STRS(_gamma_k), LOG_TYPES::DEBUG, 3);
+							// LOGINFO("MINRES_QLP solver (Previous right reflection): Iteration " + STR(k) + " - delta_k = " + STRS(_delta_k) + ", theta_km1 = " + STRS(_theta_km1), LOG_TYPES::DEBUG, 3);
+							// LOGINFO("MINRES_QLP solver (Previous right reflection): Iteration " + STR(k) + " - eta_k = " + STRS(_eta_k) + ", gamma_k = " + STRS(_gamma_k), LOG_TYPES::DEBUG, 3);
 #endif
 						}
 						
@@ -732,7 +732,7 @@ namespace algebra
 							// update _gamma_k ((4) fourth stage)
 							_gamma_k 			= (-_c_k_3) * _gamma_k;
 #ifdef _DEBUG
-							LOGINFO("MINRES_QLP solver (New right reflection): Iteration " + std::to_string(k) + " - theta_k = " + STRS(_theta_k) + ", gamma_k = " + STRS(_gamma_k), LOG_TYPES::DEBUG, 3);
+							// LOGINFO("MINRES_QLP solver (New right reflection): Iteration " + std::to_string(k) + " - theta_k = " + STRS(_theta_k) + ", gamma_k = " + STRS(_gamma_k), LOG_TYPES::DEBUG, 3);
 #endif
 						}			
 						
@@ -885,7 +885,7 @@ namespace algebra
 								if (algebra::leq(_relAres_km1, this->eps_)) _flag = MINRES_QLP_FLAGS::SOLUTION_AR;
 								if (algebra::leq(_relres, this->eps_)) 		_flag = MINRES_QLP_FLAGS::SOLUTION_RTOL;
 							#ifdef _DEBUG
-								LOGINFO("MINRES_QLP solver: Iteration " + STR(k) + " - relres = " + STRS(_relres) + ", relAres = " + STRS(_relAres), LOG_TYPES::DEBUG, 3);
+								// LOGINFO("MINRES_QLP solver: Iteration " + STR(k) + " - relres = " + STRS(_relres) + ", relAres = " + STRS(_relAres), LOG_TYPES::DEBUG, 3);
 							#endif
 							}
 
@@ -914,10 +914,10 @@ namespace algebra
 					// What to do next?
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-					if (_QLP_iter == 1)
-						LOGINFO("QLP", LOG_TYPES::DEBUG, 3);
-					else
-						LOGINFO("MINRES", LOG_TYPES::DEBUG, 3);
+					// if (_QLP_iter == 1)
+						// LOGINFO("QLP", LOG_TYPES::DEBUG, 3);
+					// else
+						// LOGINFO("MINRES", LOG_TYPES::DEBUG, 3);
 
 					// final quantities
 					z_km2 	= _F - this->matVecFun_(this->x_, this->reg_);						// update the residual vector
@@ -933,7 +933,7 @@ namespace algebra
 					// Check for convergence
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 					auto _msg = convergence_message(_flag);
-					LOGINFO("MINRES_QLP solver: " + _msg, LOG_TYPES::DEBUG, 3);
+					// LOGINFO("MINRES_QLP solver: " + _msg, LOG_TYPES::DEBUG, 3);
 					// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 					
 					this->converged_ = _flag != MINRES_QLP_FLAGS::MAXITER && _flag != MINRES_QLP_FLAGS::MAXXNORM && _flag != MINRES_QLP_FLAGS::SINGULAR;

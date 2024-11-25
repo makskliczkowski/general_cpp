@@ -9,6 +9,7 @@
 #include "../../flog.h"
 #include "../containers.h"
 #include "../random.h"
+#include "armadillo"
 #include <complex>
 #include <string>
 
@@ -169,6 +170,8 @@ public:
 	static arma::Col<_T> trueState(	const arma::Mat<_T>& _eigenVectors, 
 									const arma::Mat<_T>& _krylovVectors,
 									uint _state	= 0);
+	static arma::Col<_T> trueState(	const arma::Col<_T>& _eigenVector, 
+									const arma::Mat<_T>& _krylovVectors);
 
 	// --------- R E O R T H O N O R M A L I Z A T I O N --------
 	template <class _TC> 
@@ -263,7 +266,7 @@ inline void LanczosMethod<_T>::diagS(
 		carryVec0			= carryVec1 / bip1;
 		
 		// reorthogonalize
-		LanczosMethod<_T>::reorthogonalize(carryVec0, _krylovVec.cols(0, i - 1));
+		LanczosMethod<_T>::reorthogonalize(carryVec0, _krylovVec.cols(0, i - 1), _tol);
 
 		// add vector to matrix at i'th position
 		_krylovVec.col(i)	= carryVec0;
@@ -278,10 +281,10 @@ inline void LanczosMethod<_T>::diagS(
 		bip1				= (_T)arma::norm(carryVec1);
 		if (bip1 == 0.0) {
 			LOGINFO("Early termination in Lanczos due to zero bip1", LOG_TYPES::TRACE, 1);
-			break;
-		} else if (std::abs(bip1) < 1e-12) {
+			// break;
+		} else if (std::abs(bip1) < 1e-16) {
 			LOGINFO("Small bip1 detected; applying regularization.", LOG_TYPES::DEBUG, 1);
-			bip1 = 1e-12;
+			bip1 = 1e-16;
 		}
 		// set matrix
 		_psiMat(i, i - 1)	= bi;
@@ -300,6 +303,9 @@ inline void LanczosMethod<_T>::diagS(
 	ai											= arma::cdot(carryVec0, carryVec1);
 	_psiMat(N_Krylov - 1, N_Krylov - 2)			= bip1;
 	_psiMat(N_Krylov - 1, N_Krylov - 1)			= ai;
+
+	// last reorthogonalization
+	// LanczosMethod<_T>::reorthogonalize(carryVec1, _krylovVec.cols(0, N_Krylov - 1), 1e-16);
 
 	if (!arma::approx_equal(_psiMat, _psiMat.t(), "absdiff", 1e-12)) {
         LOGINFO("Matrix is not symmetric; check orthogonalization.", LOG_TYPES::ERROR, 1);
@@ -464,6 +470,7 @@ inline void LanczosMethod<_T>::diagS(
 
 /*
 * @brief Transforms a given state in Lanczos' basis (Krylov state basis) back to the original basis
+* Uste the Ritz vectors to construct the state in the original basis
 * @param _eigenVectors comme from diagonalizing the Lanczos' matrix
 * @param _krylovVectors constructed to span the system
 * @param _state state to be constructed - 0 corresponds to the ground state
@@ -471,12 +478,31 @@ inline void LanczosMethod<_T>::diagS(
 template<typename _T>
 inline arma::Col<_T> LanczosMethod<_T>::trueState(const arma::Mat<_T>& _eigenVectors, const arma::Mat<_T>& _krylovVectors, uint _state)
 {
-	if (_state < 0.0 || _state >= _eigenVectors.n_cols || _krylovVectors.n_cols != _eigenVectors.n_cols)
+	if (_state >= _eigenVectors.n_cols || _krylovVectors.n_cols != _eigenVectors.n_cols)
 		throw std::runtime_error("Bounds for the number of Lanczos states are not satisfied: " + std::to_string(_state) +
 			" is out of bounds for " + VEQ(_eigenVectors.n_cols));
 
-	auto& stateFromLanczos			= _eigenVectors.col(_state);
-	return _krylovVectors * stateFromLanczos;
+	
+	const arma::Col<_T> ritzVector = arma::normalise(_eigenVectors.col(_state));
+	return _krylovVectors * ritzVector;
+
+	// arma::Col<_T> stateOut(_krylovVectors.n_rows, arma::fill::zeros);
+	// for (auto j = 0; j < _eigenVectors.n_cols; ++j)						// sum over all the states \sum _j = 1 ^ M q_j * s_{ji}, where s_{ji} is the i-th state of the j-th Ritz vector
+	// {
+	// 	stateOut += ritzVector(j) * _krylovVectors.col(j) / arma::norm(_krylovVectors.col(j));
+	// }
+
+	// // norm of the state 
+	// stateOut = stateOut / arma::norm(stateOut);
+	// return stateOut;
 }
 
 // ######################################################################################################################
+
+template <typename _T>
+inline arma::Col<_T> LanczosMethod<_T>::trueState(const arma::Col<_T>& _eigenVector, const arma::Mat<_T>& _krylovVectors)
+{
+	if (_krylovVectors.n_cols != _eigenVector.n_rows)
+        throw std::runtime_error("Dimension mismatch: Krylov matrix columns must match eigenvector size.");
+	return _krylovVectors * _eigenVector;
+}
