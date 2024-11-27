@@ -36,25 +36,61 @@ namespace algebra
 
 namespace MonteCarlo {
 
-	/*
-	@brief Block mean calculation - when the data is correlated in the Monte Carlo sampling 
-	we need to calculate the mean and the standard deviation in blocks to get the correct values
-	@param _data data to be analyzed
-	@param _blockSize size of the block
-	@param _mean mean value
-	@param _std standard deviation
+	// #################################################################################################################################
+
+	/**
+	@brief Mean calculation for Monte Carlo data.
+		Calculates the mean and standard deviation of the given data.
+	@param _data Data to be analyzed.
+	@param _mean Pointer to store the calculated mean value.
+	@param _std (Optional) Pointer to store the calculated standard deviation.
 	*/
 	template <typename _T>
-	inline void blockmean(const arma::Col<_T>& _data, size_t _blockSize, _T* _mean, _T* _std = nullptr)
-	{
-		// calculate the number of blocks
+	inline void mean(const arma::Col<_T>& _data, _T* _mean, _T* _std = nullptr) {
+		*_mean = arma::mean(_data);
+		if (_std)
+			*_std = arma::stddev(_data, 0); // Use sample standard deviation
+	}
+
+	// #################################################################################################################################
+
+	/**
+	@brief Block mean calculation for correlated Monte Carlo data.
+		Calculates the mean and standard deviation using block averaging.
+
+	@param _data Data to be analyzed.
+	@param _blockSize Size of each block.
+	@param _mean Pointer to store the calculated mean value.
+	@param _std (Optional) Pointer to store the calculated standard deviation.
+	@throws std::invalid_argument If block size is larger than the data size.
+	*/
+	template <typename _T>
+	inline void blockmean(const arma::Col<_T>& _data, size_t _blockSize, _T* _mean, _T* _std = nullptr) {
+		// Check for valid block size
+		if (_blockSize == 0 || _data.n_elem < _blockSize) {
+			// LOGINFO("Invalid block size for block mean calculation.", LOG_TYPES::WARNING, 1);
+			return MonteCarlo::mean(_data, _mean, _std);
+		}
+
+		// Calculate the number of blocks
 		size_t _nBlocks = _data.n_elem / _blockSize;
 
-		// calculate the mean and the standard deviation
-		*_mean 	= arma::mean(arma::mean(arma::reshape(_data.head(_nBlocks * _blockSize), _blockSize, _nBlocks), 0));
+		// Reshape data into blocks and calculate block means
+		arma::Mat<_T> reshapedData = arma::reshape(_data.head(_nBlocks * _blockSize), _blockSize, _nBlocks);
+		arma::Col<_T> blockMeans = arma::mean(reshapedData, 0).t();
+
+		// Calculate the overall mean
+		*_mean = arma::mean(blockMeans);
+
+		// Calculate the standard deviation of block means, if requested
 		if (_std)
-			*_std 	= arma::stddev(arma::mean(arma::reshape(_data.head(_nBlocks * _blockSize), _blockSize, _nBlocks), 0));
+			*_std = arma::stddev(blockMeans, 0); // Use sample standard deviation
 	}
+
+	// #################################################################################################################################
+
+
+	// #################################################################################################################################
 
 };
 

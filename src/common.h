@@ -272,13 +272,16 @@ public:
 	pBar(double percentage, int discreteSteps, clk::time_point _time = NOW)
 		: timer(_time)
 		, percentage(percentage)
-		, percentageSteps(static_cast<int>(percentage * discreteSteps / 100.0))
+		, percentageSteps((int)std::ceil(percentage * discreteSteps / 100.0))
 	{
 		// check if we can even make the progress bar
 		if (percentage * discreteSteps < 100 || percentageSteps == 0)
 		{
-			this->percentage		=	100 / discreteSteps;
+			this->percentage		=	100.0 / discreteSteps;
 			this->percentageSteps	=	(int)std::ceil(this->percentage * discreteSteps / 100.0);
+		}
+		else {
+			this->percentage		= 100 * (double)percentageSteps / discreteSteps;
 		}
 		this->currUpdateVal		= 0;
 		this->currentProgress	= 0;
@@ -312,8 +315,8 @@ protected:
 	double neededProgress	= 100;												            // final progress
 public:
 	auto get_start_time()			const	{ return this->timer; };
-	double percentage = 34;																	// print percentage
-	int percentageSteps = 1;
+	double percentage 		= 34;															// print percentage
+	int percentageSteps 	= 1;
 };
 
 #define PROGRESS_UPD(X, PBAR, TEXT)		BEGIN_CATCH_HANDLER{								\
