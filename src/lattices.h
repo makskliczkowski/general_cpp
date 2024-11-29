@@ -156,6 +156,9 @@ public:
 private:
 	virtual void calculate_kVec() = 0;
 	virtual void calculate_rVec() = 0;
+	// ----------------------- TOPOLOGY -----------------------
+public:
+	virtual v_1d<uint> get_flux_sites(int X, int Y, int Z = 0) const { return {}; };									// returns the sites where the flux is applied
 };
 
 #endif // !LATTICE_H

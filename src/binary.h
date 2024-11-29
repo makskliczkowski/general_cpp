@@ -141,7 +141,14 @@ namespace Binary
 	{
 		auto _size = _vec.size();
 		for (int k = 0; k < _size; ++k)
-			_vec[k] = Binary::check(n, (_size - 1) - k) ? _spin : -_spin;
+		{
+			if constexpr (std::is_same<_VectorType, arma::Col<_T>>::value || std::is_same<_VectorType, arma::Col<double>>::value)
+				_vec.at(k) = Binary::check(n, (_size - 1) - k) ? _spin : -_spin;
+			else if constexpr (std::is_same<_VectorType, v_1d<_T>>::value)
+				_vec[k] = Binary::check(n, (_size - 1) - k) ? _spin : -_spin;			
+			else
+				_vec.at(k) = Binary::check(n, (_size - 1) - k) ? _spin : -_spin;
+		}
 	}
 
 	template<typename _T, class _VectorType>
@@ -150,7 +157,14 @@ namespace Binary
 	{
 		auto _size = _vec.size();
 		for (int k = 0; k < _size; ++k)
-			_vec[k] = Binary::check(n, (_size - 1) - k);
+		{
+			if constexpr (std::is_same<_VectorType, arma::Col<_T>>::value)
+				_vec(k) = Binary::check(n, (_size - 1) - k);
+			else if constexpr (std::is_same<_VectorType, v_1d<_T>>::value)
+				_vec[k] = Binary::check(n, (_size - 1) - k);
+			else 
+				_vec(k) = Binary::check(n, (_size - 1) - k);
+		}
 	}
 
 	// ##################################### BASE TO INT #####################################

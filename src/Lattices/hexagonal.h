@@ -75,6 +75,9 @@ public:
 private:
 	void calculate_kVec() override;
 	void calculate_rVec() override;
+public:
+	// --------------- TOPOLOGY ---------------
+	v_1d<uint> get_flux_sites(int X, int Y, int Z = 0) const override final;
 };
 
 

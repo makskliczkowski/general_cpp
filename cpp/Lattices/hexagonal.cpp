@@ -563,3 +563,55 @@ void HexagonalLattice::calculate_rVec()
 		}
 	}
 }
+
+// ############################################################################################################################################################
+
+// topology
+
+// ############################################################################################################################################################
+
+v_1d<uint> HexagonalLattice::get_flux_sites(int X, int Y, int Z) const
+{
+	v_1d<uint> _flux_sites;
+	if (X > Lx || Y > Ly || Z > Lz)
+	{
+		LOGINFO("The site is out of the lattice bounds.", LOG_TYPES::ERROR, 3);
+		return _flux_sites;
+	}
+
+	if (this->dim < 2)
+	{
+		LOGINFO("The dimension is too low for the hexagonal lattice.", LOG_TYPES::ERROR, 3);
+		return _flux_sites;
+	}
+
+	// calculate the starting point 
+	const auto node_start = 2 * (X + Lx * Y + Lx * Ly * Z) + 1;
+	_flux_sites.push_back(node_start);
+
+	// get neighbor up
+	const auto node_up 		= this->nn[node_start][0];
+	_flux_sites.push_back(node_up);
+
+	// get neighbor right (x bond)
+	const auto node_right 	= (node_up > 0) ? this->nn[node_up][2] : -1;
+	_flux_sites.push_back(node_right);
+
+	// get neighbor right again (y bond)
+	const auto node_right_2 = (node_right > 0) ? this->nn[node_right][1] : -1;
+	_flux_sites.push_back(node_right_2);
+
+	// get neighbor down (z bond)
+	const auto node_down 	= (node_right_2 > 0) ? this->nn[node_right_2][3] : -1;
+	_flux_sites.push_back(node_down);
+
+	// get neighbor left (x bond)
+	const auto node_left 	= (node_down > 0) ? this->nn[node_down][5] : -1;
+	_flux_sites.push_back(node_left);
+
+	// get neighbor left again (y bond)
+	const auto node_left_2 	= (node_left > 0) ? this->nn[node_left][4] : -1;
+	_flux_sites.push_back(node_left_2);
+
+	return _flux_sites;
+}

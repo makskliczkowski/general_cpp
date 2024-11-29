@@ -3,6 +3,7 @@
 
 #include "../xoshiro_pp.h"
 #include "../lin_alg.h"
+#include "armadillo"
 #include <random>
 #include <ctime>
 #include <numeric>
@@ -45,11 +46,11 @@ namespace MonteCarlo {
 	@param _mean Pointer to store the calculated mean value.
 	@param _std (Optional) Pointer to store the calculated standard deviation.
 	*/
-	template <typename _T>
-	inline void mean(const arma::Col<_T>& _data, _T* _mean, _T* _std = nullptr) {
-		*_mean = arma::mean(_data);
+	template <typename _T, typename COLTYPE = arma::Col<_T>>
+	inline void mean(const COLTYPE& _data, _T* _mean, _T* _std = nullptr) {
+		*_mean = algebra::cast<_T>(arma::mean(_data));
 		if (_std)
-			*_std = arma::stddev(_data, 0); // Use sample standard deviation
+			*_std = algebra::cast<_T>(arma::stddev(_data, 0)); // Use sample standard deviation
 	}
 
 	// #################################################################################################################################
@@ -64,8 +65,8 @@ namespace MonteCarlo {
 	@param _std (Optional) Pointer to store the calculated standard deviation.
 	@throws std::invalid_argument If block size is larger than the data size.
 	*/
-	template <typename _T>
-	inline void blockmean(const arma::Col<_T>& _data, size_t _blockSize, _T* _mean, _T* _std = nullptr) {
+	template <typename _T, typename COLTYPE = arma::Col<_T>>
+	inline void blockmean(const COLTYPE& _data, size_t _blockSize, _T* _mean, _T* _std = nullptr) {
 		// Check for valid block size
 		if (_blockSize == 0 || _data.n_elem < _blockSize) {
 			// LOGINFO("Invalid block size for block mean calculation.", LOG_TYPES::WARNING, 1);
@@ -76,15 +77,15 @@ namespace MonteCarlo {
 		size_t _nBlocks = _data.n_elem / _blockSize;
 
 		// Reshape data into blocks and calculate block means
-		arma::Mat<_T> reshapedData = arma::reshape(_data.head(_nBlocks * _blockSize), _blockSize, _nBlocks);
-		arma::Col<_T> blockMeans = arma::mean(reshapedData, 0).t();
+		arma::Mat<_T> reshapedData 	= arma::reshape(_data.head(_nBlocks * _blockSize), _blockSize, _nBlocks);
+		arma::Col<_T> blockMeans 	= arma::mean(reshapedData, 0).t();
 
 		// Calculate the overall mean
-		*_mean = arma::mean(blockMeans);
+		*_mean = algebra::cast<_T>(arma::mean(blockMeans));
 
 		// Calculate the standard deviation of block means, if requested
 		if (_std)
-			*_std = arma::stddev(blockMeans, 0); // Use sample standard deviation
+			*_std = algebra::cast<_T>(arma::stddev(blockMeans, 0)); // Use sample standard deviation
 	}
 
 	// #################################################################################################################################
