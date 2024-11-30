@@ -18,8 +18,8 @@ enum LatticeTypes { SQ, HEX, HON };						//%
 BEGIN_ENUM(LatticeTypes)								//%
 {														//%
 	DECL_ENUM_ELEMENT(SQ),								//%
-	DECL_ENUM_ELEMENT(HEX)								//%
-	DECL_ENUM_ELEMENT(HON)
+	DECL_ENUM_ELEMENT(HEX),								//%
+	DECL_ENUM_ELEMENT(HON)								//%
 }														//%
 END_ENUM(LatticeTypes);									//%
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -56,14 +56,14 @@ template <typename _T>
 template <template <class _TM = _T> class _MatType, HasMatrixType _Concept>
 inline void Diagonalizer<_T>::diagS(arma::vec& eigVal_, arma::Mat<_T>& eigVec_, const _MatType<_T>& _mat)
 {	
-	LOGINFO("Using Standard Diagonalization", LOG_TYPES::TRACE, 2);
+	LOGINFO("Using Standard Diagonalization", LOG_TYPES::TRACE, 4);
 	auto [method, memory] = Diagonalizer<_T>::decideMethod(_mat);
 	BEGIN_CATCH_HANDLER
 	{
 		arma::eig_sym(eigVal_, eigVec_, arma::Mat<_T>(_mat), method);
 	}
 	END_CATCH_HANDLER("Memory exceeded. " + STRP(memory * 1e-6, 6), ;);
-	LOGINFO("Finished Standard Diagonalization", LOG_TYPES::TRACE, 2);
+	LOGINFO("Finished Standard Diagonalization", LOG_TYPES::TRACE, 4);
 }
 
 // ######################################################################################################################
@@ -76,14 +76,14 @@ template <typename _T>
 template <template <class _TM = _T> class _MatType, HasMatrixType _Concept>
 inline void Diagonalizer<_T>::diagS(arma::vec& eigVal_, const _MatType<_T>& _mat)
 {	
-	LOGINFO("Using Standard Diagonalization", LOG_TYPES::TRACE, 2);
+	LOGINFO("Using Standard Diagonalization", LOG_TYPES::TRACE, 4);
 	auto [method, memory] = Diagonalizer<_T>::decideMethod(_mat);
 	BEGIN_CATCH_HANDLER
 	{
 		arma::eig_sym(eigVal_, arma::Mat<_T>(_mat));
 	}
 	END_CATCH_HANDLER("Memory exceeded. " + STRP(memory * 1e-6, 6), ;);
-	LOGINFO("Finished Standard Diagonalization", LOG_TYPES::TRACE, 2);
+	LOGINFO("Finished Standard Diagonalization", LOG_TYPES::TRACE, 4);
 }
 
 // ################################################### G E N E R A L ###################################################
@@ -224,7 +224,7 @@ inline void LanczosMethod<_T>::diagS(
 										double 					_tol
 									)
 {
-	LOGINFO("Starting Lanczos' Diagonalization", LOG_TYPES::TRACE, 1);
+	LOGINFO("Starting Lanczos' Diagonalization", LOG_TYPES::TRACE, 3);
 	// check the number of states constraint
 	if (N_Krylov < 2 || N_Krylov > _M.n_rows)
 		throw std::runtime_error("Cannot create such small Krylov space, it does not make sense...");
@@ -313,7 +313,6 @@ inline void LanczosMethod<_T>::diagS(
 
 	// diagonalize
 	Diagonalizer<_T>::diagS(_eigVal, _eigVec, _psiMat);
-	LOGINFO("Starting Lanczos' Diagonalization", LOG_TYPES::TRACE, 1);
 }
 
 // ######################################################################################################################
@@ -338,7 +337,7 @@ inline void LanczosMethod<_T>::diagS(
 										arma::Mat<_T>&			_psiMat
 									)
 {
-	LOGINFO("Starting Lanczos' Diagonalization", LOG_TYPES::TRACE, 1);
+	LOGINFO("Starting Lanczos' Diagonalization", LOG_TYPES::TRACE, 3);
 	// check the number of states constraint
 	if (N_Krylov < 2)
 		throw std::runtime_error("Cannot create such small Krylov space, it does not make sense...");
