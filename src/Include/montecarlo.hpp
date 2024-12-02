@@ -1,3 +1,6 @@
+#ifndef MONTE_CARLO_H
+#define MONTE_CARLO_H
+
 #include "../xoshiro_pp.h"
 #include "../lin_alg.h"
 #include "armadillo"
@@ -16,13 +19,19 @@ namespace MonteCarlo
 {
 	// #################################################################################################################################
 
-	template <typename _T, typename COLTYPE = arma::Col<_T>>
+	template <typename _T = double, typename COLTYPE = arma::Col<_T>>
 	void mean(const COLTYPE& _data, _T* _mean, _T* _std = nullptr);
 
+    template <typename _T>
+    void mean(const std::vector<_T>& _data, _T* _mean, _T* _std = nullptr);
+    
 	// #################################################################################################################################
 
-	template <typename _T, typename COLTYPE = arma::Col<_T>>
+	template <typename _T = double, typename COLTYPE = arma::Col<_T>>
 	void blockmean(const COLTYPE& _data, size_t _blockSize, _T* _mean, _T* _std = nullptr);
+
+    template <typename _T>
+    void blockmean(const std::vector<_T>& _data, size_t _blockSize, _T* _mean, _T* _std = nullptr);
 
 	// #################################################################################################################################
 };
@@ -154,3 +163,5 @@ namespace MonteCarlo
         // virtual void collect(const MCS_train_t& _par, bool quiet = false, clk::time_point _t = NOW, uint progPrc = 25) = 0; // collect the data
     };
 };
+
+#endif

@@ -59,6 +59,10 @@ namespace MonteCarlo
     template void mean(const arma::Col<double>&, double*, double*);
     template void mean(const arma::Col<float>&, float*, float*);
     template void mean(const arma::Col<std::complex<double>>&, std::complex<double>*, std::complex<double>*);
+    // arma subview
+    template void mean(const arma::subview_col<double>&, double*, double*);
+    template void mean(const arma::subview_col<float>&, float*, float*);
+    template void mean(const arma::subview_col<std::complex<double>>&, std::complex<double>*, std::complex<double>*);
 
 	// specialization for std::vector
 	template <typename _T>
@@ -120,6 +124,10 @@ namespace MonteCarlo
     template void blockmean(const arma::Col<double>&, size_t, double*, double*);
     template void blockmean(const arma::Col<float>&, size_t, float*, float*);
     template void blockmean(const arma::Col<std::complex<double>>&, size_t, std::complex<double>*, std::complex<double>*);
+    // arma subview
+    template void blockmean(const arma::subview_col<double>&, size_t, double*, double*);
+    template void blockmean(const arma::subview_col<float>&, size_t, float*, float*);
+    template void blockmean(const arma::subview_col<std::complex<double>>&, size_t, std::complex<double>*, std::complex<double>*);
 
 	// specialization for std::vector
 	template <typename _T>
@@ -180,7 +188,17 @@ namespace MonteCarlo
 
 namespace MonteCarlo 
 {
-        // template instantiation
+    // #################################################################################################################################
+    // template instantiation
+    template class MonteCarloSolver<double, double, arma::Col<double>>;
+    template class MonteCarloSolver<float, float, arma::Col<float>>;
+    template class MonteCarloSolver<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>;
+    // mix
+    template class MonteCarloSolver<double, std::complex<double>, arma::Col<std::complex<double>>>;
+    template class MonteCarloSolver<std::complex<double>, double, arma::Col<double>>;
+
+    // #################################################################################################################################
+    // template instantiation
     template class ParallelTempering<double>;
     template class ParallelTempering<float>;
     template class ParallelTempering<std::complex<double>>;
@@ -193,10 +211,26 @@ namespace MonteCarlo
     }
 
     // template instantiation
-    template double MonteCarloSolver<double>::getRandomVal() const;
-    template double MonteCarloSolver<float>::getRandomVal() const;
-    template double MonteCarloSolver<std::complex<double>>::getRandomVal() const;
+    template double MonteCarloSolver<double, double, arma::Col<double>>::getRandomVal() const;
+    template double MonteCarloSolver<float, float, arma::Col<float>>::getRandomVal() const;
+    template double MonteCarloSolver<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>::getRandomVal() const;
+    // mix
+    template double MonteCarloSolver<std::complex<double>, double, arma::Col<double>>::getRandomVal() const;
+    template double MonteCarloSolver<double, std::complex<double>, arma::Col<std::complex<double>>>::getRandomVal() const;
 
+    // #################################################################################################################################
+
+    template <typename T, typename U, typename V>
+    MonteCarloSolver<T, U, V>::~MonteCarloSolver() {}
+
+    // template instantiation
+    template MonteCarloSolver<double, double, arma::Col<double>>::~MonteCarloSolver();
+    template MonteCarloSolver<float, float, arma::Col<float>>::~MonteCarloSolver();
+    template MonteCarloSolver<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>::~MonteCarloSolver();
+    // mix
+    template MonteCarloSolver<double, std::complex<double>, arma::Col<std::complex<double>>>::~MonteCarloSolver();
+    template MonteCarloSolver<std::complex<double>, double, arma::Col<double>>::~MonteCarloSolver();
+    
     // #################################################################################################################################
     
     // #################################################################################################################################
@@ -369,4 +403,12 @@ namespace MonteCarlo
         // for (size_t i = 0; i < _par.MC_sam_; ++i)
             // this->trainStep(i, En, meanEn, stdEn, _par, quiet, randomStart, _timer);
     }
+
+    // template instantiation
+    template void ParallelTempering<double>::train(const MCS_train_t& _par, bool quiet, clk::time_point _t, uint progPrc);
+    template void ParallelTempering<float>::train(const MCS_train_t& _par, bool quiet, clk::time_point _t, uint progPrc);
+    template void ParallelTempering<std::complex<double>>::train(const MCS_train_t& _par, bool quiet, clk::time_point _t, uint progPrc);
+
+    // #################################################################################################################################
+    
 };

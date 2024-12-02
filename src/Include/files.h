@@ -10,21 +10,7 @@
 #include <iostream>
 #include <fstream>
 #include "time.h"
-#include "random.h"
-
-namespace FileParser
-{
-	/*
-	* @brief Appends the filename with the random number.
-	* @param _f filename
-	* @param _ran random generator
-	* @return filename with the random number of format _f_R=XXX
-	*/
-	inline std::string appWRandom(std::string _f, randomGen& _ran) 
-	{
-		return _f + "_R=" + STR(_ran.randomInt<int>(0, 10000));
-	}
-}
+// #include "random.h"
 
 
 // ################################################## FILE AND STREAMS ##################################################
