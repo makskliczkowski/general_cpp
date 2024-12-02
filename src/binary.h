@@ -115,10 +115,7 @@ namespace Binary
 	// ######################################################################################
 
 	template<typename _T>
-	static inline bool isPowOf2(_T x)
-	{
-		return (x != 0) && ((x & (x - 1)) == 0);
-	}
+	static inline bool isPowOf2(_T x) { return (x != 0) && ((x & (x - 1)) == 0); }
 
 	// ###################################### CHECK BIT ######################################
 

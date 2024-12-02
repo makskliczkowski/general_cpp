@@ -1,14 +1,7 @@
 #ifndef RANDOM_H
 #define RANDOM_H
 
-#include "../xoshiro_pp.h"
-#include "../lin_alg.h"
-#include "armadillo"
-#include <random>
-#include <ctime>
-#include <numeric>
-#include <type_traits>
-#include <vector>
+#include "./montecarlo.hpp"
 
 // --- RANGES ---
 #ifdef __has_include
@@ -26,81 +19,40 @@ namespace rng = std::experimental::ranges;
 #	endif
 #endif
 
-// declaration
+// forward declaration
 namespace algebra
 {
 	template <typename _T, typename _Tin>
 	inline auto cast(_Tin x) -> _T;
 }
 
-// ------------------------------------------------------- MONTE CARLO SAMPLING --------------------------------------------------------
-
-namespace MonteCarlo {
-
-	// #################################################################################################################################
-
-	/**
-	@brief Mean calculation for Monte Carlo data.
-		Calculates the mean and standard deviation of the given data.
-	@param _data Data to be analyzed.
-	@param _mean Pointer to store the calculated mean value.
-	@param _std (Optional) Pointer to store the calculated standard deviation.
-	*/
-	template <typename _T, typename COLTYPE = arma::Col<_T>>
-	inline void mean(const COLTYPE& _data, _T* _mean, _T* _std = nullptr) {
-		*_mean = algebra::cast<_T>(arma::mean(_data));
-		if (_std)
-			*_std = algebra::cast<_T>(arma::stddev(_data, 0)); // Use sample standard deviation
-	}
-
-	// #################################################################################################################################
-
-	/**
-	@brief Block mean calculation for correlated Monte Carlo data.
-		Calculates the mean and standard deviation using block averaging.
-
-	@param _data Data to be analyzed.
-	@param _blockSize Size of each block.
-	@param _mean Pointer to store the calculated mean value.
-	@param _std (Optional) Pointer to store the calculated standard deviation.
-	@throws std::invalid_argument If block size is larger than the data size.
-	*/
-	template <typename _T, typename COLTYPE = arma::Col<_T>>
-	inline void blockmean(const COLTYPE& _data, size_t _blockSize, _T* _mean, _T* _std = nullptr) {
-		// Check for valid block size
-		if (_blockSize == 0 || _data.n_elem < _blockSize) {
-			// LOGINFO("Invalid block size for block mean calculation.", LOG_TYPES::WARNING, 1);
-			return MonteCarlo::mean(_data, _mean, _std);
-		}
-
-		// Calculate the number of blocks
-		size_t _nBlocks = _data.n_elem / _blockSize;
-
-		// Reshape data into blocks and calculate block means
-		arma::Mat<_T> reshapedData 	= arma::reshape(_data.head(_nBlocks * _blockSize), _blockSize, _nBlocks);
-		arma::Col<_T> blockMeans 	= arma::mean(reshapedData, 0).t();
-
-		// Calculate the overall mean
-		*_mean = algebra::cast<_T>(arma::mean(blockMeans));
-
-		// Calculate the standard deviation of block means, if requested
-		if (_std)
-			*_std = algebra::cast<_T>(arma::stddev(blockMeans, 0)); // Use sample standard deviation
-	}
-
-	// #################################################################################################################################
-
-
-	// #################################################################################################################################
-
-};
-
-
 // -------------------------------------------------------- RANDOM NUMBER CLASS --------------------------------------------------------
 
-/*
-* @brief Random number generator class based on Xorshiro256
-* @link 
+/**
+* @class randomGen
+* @brief A class for generating random numbers using the Xoshiro256PlusPlus engine.
+* 
+* This class provides various methods to generate random numbers, including integers, 
+* floating-point numbers, and normally distributed numbers. It also includes methods 
+* for generating random vectors and matrices, as well as selecting random elements 
+* from a collection.
+* 
+* @details
+* The randomGen class uses the Xoshiro256PlusPlus engine for random number generation. 
+* It allows for seeding the engine with a specific value or using a random device to 
+* generate the seed. The class provides several methods to generate random numbers 
+* within specified ranges, as well as methods to generate random vectors and matrices 
+* with specific properties.
+* 
+* @note This class requires the XoshiroCpp library for the Xoshiro256PlusPlus engine.
+* 
+* @example
+* randomGen rng;
+* auto randomValue = rng.random(0, 10);
+* auto randomVector = rng.random(0, 10, 5);
+* auto randomMatrix = rng.GOE<double>(3, 3);
+* 
+* @see XoshiroCpp::Xoshiro256PlusPlus
 */
 class randomGen 
 {
