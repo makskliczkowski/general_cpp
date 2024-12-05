@@ -11,6 +11,8 @@
 #include <type_traits>
 #include <vector>
 
+#define MC_ENABLE_MPI 1 
+
 // #################################################################################################################################
 
 // ------------------------------------------------------- MONTE CARLO SAMPLING --------------------------------------------------------
@@ -112,6 +114,7 @@ namespace MonteCarlo
         auto getAccepted()					const -> u64                                    { return this->accepted_; };
         auto getRatio()						const -> double                                 { return (double)this->accepted_ / (double)this->total_; };
         // setters
+        virtual void setRandomFlipNum(size_t _nFlip)                                        = 0; // set the number of flips
         void setRandomGen(randomGen* _ran)                                                  { this->ran_ = _ran; };
         void setProgressBar(pBar* _pBar)                                                    { this->pBar_ = _pBar; };
         void setBeta(double _beta)                                                          { this->beta_ = _beta; };
@@ -126,6 +129,8 @@ namespace MonteCarlo
 
     // #################################################################################################################################
 
+    #include <queue>
+
     template <typename _T, class _stateType	= double, class _Config_t = arma::Col<_stateType>>
     class ParallelTempering
     {
@@ -133,8 +138,12 @@ namespace MonteCarlo
         using Solver_p      = std::shared_ptr<MonteCarloSolver<_T>>;
         using Container_t   = MonteCarloSolver<_T>::Container_t;
     private:
-        std::vector<std::thread> threads_;                                                  // threads for parallel solving
+        
+    private:
         std::mutex swapMutex_;                                                              // Protects swaps in multithreaded context
+        Threading::ThreadPool threadPool_;                                                  // Thread pool instance
+
+        // other
         pBar* pBar_         = nullptr;                                                      // progress bar
     protected:
         size_t nSolvers_;                                                                   // number of solvers
@@ -145,6 +154,7 @@ namespace MonteCarlo
         std::vector<_T> lastLosses_;                                                        // last losses
         std::vector<u64> accepted_;                                                         // number of accepted steps
         std::vector<u64> total_;                                                            // total number of steps
+        std::vector<bool> finished_;                                                        // finished solvers - when the early stopping criterion is met
         v_1d<Container_t> losses_;                                                          // losses for each solver
         v_1d<Container_t> meanLosses_;                                                      // mean losses for each solver
         v_1d<Container_t> stdLosses_;                                                       // standard deviation of the losses for each solver
@@ -172,6 +182,9 @@ namespace MonteCarlo
         // virtual void collect(const MCS_train_t& _par, bool quiet = false, clk::time_point _t = NOW, uint progPrc = 25) = 0; // collect the data
 
         v_1d<Solver_p>& getSolvers()                                                        const { return this->MCSs_; };
+
+        // SETTERS
+        void setProgressBar(pBar* _pBar)                                                    { this->pBar_ = _pBar; };
     };
 };
 

@@ -1,6 +1,9 @@
 #include "../../src/Include/random.h"
 #include "../../src/flog.h"
 #include "../../src/common.h"
+#ifdef MC_ENABLE_MPI
+#   include <mpi.h>
+#endif
 
 // ##########################################################################################################################################
 
@@ -256,7 +259,7 @@ namespace MonteCarlo
 
     template <typename _T, class _stateType, class _Config_t>
     ParallelTempering<_T, _stateType, _Config_t>::ParallelTempering(Solver_p _MCS, const std::vector<double>& _betas, size_t _nSolvers)
-        : nSolvers_(_nSolvers), betas_(_betas), lastLosses_(_nSolvers, 0.0), accepted_(_nSolvers, 0), total_(_nSolvers, 0)
+        : threadPool_(_nSolvers), nSolvers_(_nSolvers), betas_(_betas), lastLosses_(_nSolvers, 0.0), accepted_(_nSolvers, 0), total_(_nSolvers, 0)
     {
         if (_nSolvers < 1)
             throw std::invalid_argument("The number of solvers must be greater than 0.");
@@ -271,6 +274,14 @@ namespace MonteCarlo
 
         this->MCSs_.push_back(_MCS);
         this->replicate(this->nSolvers_);
+
+        // Initialize the counters
+        this->finished_     = std::vector<bool>(this->nSolvers_, false);
+        this->total_        = std::vector<u64>(this->nSolvers_, 0);
+        this->accepted_     = std::vector<u64>(this->nSolvers_, 0);
+        this->losses_       = v_1d<Container_t>(this->nSolvers_);
+        this->meanLosses_   = v_1d<Container_t>(this->nSolvers_);
+        this->stdLosses_    = v_1d<Container_t>(this->nSolvers_);
     }
 
     // template instantiation
@@ -299,7 +310,7 @@ namespace MonteCarlo
 
     template <typename _T, class _stateType, class _Config_t>
     ParallelTempering<_T, _stateType, _Config_t>::ParallelTempering(const std::vector<Solver_p>& _MCSs, const std::vector<double>& _betas)
-        : nSolvers_(_MCSs.size()), MCSs_(_MCSs), betas_(_betas), lastLosses_(_MCSs.size(), 0.0), accepted_(_MCSs.size(), 0), total_(_MCSs.size(), 0)
+        : threadPool_(_MCs.size()), nSolvers_(_MCSs.size()), MCSs_(_MCSs), betas_(_betas), lastLosses_(_MCSs.size(), 0.0), accepted_(_MCSs.size(), 0), total_(_MCSs.size(), 0)
     {
         if (this->nSolvers_ < 1)
             throw std::invalid_argument("The number of solvers must be greater than 0.");
@@ -311,6 +322,14 @@ namespace MonteCarlo
             for (size_t i = 0; i < this->nSolvers_; ++i)
                 this->betas_[i] = 1.0 / (double)(i + 1);
         }
+
+        // Initialize the counters
+        this->finished_     = std::vector<bool>(this->nSolvers_, false);
+        this->total_        = std::vector<u64>(this->nSolvers_, 0);
+        this->accepted_     = std::vector<u64>(this->nSolvers_, 0);
+        this->losses_       = v_1d<Container_t>(this->nSolvers_);
+        this->meanLosses_   = v_1d<Container_t>(this->nSolvers_);
+        this->stdLosses_    = v_1d<Container_t>(this->nSolvers_);
     }
 
     // template instantiation
@@ -328,10 +347,10 @@ namespace MonteCarlo
     * solvers to enhance sampling efficiency.
     * 
     * @tparam _T The data type used by the Monte Carlo solvers.
+    * @tparam _stateType The state type used by the Monte Carlo solvers.
+    * @tparam _Config_t The container type used by the Monte Carlo solvers.
+    * @tparam useMPI If true, enables MPI support for parallel tempering. This requires the MPI library to be enabled in the build.
     * @param i The current iteration index.
-    * @param En A container to store energy values.
-    * @param meanEn A container to store mean energy values.
-    * @param stdEn A container to store standard deviation of energy values.
     * @param _par Training parameters for the Monte Carlo solver.
     * @param quiet If true, suppresses output during training.
     * @param randomStart If true, initializes solvers with random starting points.
@@ -339,7 +358,7 @@ namespace MonteCarlo
     */
     template <typename _T, class _stateType, class _Config_t>
     template <bool useMPI>
-    void  ParallelTempering<_T, _stateType, _Config_t>::trainStep(size_t i,    
+    void ParallelTempering<_T, _stateType, _Config_t>::trainStep(size_t i,    
                                             const MonteCarlo::MCS_train_t& _par, 
                                             const bool quiet, 
                                             const bool randomStart,
@@ -348,27 +367,61 @@ namespace MonteCarlo
 
         if constexpr (useMPI)
         {
-            // MPI implementation
-            // ...
+#ifndef MC_ENABLE_MPI
+            throw std::runtime_error("MPI is not enabled in this build.");
+#else
+        int rank, size;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+        // Determine the range of solvers for this rank
+        const size_t local_start = (this->nSolvers_ / size) * rank;
+        const size_t local_end = (rank == size - 1) ? this->nSolvers_ : local_start + (this->nSolvers_ / size);
+
+        for (size_t j = local_start; j < local_end; ++j)
+        {
+            if (!this->finished_[j])
+                this->finished_[j] = this->MCSs_[j]->trainStep(i, this->losses_[j], this->meanLosses_[j], 
+                                                this->stdLosses_[j], _par, quiet, randomStart, _timer);
+        }
+        
+        // update counters
+        for (size_t j = local_start; j < local_end; ++j)
+        {
+            this->total_[j]         = this->MCSs_[j]->getTotal();
+            this->accepted_[j]      = this->MCSs_[j]->getAccepted();
+            this->lastLosses_[j]    = this->MCSs_[j]->getLastLoss();
+        }
+#endif
         }
         else
         {
-            this->threads_.clear();                                         // set the thread pool
             for (size_t j = 0; j < this->nSolvers_; ++j)
             {
-                auto& _loss = this->losses_[j];
-                auto& _mean = this->meanLosses_[j];
-                auto& _std  = this->stdLosses_[j];
-                this->threads_.emplace_back([this, i, j, &_loss, &_mean, &_std, &_par, quiet, randomStart, &_timer]() {
-                        this->MCSs_[j]->trainStep(i, _loss, _mean, _std, _par, quiet, randomStart, _timer);
+                if (this->finished_[j])                                     // if the solver has finished, skip it
+                    continue;
+                this->threadPool_.submit([this, i, j, &_par, quiet, randomStart, &_timer]() 
+                    {
+                        this->finished_[j] = this->MCSs_[j]->trainStep(i, this->losses_[j], 
+                                                    this->meanLosses_[j], this->stdLosses_[j], 
+                                                    _par, quiet, randomStart, _timer);
                     });
             }
 
-            for (auto& th : this->threads_)                                 // join all threads and get the results
-                th.join();
+            // Wait for all tasks to finish
+            {
+                std::unique_lock lock(this->threadPool_.mutex()); // Access thread pool's queue mutex
+                threadPool_.cv().wait(lock, [this]() { return threadPool_.taskQueue().empty(); });
+            }
+            
+            // update counters
+            for (size_t j = 0; j < this->nSolvers_; ++j)
+            {
+                this->total_[j]         = this->MCSs_[j]->getTotal();
+                this->accepted_[j]      = this->MCSs_[j]->getAccepted();
+                this->lastLosses_[j]    = this->MCSs_[j]->getLastLoss();
+            }
         }
-
-        this->swaps();
     }
 
     // template instantiation
@@ -398,6 +451,9 @@ namespace MonteCarlo
     template <typename _T, class _stateType, class _Config_t>
     void ParallelTempering<_T, _stateType, _Config_t>::swap(size_t i, size_t j)
     {        
+        if (i == j || i >= this->nSolvers_ || j >= this->nSolvers_ || this->finished_[i] || this->finished_[j])
+            return;
+
         // Calculate the acceptance probability
         const _T _loss_i    = this->MCSs_[i]->getLastLoss();
         const _T _loss_j    = this->MCSs_[j]->getLastLoss();
@@ -419,23 +475,42 @@ namespace MonteCarlo
     // #################################################################################################################################
     
     /**
-    * @brief Perform swaps between adjacent solvers in parallel tempering.
+    * @brief Perform swaps between solvers in parallel tempering, skipping finished solvers.
     *
-    * This function iterates through the solvers and performs a swap operation
-    * between each pair of adjacent solvers. The swaps are intended to facilitate
-    * the parallel tempering process, which is a technique used in optimization
-    * and sampling algorithms to improve convergence by allowing solvers to
-    * exchange information
+    * This function iterates through the solvers and attempts to perform a swap operation
+    * between the current solver and the next available unfinished solver. If no suitable
+    * solver is found, the current solver is skipped.
     *
-    * @note swaps all adjacent solvers in the list i, i+1 for i = 0, 1, ..., nSolvers - 2
+    * @note This ensures swaps are only performed when valid solvers are available, improving
+    *       the effectiveness of parallel tempering.
     *
     * @tparam _T The type of the solvers.
     */
     template <typename _T, class _stateType, class _Config_t>
     void ParallelTempering<_T, _stateType, _Config_t>::swaps()
     {
-        for (size_t i = 0; i < this->nSolvers_ - 1; ++i)
-            this->swap(i, i + 1);
+        size_t i = 0;
+        while (i < this->nSolvers_ - 1)
+        {
+            if (this->finished_[i])                                 // Skip finished solvers
+            {
+                ++i;
+                continue;
+            }
+
+            size_t j = i + 1;
+            
+            while (j < this->nSolvers_ && this->finished_[j])       // Find the next unfinished solver
+                ++j;
+
+            if (j < this->nSolvers_)                                // If a valid solver is found, perform the swap
+            {
+                this->swap(i, j);
+                i = j;
+            }
+            else 
+                break;                                              // Exit the loop if no valid solver is found
+        }
     }
 
     // template instantiation
@@ -449,6 +524,15 @@ namespace MonteCarlo
     template <bool useMPI>
     void ParallelTempering<_T, _stateType, _Config_t>::train(const MCS_train_t& _par, bool quiet, bool ranStart, clk::time_point _t, uint progPrc)
     {
+        // Initialize MPI if useMPI is true
+        if constexpr (useMPI) 
+        {
+            #ifdef MC_ENABLE_MPI
+                MPI_Init(nullptr, nullptr);                                 // Initialize MPI environment
+            #else
+                throw std::runtime_error("MPI is not enabled in this build.");
+            #endif
+        }
         {
             this->pBar_ = new pBar(progPrc, _par.MC_sam_);					// set the progress bar		
             _par.hi();														// set the info about training
@@ -456,35 +540,41 @@ namespace MonteCarlo
                 this->MCSs_[i]->reset(_par.nblck_);						    // reset the derivatives
         }
 
-        v_1d<Timer> timers;													    // timer for the training
-        this->losses_.resize(this->nSolvers_);							        // losses for each solver
+        v_1d<Timer> timers(this->nSolvers_);							    // timer for the training
+        this->losses_.resize(this->nSolvers_);							    // losses for each solver
         for (size_t i = 0; i < this->nSolvers_; ++i)    
-            this->losses_[i].resize(_par.bsize_);						        // losses for each solver
-        this->meanLosses_.resize(this->nSolvers_);						        // mean losses for each solver
+            this->losses_[i].resize(_par.bsize_);			    	        // losses for each solver
+        this->meanLosses_.resize(this->nSolvers_);				            // mean losses for each solver
         for (size_t i = 0; i < this->nSolvers_; ++i)    
-            this->meanLosses_[i].resize(_par.MC_sam_);					        // mean losses for each solver
-        this->stdLosses_.resize(this->nSolvers_);						        // standard deviation of the losses for each solver
+            this->meanLosses_[i].resize(_par.MC_sam_);	    		        // mean losses for each solver
+        this->stdLosses_.resize(this->nSolvers_);					        // standard deviation of the losses for each solver
         for (size_t i = 0; i < this->nSolvers_; ++i)    
-            this->stdLosses_[i].resize(_par.MC_sam_);					        // standard deviation of the losses for each solver
+            this->stdLosses_[i].resize(_par.MC_sam_);				        // standard deviation of the losses for each solver
         
-        if constexpr (useMPI)
+        for (size_t i = 0; i < this->nSolvers_; ++i) 
         {
-            // !TODO implement the MPI training
+            this->MCSs_[i]->setRandomState();       	    			    // set the random state at the begining and the number of flips
+            this->MCSs_[i]->setRandomFlipNum(_par.nFlip);				    // set the random state at the begining and the number of flips
         }
-        else
+    
+        for (size_t i = 0; i < _par.MC_sam_; ++i)                           // go through the training steps
         {
-            for (size_t i = 0; i < this->nSolvers_; ++i) 
-            {
-                this->MCSs_[i]->setRandomState();       	    			    // set the random state at the begining and the number of flips
-                this->MCSs_[i]->setRandomFlipNum(_par.nFlip);				    // set the random state at the begining and the number of flips
-            }
-        
-            for (size_t i = 0; i < _par.MC_sam_; ++i)                           // go through the training steps
-            {
-                this->trainStep<useMPI>(i, _par, quiet, ranStart, timers[i]);   // perform the training step
-                if (i % this->pBar_->percentageSteps == 0)
-                    this->pBar_->update(i);
-            }
+            this->trainStep<useMPI>(i, _par, quiet, ranStart, timers[i]);   // perform the training step
+            if (i % this->pBar_->percentageSteps == 0)
+                this->pBar_->update(i);
+
+            if (std::all_of(this->finished_.begin(), this->finished_.end(), [](bool f) { return f; }))
+                break;                                                      // Exit the training loop
+            this->swaps();                                                  // Perform swaps between solvers                                          
+        }
+
+        if constexpr (useMPI) 
+        {                                                                    // Finalize MPI if useMPI is true
+            #ifdef MC_ENABLE_MPI
+                MPI_Finalize();  // Finalize MPI environment
+            #else
+                throw std::runtime_error("MPI is not enabled in this build.");
+            #endif
         }
     }
 

@@ -1,4 +1,5 @@
 #pragma once
+#include <condition_variable>
 #include <iostream>
 #ifndef MATH_H
 #define MATH_H
@@ -197,6 +198,7 @@ namespace Math
 // ###############################################################################
 
 
+#include <queue>
 #include <future>
 #include <vector>
 #include <atomic>
@@ -212,7 +214,7 @@ namespace Math
 
 namespace Threading
 {
-	/*
+	/**
 	* @brief Creates futures for a class member function with arguments and returns the results.
 	* 
 	* @tparam ClassType Type of the class instance.
@@ -285,10 +287,37 @@ namespace Threading
 		return _out;
 	}
 
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+	class ThreadPool 
+	{
+	public:
+		using Task = std::function<void()>;
+
+	private:
+		std::vector<std::thread> workers_;
+		std::queue<Task> taskQueue_;
+		std::condition_variable cv_;
+		std::mutex queueMutex_;
+		bool stop_ = false;
+
+	public:
+		ThreadPool(size_t numThreads = std::thread::hardware_concurrency());
+		~ThreadPool();
+
+		void submit(Task task);
+		void shutdown();
+
+		// mutex for the thread pool
+		std::mutex& mutex() 				{ return this->queueMutex_; }
+		std::condition_variable& cv() 		{ return this->cv_; }
+		std::queue<Task>& taskQueue() 		{ return this->taskQueue_; }
+	};
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 };
 
-namespace algebra {
+namespace algebra 
+{
 	// ################################################################## CONJUGATE #####################################################################
 
 	template <typename _T>
