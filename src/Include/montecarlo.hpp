@@ -70,6 +70,8 @@ namespace MonteCarlo
     public:
         using Config_t                      =       _Config_t;
         using Container_t                   =       arma::Col<_T>;
+        using MC_t                          =       MonteCarloSolver<_T, _stateType, _Config_t>;
+        using MC_t_p                        =       std::shared_ptr<MC_t>;
     public:
         const _T epsilon_ 					= 		std::numeric_limits<_T>::epsilon();     // machine epsilon
         u64 accepted_                       =       0;                                      // number of accepted steps
@@ -113,54 +115,63 @@ namespace MonteCarlo
         void setRandomGen(randomGen* _ran)                                                  { this->ran_ = _ran; };
         void setProgressBar(pBar* _pBar)                                                    { this->pBar_ = _pBar; };
         void setBeta(double _beta)                                                          { this->beta_ = _beta; };
+        // virtual
         virtual void setConfig(const Config_t& _config)                                     = 0; // set the configuration
+        virtual void swapConfig(MC_t_p _other)                                              = 0; // exchange information
         // reset
         virtual void reset(size_t)                                                          = 0; // reset the MCS
+        virtual auto clone()                const -> MC_t_p                                 = 0; // clone the MCS
 
     };
 
     // #################################################################################################################################
 
-    template <typename _T>
+    template <typename _T, class _stateType	= double, class _Config_t = arma::Col<_stateType>>
     class ParallelTempering
     {
+    public:
         using Solver_p      = std::shared_ptr<MonteCarloSolver<_T>>;
         using Container_t   = MonteCarloSolver<_T>::Container_t;
+    private:
+        std::vector<std::thread> threads_;                                                  // threads for parallel solving
         std::mutex swapMutex_;                                                              // Protects swaps in multithreaded context
         pBar* pBar_         = nullptr;                                                      // progress bar
     protected:
         size_t nSolvers_;                                                                   // number of solvers
         std::vector<Solver_p> MCSs_;                                                        // pointers to the Monte Carlo solvers
-        std::vector<_T> betas_;                                                             // inverse temperatures
+        std::vector<double> betas_;                                                         // inverse temperatures
+
+        // !!! for the future use !!!
         std::vector<_T> lastLosses_;                                                        // last losses
         std::vector<u64> accepted_;                                                         // number of accepted steps
         std::vector<u64> total_;                                                            // total number of steps
+        v_1d<Container_t> losses_;                                                          // losses for each solver
+        v_1d<Container_t> meanLosses_;                                                      // mean losses for each solver
+        v_1d<Container_t> stdLosses_;                                                       // standard deviation of the losses for each solver
     public:
         ParallelTempering() = default;
-        ParallelTempering(const std::vector<Solver_p>& _MCSs, const std::vector<_T>& _betas)
-            : nSolvers_(_MCSs.size()), MCSs_(_MCSs), betas_(_betas), lastLosses_(_MCSs.size(), 0.0), accepted_(_MCSs.size(), 0), total_(_MCSs.size(), 0) 
-        {
-            if (_MCSs.size() != _betas.size())
-                throw std::invalid_argument("The number of solvers and the number of betas must be the same.");
-        };
+        ParallelTempering(Solver_p _MCS, const std::vector<double>& _betas, size_t _nSolvers);
+        ParallelTempering(const std::vector<Solver_p>& _MCSs, const std::vector<double>& _betas);
         virtual ~ParallelTempering();
     
     protected:
-        virtual void trainStep(size_t i,    
-                                MonteCarloSolver<_T>::Container_t& En,
-                                MonteCarloSolver<_T>::Container_t& meanEn, 
-                                MonteCarloSolver<_T>::Container_t& stdEn, 
-                                const MonteCarlo::MCS_train_t& _par, 
+        void replicate(size_t _nSolvers);                                                   // replicate the configurations
+        template <bool useMPI = false>
+        void trainStep(size_t i,    
+                                const MCS_train_t& _par, 
                                 const bool quiet, 
                                 const bool randomStart,
-                                Timer& _timer);                                                                             // perform a single training step
-        virtual void swap(size_t i, size_t j);                                                                              // swap the configurations
-        virtual void swaps();                                                                                               // perform the swaps
-
+                                Timer& _timer);                                             // perform a single training step
+        virtual void swap(size_t i, size_t j);                                              // swap the configurations
+        virtual void swaps();                                                               // perform the swaps
+        
     public:
         // !TODO implement the training and parallel solving 
-        virtual void train(const MCS_train_t& _par, bool quiet = false, clk::time_point _t = NOW, uint progPrc = 25);       // train the solvers
+        template <bool useMPI = false>
+        void train(const MCS_train_t& _par, bool quiet = false, bool ranStart = false, clk::time_point _t = NOW, uint progPrc = 25);       // train the solvers
         // virtual void collect(const MCS_train_t& _par, bool quiet = false, clk::time_point _t = NOW, uint progPrc = 25) = 0; // collect the data
+
+        v_1d<Solver_p>& getSolvers()                                                        const { return this->MCSs_; };
     };
 };
 
