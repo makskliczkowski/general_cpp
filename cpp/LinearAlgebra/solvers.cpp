@@ -205,8 +205,34 @@ namespace algebra
 			// *********************************************************************************************************************************************     
 
 			/**
-			* @brief Solve the linear system using the specified solver type and the matrix-free multiplication function
-			* @param _type Type of the solver
+			* @brief Solves a linear system using various iterative solvers.
+			*
+			* This function provides an interface to solve a linear system of equations 
+			* using different types of solvers. The solvers can handle matrix-free 
+			* multiplication and support preconditioning.
+			*
+			* @tparam _T1 The data type of the elements in the vectors and matrices.
+			* @tparam _symmetric A boolean indicating whether the matrix is symmetric.
+			* @param _type The type of solver to use. It can be one of the following:
+			*              - Type::ARMA: Not implemented for matrix-free multiplication.
+			*              - Type::ConjugateGradient: Conjugate Gradient solver for positive semidefinite matrices.
+			*              - Type::MINRES: MINRES solver for symmetric matrices.
+			*              - Type::MINRES_QLP: MINRES-QLP solver for symmetric matrices.
+			*              - Type::PseudoInverse: Not implemented for matrix-free multiplication.
+			*              - Type::Direct: Not implemented for matrix-free multiplication.
+			* @param _matrixFreeMultiplication A function or functor that performs matrix-free multiplication.
+			* @param _F The right-hand side vector of the linear system.
+			* @param _x0 The initial guess for the solution.
+			* @param _preconditioner The preconditioner to use.
+			* @param _eps The tolerance for the convergence criterion.
+			* @param _max_iter The maximum number of iterations.
+			* @param _converged A reference to a boolean that will be set to true if the solver converges.
+			* @param _reg A regularization parameter.
+			* @return arma::Col<_T1> The solution vector.
+			*
+			* @note The ConjugateGradient, MINRES, and MINRES_QLP solvers are only implemented for symmetric matrices.
+			*       If an unsupported solver type is specified, the function will default to the ConjugateGradient solver
+			*       for positive semidefinite matrices.
 			*/
 			template <typename _T1, bool _symmetric>
 			arma::Col<_T1> solve(Type _type, SOLVE_MATMUL_ARG_TYPES_PRECONDITIONER(_T1, _symmetric))

@@ -38,7 +38,6 @@ void MonteCarlo::MCS_train_t::hi(const std::string& _in) const
 
 namespace MonteCarlo 
 {
-
 	// #################################################################################################################################
 
 	/**
@@ -175,10 +174,6 @@ namespace MonteCarlo
     template void blockmean(const std::vector<std::complex<double>>&, size_t, std::complex<double>*, std::complex<double>*);
 
 	// #################################################################################################################################
-
-
-	// #################################################################################################################################
-
 };
 
 // ##########################################################################################################################################
@@ -310,7 +305,7 @@ namespace MonteCarlo
 
     template <typename _T, class _stateType, class _Config_t>
     ParallelTempering<_T, _stateType, _Config_t>::ParallelTempering(const std::vector<Solver_p>& _MCSs, const std::vector<double>& _betas)
-        : threadPool_(_MCs.size()), nSolvers_(_MCSs.size()), MCSs_(_MCSs), betas_(_betas), lastLosses_(_MCSs.size(), 0.0), accepted_(_MCSs.size(), 0), total_(_MCSs.size(), 0)
+        : threadPool_(_MCSs.size()), nSolvers_(_MCSs.size()), MCSs_(_MCSs), betas_(_betas), lastLosses_(_MCSs.size(), 0.0), accepted_(_MCSs.size(), 0), total_(_MCSs.size(), 0)
     {
         if (this->nSolvers_ < 1)
             throw std::invalid_argument("The number of solvers must be greater than 0.");
@@ -464,6 +459,7 @@ namespace MonteCarlo
         {
             std::lock_guard<std::mutex> lock(this->swapMutex_); // use the mutex to protect the swap operation
             this->MCSs_[i]->swapConfig(this->MCSs_[j]);         // swap the configurations
+            LOGINFO("Swapped configurations between solvers " + std::to_string(i) + " and " + std::to_string(j) + ".", LOG_TYPES::DEBUG, 3);
         }
     }
     
@@ -520,10 +516,71 @@ namespace MonteCarlo
 
     // #################################################################################################################################
 
+    /**
+    * @brief Trains a single Markov Chain Monte Carlo (MCMC) simulation without using parallel tempering.
+    * This is equivalent to not using the replica exchange algorithm.
+    * 
+    * This function trains a single MCMC simulation using the parameters provided. It utilizes the 
+    * first MCMC simulation in the `MCSs_` vector to perform the training. The training process is
+    * executed in a single thread and given by the inherited `train` function.
+    * 
+    * @tparam _T The type of the data being processed.
+    * @tparam _stateType The type representing the state of the MCMC simulation.
+    * @tparam _Config_t The type representing the configuration of the MCMC simulation.
+    * 
+    * @param _par The parameters for the MCMC training.
+    * @param quiet A boolean flag indicating whether to suppress output during training.
+    * @param ranStart A boolean flag indicating whether to start the training with a random state.
+    * @param _t The starting time point for the training.
+    * @param progPrc The progress percentage of the training.
+    */
+    template <typename _T, class _stateType, class _Config_t>
+    void ParallelTempering<_T, _stateType, _Config_t>::trainSingle(const MCS_train_t& _par, bool quiet, bool ranStart, clk::time_point _t, uint progPrc)
+    {
+        this->MCSs_[0]->train(_par, quiet, ranStart, _t, progPrc);
+    }
+
+    // template instantiation
+    template void ParallelTempering<double, double, arma::Col<double>>::trainSingle(const MCS_train_t&, bool, bool, clk::time_point, uint);
+    template void ParallelTempering<float, float, arma::Col<float>>::trainSingle(const MCS_train_t&, bool, bool, clk::time_point, uint);
+    template void ParallelTempering<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>::trainSingle(const MCS_train_t&, bool, bool, clk::time_point, uint);
+
+    // #################################################################################################################################
+
+    /**
+    * @brief Trains the Parallel Tempering model using Monte Carlo simulations.
+    * 
+    * @tparam _T The data type used for the training.
+    * @tparam _stateType The type representing the state of the system.
+    * @tparam _Config_t The configuration type.
+    * @tparam useMPI A boolean template parameter indicating whether to use MPI for parallel processing.
+    * 
+    * @param _par The parameters for the Monte Carlo simulation training.
+    * @param quiet A boolean flag indicating whether to suppress output.
+    * @param ranStart A boolean flag indicating whether to start with a random state.
+    * @param _t The starting time point for the training.
+    * @param progPrc The progress percentage for the progress bar.
+    * 
+    * @throws std::invalid_argument If the number of solvers is less than 1.
+    * @throws std::runtime_error If MPI is not enabled in the build but useMPI is true.
+    * 
+    * This function initializes the training process for the Parallel Tempering model. It supports both single and multiple solvers.
+    * If MPI is enabled and useMPI is true, it initializes the MPI environment. The function sets up the progress bar, resets the solvers,
+    * and performs the training steps. During each training step, it updates the progress bar and checks if all solvers have finished training.
+    * If all solvers are finished, it exits the training loop. If MPI is enabled, it finalizes the MPI environment at the end.
+    */
     template <typename _T, class _stateType, class _Config_t>
     template <bool useMPI>
     void ParallelTempering<_T, _stateType, _Config_t>::train(const MCS_train_t& _par, bool quiet, bool ranStart, clk::time_point _t, uint progPrc)
     {
+        if (this->nSolvers_ == 1)
+        {
+            return this->trainSingle(_par, quiet, ranStart, _t, progPrc);
+        }
+
+        if (this->nSolvers_ < 1)
+            throw std::invalid_argument("The number of solvers must be greater than 0.");
+
         // Initialize MPI if useMPI is true
         if constexpr (useMPI) 
         {
@@ -560,11 +617,40 @@ namespace MonteCarlo
         for (size_t i = 0; i < _par.MC_sam_; ++i)                           // go through the training steps
         {
             this->trainStep<useMPI>(i, _par, quiet, ranStart, timers[i]);   // perform the training step
-            if (i % this->pBar_->percentageSteps == 0)
-                this->pBar_->update(i);
+
+            // inform the user about the progress
+            { 
+                double _bestLoss = std::numeric_limits<double>::max(), _bestAcc = 0.0;
+                size_t _bestIdx = 0, _bestAccIdx = 0;
+                std::string _prog;
+                for (size_t j = 0; j < this->nSolvers_; ++j)
+                {
+                    const double _currLoss = algebra::cast<double>(this->lastLosses_[j]);
+                    if (_currLoss < _bestLoss)
+                    {
+                        _bestLoss = _currLoss;
+                        _bestIdx = j;
+                    }
+                    const double _currAcc = (double)this->accepted_[j] / this->total_[j];
+                    if (_currAcc > _bestAcc)
+                    {
+                        _bestAcc = _currAcc;
+                        _bestAccIdx = j;
+                    }
+                }
+                _prog = "Iteration " + std::to_string(i) + "/" + std::to_string(_par.MC_sam_) +
+                    ", Best Loss: " + std::to_string(_bestLoss) +
+                    ", Best Acceptance: " + std::to_string(_bestAcc * 100) + "%" +
+                    ", Best Solver Index: " + std::to_string(_bestIdx) +
+                    ", Best Acceptance Solver Index: " + std::to_string(_bestAccIdx);
+                PROGRESS_UPD_Q(i, (*this->pBar_), _prog, !quiet);           // update the progress bar
+            }
 
             if (std::all_of(this->finished_.begin(), this->finished_.end(), [](bool f) { return f; }))
+            {
+                LOGINFO("All solvers have finished training.", LOG_TYPES::INFO, 1);
                 break;                                                      // Exit the training loop
+            }
             this->swaps();                                                  // Perform swaps between solvers                                          
         }
 

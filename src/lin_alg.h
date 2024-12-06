@@ -999,7 +999,8 @@ namespace algebra
 		#define SOLVE_MATMUL_ARG_TYPESD_PRECONDITIONER(_T1, _T2) Solvers::_AX_fun<_T1> _matrixFreeMultiplication, SOLVE_GENERAL_ARG_TYPESD_PRECONDITIONER(_T1, _T2)
 
 		// #################################################################################################################################################
-		namespace General {
+		namespace General 
+		{
 			// #################################################################################################################################################
 			enum class Type {
 				ARMA				= 0,				// Armadillo solver
@@ -1073,7 +1074,8 @@ namespace algebra
 			// #############################################################################################################################################
 		};
 		// #################################################################################################################################################
-		namespace General { 
+		namespace General 
+		{ 
 			// #################################################################################################################################################
 			// with a signle matrix
 			#define SOLVE_MAT_ARG_TYPES(_T1) const arma::Mat<_T1>& _A, SOLVE_GENERAL_ARG_TYPES(_T1)
@@ -1093,7 +1095,8 @@ namespace algebra
 			// #################################################################################################################################################
 			#define MAKE_MATRIX_FREE_MULT(_T) auto _f = [&](const arma::Col<_T>& _x, double _reg) -> arma::Col<_T> { return matrixFreeMultiplication<_T>(_A, _x, _reg); };
 			// #################################################################################################################################################
-			namespace CG {
+			namespace CG 
+			{
 				template<typename _T1>
 				arma::Col<_T1> conjugate_gradient(SOLVE_MATMUL_ARG_TYPESD(_T1));
 				template<typename _T1>
@@ -1133,7 +1136,8 @@ namespace algebra
 				// ############################################################################################################################################
 			};
 			// ------------------------------------------------------------------------------------------------------------------------------------------------
-			namespace MINRES {
+			namespace MINRES 
+			{
 				template<typename _T1>
 				arma::Col<_T1> minres(SOLVE_MATMUL_ARG_TYPESD(_T1));
 				template<typename _T1>
@@ -1208,7 +1212,8 @@ namespace algebra
 			* with some modifications and related changes.
 			// ---------
 			*/
-			namespace MINRES_QLP {
+			namespace MINRES_QLP 
+			{
 				template<typename _T1>
 				arma::Col<_T1> minres_qlp(SOLVE_MATMUL_ARG_TYPESD_PRECONDITIONER(_T1, true));
 				template<typename _T1>
@@ -1282,7 +1287,8 @@ namespace algebra
 				// ############################################################################################################################################
 			};
 			// ------------------------------------------------------------------------------------------------------------------------------------------------
-			namespace PseudoInverse {
+			namespace PseudoInverse 
+			{
 				template<typename _T1, bool _symmetric = true>
 				class PseudoInverse_s : public Solver<_T1, _symmetric> 
 				{
@@ -1313,7 +1319,8 @@ namespace algebra
 				// ############################################################################################################################################
 			};
 			// ------------------------------------------------------------------------------------------------------------------------------------------------
-			namespace Direct {
+			namespace Direct 
+			{
 				// --------------------------------------------------------------------------------------------------------------------------------------------
 				template<typename _T1, bool _symmetric = true>
 				class Direct_s : public Solver<_T1, _symmetric> 
@@ -1345,7 +1352,8 @@ namespace algebra
 				// ############################################################################################################################################
 			};
 			// ------------------------------------------------------------------------------------------------------------------------------------------------
-			namespace ARMA {
+			namespace ARMA 
+			{
 				template<typename _T1>
 				arma::Col<_T1> arma_solve(SOLVE_MAT_ARG_TYPESD(_T1)) { return arma::solve(_A, _F); }
 				template<typename _T1>
