@@ -505,3 +505,5 @@ inline arma::Col<_T> LanczosMethod<_T>::trueState(const arma::Col<_T>& _eigenVec
         throw std::runtime_error("Dimension mismatch: Krylov matrix columns must match eigenvector size.");
 	return _krylovVectors * _eigenVector;
 }
+
+// ######################################################################################################################

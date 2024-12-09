@@ -2,6 +2,7 @@
 #define RANDOM_H
 
 #include "./montecarlo.hpp"
+#include "../xoshiro_pp.h"
 
 // --- RANGES ---
 #ifdef __has_include

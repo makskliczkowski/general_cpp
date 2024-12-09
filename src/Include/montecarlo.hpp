@@ -1,7 +1,5 @@
 #ifndef MONTE_CARLO_H
 #define MONTE_CARLO_H
-
-#include "../xoshiro_pp.h"
 #include "../lin_alg.h"
 #include "armadillo"
 #include <cstddef>
@@ -10,8 +8,9 @@
 #include <numeric>
 #include <type_traits>
 #include <vector>
-
-#define MC_ENABLE_MPI 1 
+#ifdef USE_MPI
+#   define MC_ENABLE_MPI 1
+#endif
 
 // #################################################################################################################################
 
