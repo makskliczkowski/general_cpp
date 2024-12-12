@@ -22,6 +22,18 @@ namespace algebra
         template<typename _T, typename _CT>
         using fun_jac_t = IVP_Functions<_T, _CT>::fun_jac_t;
 
+        // class instantiation
+        template struct IVP_Functions<double, arma::Col<double>>;
+        template struct IVP_Functions<std::complex<double>, arma::Col<std::complex<double>>>;
+
+        // RK 
+        template class RK<1, double, arma::Col<double>>;
+        template class RK<1, std::complex<double>, arma::Col<std::complex<double>>>;
+        template class RK<2, double, arma::Col<double>>;
+        template class RK<2, std::complex<double>, arma::Col<std::complex<double>>>;
+        template class RK<4, double, arma::Col<double>>;
+        template class RK<4, std::complex<double>, arma::Col<std::complex<double>>>;
+
         // #########################################################################################################################
 
         /**

@@ -10,6 +10,7 @@
 *******************************/
 #pragma once
 
+#include <stdexcept>
 #ifndef ALG_H
 #define ALG_H
 
@@ -1666,6 +1667,7 @@ namespace algebra
 			using fun_t 		= IVP_Functions<_T, _CT>::fun_t;											// function type - updates the state
 			using fun_jac_t 	= IVP_Functions<_T, _CT>::fun_jac_t;										// function type - returns the Jacobian matrix
 		public:																								// _SINGLE STEP_
+			virtual ~IVP() = default;																		// virtual destructor
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 			virtual void step(const fun_r_t& _f, double _t, double _h, const _CT& _y, _CT& _yout) = 0; 		// single step of the ODE solver - does not update the inner state
 			virtual void step(const fun_t& _f, double _t, double _h, const _CT& _y, _CT& _yout) = 0;	 	// single step of the ODE solver - does not update the inner state
@@ -1805,14 +1807,15 @@ namespace algebra
 			using fun_jac_t = IVP_Functions<_T, _CT>::fun_jac_t;
 		public:
 			// -----------------------------------------------------------------------------------------------------------------------------------------
+			~RK() = default;
 			RK() : RK_Base<RK<_order, _T, _CT>, _order, _T, _CT>()
 			{
 				if constexpr (_order == 1) {
 					this->coefficients_ = {1.0};
 					this->timesteps_ 	= {1.0};
 				} else if constexpr (_order == 2) {
-					this->coefficients_ = {0.5, 0.5};
-					this->timesteps_ 	= {0.5, 0.5};
+					this->coefficients_ = {0.25, 0.75};
+					this->timesteps_ 	= {0.75, 1.0};
 				} else if constexpr (_order == 4) {
 					this->coefficients_ = {1.0 / 6.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 6.0};
 					this->timesteps_ 	= {0.5, 0.5, 1.0, 1.0};
@@ -1870,6 +1873,49 @@ namespace algebra
 			_y = y_temp;
 			_t += _h;
 			_h = h_new;
+		}
+
+		// #############################################################################################################################################
+
+		enum class ODE_Solvers 
+		{
+			Euler,
+			Heun,
+			RK2,
+			RK4,
+			RKAdaptive
+		};
+
+		/**
+		* @brief Factory function to create a Runge-Kutta solver of a specified order.
+		* 
+		* This function creates and returns a pointer to a Runge-Kutta solver object
+		* of the specified order. The supported orders are 1, 2, and 4. If an unsupported
+		* order is provided, the function throws an invalid_argument exception.
+		* 
+		* @tparam _T The data type used for the solver (default is double).
+		* @tparam _CT The container type used for the solver (default is arma::Col<_T>).
+		* @param order The order of the Runge-Kutta solver to create.
+		* @return IVP<_T, _CT>* Pointer to the created Runge-Kutta solver.
+		* @throws std::invalid_argument If the specified order is not supported.
+		*/
+		template <typename _T = double, typename _CT = arma::Col<_T>>
+		IVP<_T, _CT>* createRKsolver(ODE_Solvers solverType, double _tol = 1e-10)
+		{
+			switch (solverType) {
+				case ODE_Solvers::Euler:
+					return new RK<1, _T, _CT>();
+				case ODE_Solvers::Heun:
+				case ODE_Solvers::RK2:
+					return new RK<2, _T, _CT>();
+				case ODE_Solvers::RK4:
+					return new RK<4, _T, _CT>();
+				case ODE_Solvers::RKAdaptive:
+					throw std::runtime_error("Adaptive Runge-Kutta solver not implemented yet");
+					break;
+				default:
+					throw std::invalid_argument("Unsupported Runge-Kutta solver type");
+			}
 		}
 
 		// #############################################################################################################################################
