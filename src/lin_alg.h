@@ -647,7 +647,7 @@ namespace algebra
 
 				void set(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0) override
 				{
-					Preconditioner<T, _T>::set(true, _sigma);
+					Preconditioner<T, _T>::set(true, _sigma < 0 ? 0 : _sigma);
 
 					this->diaginv_.set_size(S.n_cols);
 					for (size_t i = 0; i < diaginv_.n_elem; ++i) 
@@ -1047,6 +1047,7 @@ namespace algebra
 				// -----------------------------------------------------------------------------------------------------------------------------------------
 				// getters
 				inline const arma::Col<_T>& solution() 					const { return this->x_; };			
+				inline arma::Col<_T>&& moveSolution() 					{ return std::move(this->x_); }
 				inline _T solution(size_t _i) 							const { return this->x_(_i); }
 				inline size_t getN() 									const { return this->N_; }
 				inline size_t getIter() 								const { return this->iter_; }
@@ -1623,10 +1624,210 @@ namespace algebra
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 		};
 
-		// #################################################################################################################################################
+		// #############################################################################################################################################
 	
 	};
 
+	// #################################################################################################################################################
+
+	// ################################################################### ODE #########################################################################
+
+	// #################################################################################################################################################
+
+	namespace ODE
+	{
+		// #############################################################################################################################################
+
+		template <typename _T, typename _CT>
+		struct IVP_Functions {
+			using fun_r_t 	= std::function<_CT(double, double, const _CT&)>;
+			using fun_t 	= std::function<void(double, double, const _CT&, _CT&)>;
+			using fun_jac_t = std::function<arma::Mat<_T>(const _CT&, const _CT&)>;
+		};
+
+		/**
+		* @class IVP
+		* @brief A template class for solving Initial Value Problems (IVP) for Ordinary Differential Equations (ODE).
+		* 
+		* This class provides an interface for implementing various ODE solvers. It defines the necessary function types
+		* and methods required for single-step ODE solving and updating the state of the system.
+		* 
+		* @tparam Derived The derived class type.
+		* @tparam _T The data type for numerical values, default is double.
+		* @tparam _CT The container type for storing state vectors, default is arma::Col<_T>.
+		* 
+		* @note This class is intended to be used as a base class for specific ODE solver implementations.
+		*/
+		template <typename _T = double, typename _CT = arma::Col<_T>>
+		class IVP
+		{
+		public:
+			using fun_r_t 		= IVP_Functions<_T, _CT>::fun_r_t;											// function type - returns the derivative at time t
+			using fun_t 		= IVP_Functions<_T, _CT>::fun_t;											// function type - updates the state
+			using fun_jac_t 	= IVP_Functions<_T, _CT>::fun_jac_t;										// function type - returns the Jacobian matrix
+		public:																								// _SINGLE STEP_
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+			virtual void step(const fun_r_t& _f, double _t, double _h, const _CT& _y, _CT& _yout) = 0; 		// single step of the ODE solver - does not update the inner state
+			virtual void step(const fun_t& _f, double _t, double _h, const _CT& _y, _CT& _yout) = 0;	 	// single step of the ODE solver - does not update the inner state
+			
+			_CT step(const fun_r_t& _f, double _t, double _h, const _CT& _y) {
+				_CT yout;
+				step(_f, _t, _h, _y, yout);
+				return yout;
+			}
+			
+			_CT step(const fun_t& _f, double _t, double _h, const _CT& _y) {
+				_CT yout;
+				step(_f, _t, _h, _y, yout);
+				return yout;
+			}
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+			virtual void update(_CT& _y, double _h) = 0; 													// update the inner state
+			virtual _CT update(const _CT& _y, double _h) = 0; 												// update the inner state
+			virtual double dt(double _h, uint i) const = 0; 												// get the timestep
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+		};
+
+		// #############################################################################################################################################
+
+		template <typename Derived, uint order = 1, typename _T = double, typename _CT = arma::Col<_T>>
+		class RK_Base : public IVP<_T, _CT>
+		{
+		public:
+			using fun_r_t 	= IVP_Functions<_T, _CT>::fun_r_t;
+			using fun_t 	= IVP_Functions<_T, _CT>::fun_t;
+			using fun_jac_t = IVP_Functions<_T, _CT>::fun_jac_t;
+		protected:
+			v_1d<_CT> k_;					// k values of the RK method
+			_CT kout_;						// helper for returning the k values
+			v_1d<double> coefficients_;		// coefficients of the RK method - for single step
+			v_1d<double> timesteps_;		// timesteps of the RK method (for single step)	- multipliers of the timestep
+			uint order_ = order;			// order of the RK method
+		public:
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+			RK_Base() 
+			{
+				k_.resize(order);
+				coefficients_.resize(order);
+				timesteps_.resize(order);
+			}
+
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+			void step(const fun_r_t& _f, double _t, double _h, const _CT& _y, _CT& _yout) override {
+				static_cast<Derived*>(this)->step_impl(_f, _t, _h, _y, _yout);
+			}
+
+			void step(const fun_t& _f, double _t, double _h, const _CT& _y, _CT& _yout) override {
+				static_cast<Derived*>(this)->step_impl(_f, _t, _h, _y, _yout);
+			}
+
+			_CT step(const fun_r_t& _f, double _t, double _h, const _CT& _y) {
+				return static_cast<Derived*>(this)->step_impl(_f, _t, _h, _y);
+			}
+
+			_CT step(const fun_t& _f, double _t, double _h, const _CT& _y) {
+				return static_cast<Derived*>(this)->step_impl(_f, _t, _h, _y);
+			}
+
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+			virtual void update(_CT& _y, double _h) override;
+			virtual _CT update(const _CT& _y, double _h) override;
+
+			double dt(double _h, uint i) const override						{ return _h * this->timesteps_[i]; }
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+			// getters
+			v_1d<double> getCoefficients() 									const { return this->coefficients_; };
+			v_1d<double> getTimesteps() 									const { return this->timesteps_; };
+			// set
+			void setCoefficients(const v_1d<double>& _coefficients) 		{ if(_coefficients.size() == this->order_) this->coefficients_ = _coefficients; }
+			void setTimesteps(const v_1d<double>& _timesteps) 				{ if(_timesteps.size() == this->order_) this->timesteps_ = _timesteps; }
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+		};
+
+		/**
+        * @brief Updates the value of _y using the Runge-Kutta method.
+        *
+        * This function updates the value of _y by iterating over the coefficients
+        * and performing the necessary calculations with the k_ array.
+        *
+		* @tparam Derived The derived class of the RK_Base class.
+        * @tparam _order The order of the Runge-Kutta method.
+        * @tparam _T The data type of the coefficients.
+        * @tparam _CT The data type of the value to be updated.
+        * @param _y The value to be updated.
+        * @note This function assumes that the k_ array has been properly initialized and does not check for its size.
+        */
+        template <typename Derived, uint _order, typename _T, typename _CT>
+        inline void RK_Base<Derived, _order, _T, _CT>::update(_CT& _y, double _h)
+        {
+			const auto _dt = this->dt(_h, this->order_ - 1);
+            for (int _c = 0; _c < this->order_; _c++)
+                _y += (this->coefficients_[_c] * _dt) * this->k_[_c];
+        }
+
+		/**
+		* @brief Updates the solution using Runge-Kutta method
+		* 
+		* Performs one step of the Runge-Kutta integration by combining previous stage
+		* values (k_) with their corresponding coefficients. The method calculates
+		* the weighted sum of stage values and adds it to the current solution.
+		* 
+		* @param _y Current value/state of the system
+		* @param _h Step size for the integration
+		* @return _CT Updated value/state after one RK step
+		* 
+		* @details The method:
+		* 1. Calculates the time step using dt()
+		* 2. Initializes output with current state
+		* 3. Adds weighted contributions from each RK stage
+		* 4. Returns the final updated state
+		* 
+		* @note Part of RK_Base template class implementation for Runge-Kutta methods
+		*/
+		template <typename Derived, uint _order, typename _T, typename _CT>
+		inline _CT RK_Base<Derived, _order, _T, _CT>::update(const _CT& _y, double _h)
+		{
+			const auto _dt 	= this->dt(_h, this->order_ - 1);
+			this->kout_ 	= _y;
+			for (int _c = 0; _c < this->order_; _c++)
+				this->kout_ += (_dt * this->coefficients_[_c]) * this->k_[_c];
+			return _y + this->kout_;
+		}
+
+		// #############################################################################################################################################
+
+		template <uint _order, typename _T = double, typename _CT = arma::Col<_T>>
+		class RK : public RK_Base<RK<_order, _T, _CT>, _order, _T, _CT>
+		{
+		public:
+			using fun_r_t 	= IVP_Functions<_T, _CT>::fun_r_t;
+			using fun_t 	= IVP_Functions<_T, _CT>::fun_t;
+			using fun_jac_t = IVP_Functions<_T, _CT>::fun_jac_t;
+		public:
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+			RK() : RK_Base<RK<_order, _T, _CT>, _order, _T, _CT>()
+			{
+				if constexpr (_order == 1) {
+					this->coefficients_ = {1.0};
+					this->timesteps_ 	= {1.0};
+				} else if constexpr (_order == 2) {
+					this->coefficients_ = {0.5, 0.5};
+					this->timesteps_ 	= {0.5, 0.5};
+				} else if constexpr (_order == 4) {
+					this->coefficients_ = {1.0 / 6.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 6.0};
+					this->timesteps_ 	= {0.5, 0.5, 1.0, 1.0};
+				}
+			};
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+			void step_impl(const fun_r_t& _f, double _t, double _h, const _CT& _y, _CT& _yout);
+			void step_impl(const fun_t& _f, double _t, double _h, const _CT& _y, _CT& _yout);
+			_CT step_impl(const fun_r_t& _f, double _t, double _h, const _CT& _y);
+			_CT step_impl(const fun_t& _f, double _t, double _h, const _CT& _y);
+			// -----------------------------------------------------------------------------------------------------------------------------------------
+		};
+
+		// #############################################################################################################################################
+	};
 
 	// #################################################################################################################################################
 	

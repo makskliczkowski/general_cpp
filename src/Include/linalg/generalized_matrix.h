@@ -11,11 +11,26 @@
 
 // ############################################################################################################
 
-/*
-* @brief This class will allow to create Hamiltonian matrices for different models within the sparse and dense representation.
-* @tparam _T: Type of the matrix elements.
+
+/**
+* @class GeneralizedMatrix
+* @brief A class for handling both sparse and dense matrices using Armadillo library.
+*
+* This class provides a unified interface for working with both sparse and dense matrices.
+* It supports various matrix operations, including element access, arithmetic operations,
+* and matrix transformations. The class is templated to support different data types.
+*
+* @tparam _T The type of the matrix elements. Default is double.
+*
+* @section Example
+* @code
+* GeneralizedMatrix<double> mat(5, 5, true); // Create a 5x5 sparse matrix
+* mat.set(0, 0, 1.0); // Set element (0,0) to 1.0
+* mat.print(); // Print the matrix
+* @endcode
+* @author Maksymilian Kliczkowski (WUST, Poland)
 */
-template <typename _T>
+template <typename _T = double>
 class GeneralizedMatrix
 {
 public:

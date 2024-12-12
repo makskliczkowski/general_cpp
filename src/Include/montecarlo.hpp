@@ -47,6 +47,7 @@ class pBar;
                     using Container_t = MC_t::Container_t;                                      \
                     using Container_pair_t = MC_t::Container_pair_t;                            \
                     using Config_t = MC_t::Config_t;                                            \
+                    using Config_cr_t = MC_t::Config_cr_t;                                      \
                     using MCS_train_t = MonteCarlo::MCS_train_t;
 
 namespace MonteCarlo
@@ -110,6 +111,7 @@ namespace MonteCarlo
     {
     public:
         using Config_t                      =       _Config_t;
+        using Config_cr_t                   =       const Config_t&;
         using Container_t                   =       arma::Col<_T>;
         using Container_pair_t              =       std::pair<Container_t, Container_t>;
         using MC_t                          =       MonteCarloSolver<_T, _stateType, _Config_t>;

@@ -24,10 +24,10 @@ class Diagonalizer
 {
 public:
 	template <template <class _TM = _T> class _MatType, HasMatrixType _Concept = _MatType<_T>>
-	static void diagS(arma::vec& eigVal_, arma::Mat<_T>& eigVec_, const _MatType<_T>& _mat);
+	static void diagS(arma::vec& eigVal_, arma::Mat<_T>& eigVec_, const _MatType<_T>& _mat, bool _verbose = false);
 	
 	template <template <class _TM = _T> class _MatType, HasMatrixType _Concept = _MatType<_T>>
-	static void diagS(arma::vec& eigVal_, const _MatType<_T>& _mat);
+	static void diagS(arma::vec& eigVal_, const _MatType<_T>& _mat, bool _verbose = false);
 
 	template <template <class _TM = _T> class _MatType, HasMatrixType _Concept = _MatType<_T>, class _T2>
 	arma::Mat<_T> changeBase(const arma::Mat<_T>& U, const _MatType<_T2>& A);
@@ -37,12 +37,13 @@ protected:
 	* @brief Based on the memory consumption decides on the method for standard diagonalization
 	*/
 	template <template <class _TM = _T> class _MatType, HasMatrixType _Concept = _MatType<_T>>
-	static inline std::tuple<const char*, double> decideMethod(const _MatType<_T>& _mat)
+	static inline std::tuple<const char*, double> decideMethod(const _MatType<_T>& _mat, bool _verbose = false)
 	{
 		auto memory				=	_mat.n_rows * _mat.n_cols * sizeof(_T);
 		const char* method		=	(memory > 120 * 1e9) ? "std" : "dc";
 		std::string memoryStr	=	"DIMENSION= " + STRP(memory * 1e-6, 5) + "mb";
-		LOGINFO(memoryStr, LOG_TYPES::TRACE, 3);
+		if (_verbose)
+			LOGINFO(memoryStr, LOG_TYPES::TRACE, 3);
 		return std::make_tuple(method, memory);
 	}
 };
@@ -54,16 +55,18 @@ protected:
 */
 template <typename _T>
 template <template <class _TM = _T> class _MatType, HasMatrixType _Concept>
-inline void Diagonalizer<_T>::diagS(arma::vec& eigVal_, arma::Mat<_T>& eigVec_, const _MatType<_T>& _mat)
+inline void Diagonalizer<_T>::diagS(arma::vec& eigVal_, arma::Mat<_T>& eigVec_, const _MatType<_T>& _mat, bool _verbose)
 {	
-	LOGINFO("Using Standard Diagonalization", LOG_TYPES::TRACE, 4);
-	auto [method, memory] = Diagonalizer<_T>::decideMethod(_mat);
+	if (_verbose)
+		LOGINFO("Using Standard Diagonalization", LOG_TYPES::TRACE, 4);
+	auto [method, memory] = Diagonalizer<_T>::decideMethod(_mat, _verbose);
 	BEGIN_CATCH_HANDLER
 	{
 		arma::eig_sym(eigVal_, eigVec_, arma::Mat<_T>(_mat), method);
 	}
 	END_CATCH_HANDLER("Memory exceeded. " + STRP(memory * 1e-6, 6), ;);
-	LOGINFO("Finished Standard Diagonalization", LOG_TYPES::TRACE, 4);
+	if (_verbose)
+		LOGINFO("Finished Standard Diagonalization", LOG_TYPES::TRACE, 4);
 }
 
 // ######################################################################################################################
@@ -74,16 +77,18 @@ inline void Diagonalizer<_T>::diagS(arma::vec& eigVal_, arma::Mat<_T>& eigVec_, 
 */
 template <typename _T>
 template <template <class _TM = _T> class _MatType, HasMatrixType _Concept>
-inline void Diagonalizer<_T>::diagS(arma::vec& eigVal_, const _MatType<_T>& _mat)
+inline void Diagonalizer<_T>::diagS(arma::vec& eigVal_, const _MatType<_T>& _mat, bool _verbose)
 {	
-	LOGINFO("Using Standard Diagonalization", LOG_TYPES::TRACE, 4);
-	auto [method, memory] = Diagonalizer<_T>::decideMethod(_mat);
+	if (_verbose)
+		LOGINFO("Using Standard Diagonalization", LOG_TYPES::TRACE, 4);
+	auto [method, memory] = Diagonalizer<_T>::decideMethod(_mat, _verbose);
 	BEGIN_CATCH_HANDLER
 	{
 		arma::eig_sym(eigVal_, arma::Mat<_T>(_mat));
 	}
 	END_CATCH_HANDLER("Memory exceeded. " + STRP(memory * 1e-6, 6), ;);
-	LOGINFO("Finished Standard Diagonalization", LOG_TYPES::TRACE, 4);
+	if (_verbose)
+		LOGINFO("Finished Standard Diagonalization", LOG_TYPES::TRACE, 4);
 }
 
 // ################################################### G E N E R A L ###################################################
