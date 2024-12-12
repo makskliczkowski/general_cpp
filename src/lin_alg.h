@@ -1824,7 +1824,53 @@ namespace algebra
 			_CT step_impl(const fun_r_t& _f, double _t, double _h, const _CT& _y);
 			_CT step_impl(const fun_t& _f, double _t, double _h, const _CT& _y);
 			// -----------------------------------------------------------------------------------------------------------------------------------------
+			// Adaptive step-size control
+			void adaptive_step(const fun_r_t& _f, double& _t, double& _h, _CT& _y, double _tol);
+			void adaptive_step(const fun_t& _f, double& _t, double& _h, _CT& _y, double _tol);
 		};
+
+		// Adaptive step-size control implementation
+		template <uint _order, typename _T, typename _CT>
+		void RK<_order, _T, _CT>::adaptive_step(const fun_r_t& _f, double& _t, double& _h, _CT& _y, double _tol)
+		{
+			_CT y_temp, y_err;
+			double h_new, err;
+			do {
+				step_impl(_f, _t, _h, _y, y_temp);
+				step_impl(_f, _t, _h / 2, _y, y_err);
+				step_impl(_f, _t + _h / 2, _h / 2, y_err, y_err);
+				y_err = y_temp - y_err;
+				err = arma::norm(y_err, "inf");
+				h_new = _h * std::pow(_tol / err, 1.0 / (_order + 1));
+				if (err > _tol) {
+					_h = h_new;
+				}
+			} while (err > _tol);
+			_y = y_temp;
+			_t += _h;
+			_h = h_new;
+		}
+
+		template <uint _order, typename _T, typename _CT>
+		void RK<_order, _T, _CT>::adaptive_step(const fun_t& _f, double& _t, double& _h, _CT& _y, double _tol)
+		{
+			_CT y_temp, y_err;
+			double h_new, err;
+			do {
+				step_impl(_f, _t, _h, _y, y_temp);
+				step_impl(_f, _t, _h / 2, _y, y_err);
+				step_impl(_f, _t + _h / 2, _h / 2, y_err, y_err);
+				y_err = y_temp - y_err;
+				err = arma::norm(y_err, "inf");
+				h_new = _h * std::pow(_tol / err, 1.0 / (_order + 1));
+				if (err > _tol) {
+					_h = h_new;
+				}
+			} while (err > _tol);
+			_y = y_temp;
+			_t += _h;
+			_h = h_new;
+		}
 
 		// #############################################################################################################################################
 	};
@@ -2301,13 +2347,13 @@ inline bool saveAlgebraic(const std::string& _path, const std::string& _file, co
 #ifdef HAS_CXX20
 	else if (_file.ends_with(".bin"))
 #else
-	else if (endsWith(_file, ".bin"))
+	if (endsWith(_file, ".bin"))
 #endif
 		_isSaved	= _toSave.save(_path + _file);
 #ifdef HAS_CXX20
 	else if (_file.ends_with(".txt") || _file.ends_with(".dat"))
 #else
-	else if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
+	if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
 #endif
 	{
 		if(!_app)
@@ -2357,13 +2403,13 @@ inline bool saveAlgebraic(const std::string& _path, const std::string& _file, co
 #ifdef HAS_CXX20
 	else if (_file.ends_with(".bin"))
 #else
-	else if (endsWith(_file, ".bin"))
+	if (endsWith(_file, ".bin"))
 #endif
 		_isSaved	= _toSave.save(_path + _file);
 #ifdef HAS_CXX20
 	else if (_file.ends_with(".txt") || _file.ends_with(".dat"))
 #else
-	else if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
+	if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
 #endif
 	{
 		if(!_app)
@@ -2407,7 +2453,7 @@ inline bool loadAlgebraic(const std::string& _path, const std::string& _file, _T
 #ifdef HAS_CXX20
 	else if (_file.ends_with(".bin"))
 #else
-	else if (endsWith(_file, ".bin"))
+	if (endsWith(_file, ".bin"))
 #endif
 	{
 		_toSet.load(_path + _file);
@@ -2416,7 +2462,7 @@ inline bool loadAlgebraic(const std::string& _path, const std::string& _file, _T
 #ifdef HAS_CXX20
 	else if (_file.ends_with(".txt") || _file.ends_with(".dat"))
 #else
-	else if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
+	if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
 #endif
 	{
 		_toSet.load(_path + _file, arma::arma_ascii);
@@ -2446,7 +2492,7 @@ inline bool loadAlgebraic(const std::string& _path, const std::string& _file, _T
 #ifdef HAS_CXX20
 	else if (_file.ends_with(".bin"))
 #else
-	else if (endsWith(_file, ".bin"))
+	if (endsWith(_file, ".bin"))
 #endif
 	{
 		_toSet.load(_path + _file);
@@ -2455,7 +2501,7 @@ inline bool loadAlgebraic(const std::string& _path, const std::string& _file, _T
 #ifdef HAS_CXX20
 	else if (_file.ends_with(".txt") || _file.ends_with(".dat"))
 #else
-	else if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
+	if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
 #endif
 	{
 		_toSet.load(_path + _file, arma::arma_ascii);
