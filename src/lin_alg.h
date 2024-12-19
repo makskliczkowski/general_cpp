@@ -10,7 +10,6 @@
 *******************************/
 #pragma once
 
-#include <stdexcept>
 #ifndef ALG_H
 #define ALG_H
 
@@ -1667,7 +1666,6 @@ namespace algebra
 			using fun_t 		= IVP_Functions<_T, _CT>::fun_t;											// function type - updates the state
 			using fun_jac_t 	= IVP_Functions<_T, _CT>::fun_jac_t;										// function type - returns the Jacobian matrix
 		public:																								// _SINGLE STEP_
-			virtual ~IVP() = default;																		// virtual destructor
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 			virtual void step(const fun_r_t& _f, double _t, double _h, const _CT& _y, _CT& _yout) = 0; 		// single step of the ODE solver - does not update the inner state
 			virtual void step(const fun_t& _f, double _t, double _h, const _CT& _y, _CT& _yout) = 0;	 	// single step of the ODE solver - does not update the inner state
@@ -1807,15 +1805,14 @@ namespace algebra
 			using fun_jac_t = IVP_Functions<_T, _CT>::fun_jac_t;
 		public:
 			// -----------------------------------------------------------------------------------------------------------------------------------------
-			~RK() = default;
 			RK() : RK_Base<RK<_order, _T, _CT>, _order, _T, _CT>()
 			{
 				if constexpr (_order == 1) {
 					this->coefficients_ = {1.0};
 					this->timesteps_ 	= {1.0};
 				} else if constexpr (_order == 2) {
-					this->coefficients_ = {0.25, 0.75};
-					this->timesteps_ 	= {0.75, 1.0};
+					this->coefficients_ = {0.5, 0.5};
+					this->timesteps_ 	= {0.5, 0.5};
 				} else if constexpr (_order == 4) {
 					this->coefficients_ = {1.0 / 6.0, 1.0 / 3.0, 1.0 / 3.0, 1.0 / 6.0};
 					this->timesteps_ 	= {0.5, 0.5, 1.0, 1.0};
@@ -1854,26 +1851,6 @@ namespace algebra
 			_h = h_new;
 		}
 
-		template <uint _order, typename _T, typename _CT>
-		void RK<_order, _T, _CT>::adaptive_step(const fun_t& _f, double& _t, double& _h, _CT& _y, double _tol)
-		{
-			_CT y_temp, y_err;
-			double h_new, err;
-			do {
-				step_impl(_f, _t, _h, _y, y_temp);
-				step_impl(_f, _t, _h / 2, _y, y_err);
-				step_impl(_f, _t + _h / 2, _h / 2, y_err, y_err);
-				y_err = y_temp - y_err;
-				err = arma::norm(y_err, "inf");
-				h_new = _h * std::pow(_tol / err, 1.0 / (_order + 1));
-				if (err > _tol) {
-					_h = h_new;
-				}
-			} while (err > _tol);
-			_y = y_temp;
-			_t += _h;
-			_h = h_new;
-		}
 
 		// #############################################################################################################################################
 
