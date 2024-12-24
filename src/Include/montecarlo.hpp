@@ -44,11 +44,11 @@ class pBar;
 #define MCS_PUBLIC_TYPES(_T, _ST, _CT) public:                                                  \
                     using MC_t = typename MonteCarlo::MonteCarloSolver<_T, _stateType, _CT<_stateType>>; \
                     using MC_t_p = std::shared_ptr<MC_t>;                                       \
-                    using Container_t = MC_t::Container_t;                                      \
-                    using Container_pair_t = MC_t::Container_pair_t;                            \
-                    using Config_t = MC_t::Config_t;                                            \
-                    using Config_cr_t = MC_t::Config_cr_t;                                      \
-                    using MCS_train_t = MonteCarlo::MCS_train_t;
+                    using Container_t = typename MC_t::Container_t;                                      \
+                    using Container_pair_t = typename MC_t::Container_pair_t;                            \
+                    using Config_t = typename MC_t::Config_t;                                            \
+                    using Config_cr_t = typename MC_t::Config_cr_t;                                      \
+                    using MCS_train_t = typename MonteCarlo::MCS_train_t;
 
 namespace MonteCarlo
 {
@@ -217,7 +217,7 @@ namespace MonteCarlo
     {
     public:
         using Solver_p      = std::shared_ptr<MonteCarloSolver<_T>>;
-        using Container_t   = MonteCarloSolver<_T>::Container_t;
+        using Container_t   = typename MonteCarloSolver<_T>::Container_t;
     private:
         
     private:
