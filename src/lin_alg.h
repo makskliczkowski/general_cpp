@@ -1662,9 +1662,9 @@ namespace algebra
 		class IVP
 		{
 		public:
-			using fun_r_t 		= IVP_Functions<_T, _CT>::fun_r_t;											// function type - returns the derivative at time t
-			using fun_t 		= IVP_Functions<_T, _CT>::fun_t;											// function type - updates the state
-			using fun_jac_t 	= IVP_Functions<_T, _CT>::fun_jac_t;										// function type - returns the Jacobian matrix
+			using fun_r_t 		= typename IVP_Functions<_T, _CT>::fun_r_t;											// function type - returns the derivative at time t
+			using fun_t 		= typename IVP_Functions<_T, _CT>::fun_t;											// function type - updates the state
+			using fun_jac_t 	= typename IVP_Functions<_T, _CT>::fun_jac_t;										// function type - returns the Jacobian matrix
 		public:																								// _SINGLE STEP_
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 			virtual void step(const fun_r_t& _f, double _t, double _h, const _CT& _y, _CT& _yout) = 0; 		// single step of the ODE solver - does not update the inner state
@@ -1694,9 +1694,9 @@ namespace algebra
 		class RK_Base : public IVP<_T, _CT>
 		{
 		public:
-			using fun_r_t 	= IVP_Functions<_T, _CT>::fun_r_t;
-			using fun_t 	= IVP_Functions<_T, _CT>::fun_t;
-			using fun_jac_t = IVP_Functions<_T, _CT>::fun_jac_t;
+			using fun_r_t 	= typename IVP_Functions<_T, _CT>::fun_r_t;
+			using fun_t 	= typename IVP_Functions<_T, _CT>::fun_t;
+			using fun_jac_t = typename IVP_Functions<_T, _CT>::fun_jac_t;
 		protected:
 			v_1d<_CT> k_;					// k values of the RK method
 			_CT kout_;						// helper for returning the k values
@@ -1800,9 +1800,9 @@ namespace algebra
 		class RK : public RK_Base<RK<_order, _T, _CT>, _order, _T, _CT>
 		{
 		public:
-			using fun_r_t 	= IVP_Functions<_T, _CT>::fun_r_t;
-			using fun_t 	= IVP_Functions<_T, _CT>::fun_t;
-			using fun_jac_t = IVP_Functions<_T, _CT>::fun_jac_t;
+			using fun_r_t 	= typename IVP_Functions<_T, _CT>::fun_r_t;
+			using fun_t 	= typename IVP_Functions<_T, _CT>::fun_t;
+			using fun_jac_t = typename IVP_Functions<_T, _CT>::fun_jac_t;
 		public:
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 			RK() : RK_Base<RK<_order, _T, _CT>, _order, _T, _CT>()

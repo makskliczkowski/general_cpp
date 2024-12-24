@@ -42,7 +42,7 @@ class randomGen;
 class pBar;
 
 #define MCS_PUBLIC_TYPES(_T, _ST, _CT) public:                                                  \
-                    using MC_t = MonteCarlo::MonteCarloSolver<_T, _stateType, _CT<_stateType>>; \
+                    using MC_t = typename MonteCarlo::MonteCarloSolver<_T, _stateType, _CT<_stateType>>; \
                     using MC_t_p = std::shared_ptr<MC_t>;                                       \
                     using Container_t = MC_t::Container_t;                                      \
                     using Container_pair_t = MC_t::Container_pair_t;                            \
