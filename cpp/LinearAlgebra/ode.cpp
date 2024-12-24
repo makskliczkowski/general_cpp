@@ -10,17 +10,17 @@ namespace algebra
         // #########################################################################################################################
 
         template<typename _T, typename _CT>
-        using fun_r_t = IVP_Functions<_T, _CT>::fun_r_t;
+        using fun_r_t = typename IVP_Functions<_T, _CT>::fun_r_t;
         using fun_r_t_col_dd = fun_r_t<double, arma::Col<double>>;
         using fun_r_t_col_cc = fun_r_t<std::complex<double>, arma::Col<std::complex<double>>>;
 
         template<typename _T, typename _CT>
-        using fun_t = IVP_Functions<_T, _CT>::fun_t;
+        using fun_t = typename IVP_Functions<_T, _CT>::fun_t;
         using fun_t_col_dd = fun_t<double, arma::Col<double>>;
         using fun_t_col_cc = fun_t<std::complex<double>, arma::Col<std::complex<double>>>;
 
         template<typename _T, typename _CT>
-        using fun_jac_t = IVP_Functions<_T, _CT>::fun_jac_t;
+        using fun_jac_t = typename IVP_Functions<_T, _CT>::fun_jac_t;
 
         // class instantiation
         template struct IVP_Functions<double, arma::Col<double>>;
