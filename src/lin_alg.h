@@ -1666,6 +1666,7 @@ namespace algebra
 			using fun_t 		= typename IVP_Functions<_T, _CT>::fun_t;											// function type - updates the state
 			using fun_jac_t 	= typename IVP_Functions<_T, _CT>::fun_jac_t;										// function type - returns the Jacobian matrix
 		public:																								// _SINGLE STEP_
+			virtual ~IVP() 		= default;																	// destructor
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 			virtual void step(const fun_r_t& _f, double _t, double _h, const _CT& _y, _CT& _yout) = 0; 		// single step of the ODE solver - does not update the inner state
 			virtual void step(const fun_t& _f, double _t, double _h, const _CT& _y, _CT& _yout) = 0;	 	// single step of the ODE solver - does not update the inner state
