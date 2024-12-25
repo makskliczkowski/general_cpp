@@ -400,17 +400,19 @@ namespace Slurm
 		pclose(pipe);
 		
 		std::string time_limit_key 		= "TimeLimit=";
-		std::string elapsed_time_key 	= "Elapsed=";
+		std::string run_time_key 		= "RunTime=";
 		auto time_limit_pos 			= output.find(time_limit_key);
-		auto elapsed_time_pos 			= output.find(elapsed_time_key);		
-
-		if (time_limit_pos != std::string::npos && elapsed_time_pos != std::string::npos) 
+		auto run_time_pos 				= output.find(run_time_key);		
+		
+		if (time_limit_pos != std::string::npos && run_time_pos != std::string::npos) 
 		{
+			LOGINFO("SLURM job information found:", LOG_TYPES::INFO, 3);
+				
 			std::string time_limit_str = output.substr(time_limit_pos + time_limit_key.size(), 8);
-			std::string elapsed_time_str = output.substr(elapsed_time_pos + elapsed_time_key.size(), 8);
+			std::string run_time_str = output.substr(run_time_pos + run_time_key.size(), 8);
 
 			int time_limit_hours, time_limit_minutes, time_limit_seconds;
-			int elapsed_hours, elapsed_minutes, elapsed_seconds;
+			int run_hours, run_minutes, run_seconds;
 
 			// Convert TimeLimit to seconds
 			if (sscanf(time_limit_str.c_str(), "%d:%d:%d", &time_limit_hours, &time_limit_minutes, &time_limit_seconds) == 3)
@@ -418,14 +420,14 @@ namespace Slurm
 				int total_time_limit_seconds = time_limit_hours * 3600 + time_limit_minutes * 60 + time_limit_seconds;
 				LOGINFO("Total time limit: " + std::to_string(total_time_limit_seconds) + " seconds", LOG_TYPES::INFO, 3);
 
-				// Convert Elapsed to seconds
-				if (sscanf(elapsed_time_str.c_str(), "%d:%d:%d", &elapsed_hours, &elapsed_minutes, &elapsed_seconds) == 3)
+				// Convert RunTime to seconds
+				if (sscanf(run_time_str.c_str(), "%d:%d:%d", &run_hours, &run_minutes, &run_seconds) == 3)
 				{
-					int total_elapsed_seconds = elapsed_hours * 3600 + elapsed_minutes * 60 + elapsed_seconds;
-					LOGINFO("Total elapsed time: " + std::to_string(total_elapsed_seconds) + " seconds", LOG_TYPES::INFO, 3);
+					int total_run_seconds = run_hours * 3600 + run_minutes * 60 + run_seconds;
+					LOGINFO("Total run time: " + std::to_string(total_run_seconds) + " seconds", LOG_TYPES::INFO, 3);
 
-					// Calculate remaining time by subtracting elapsed time from time limit
-					int remaining_time_seconds = total_time_limit_seconds - total_elapsed_seconds;
+					// Calculate remaining time by subtracting run time from time limit
+					int remaining_time_seconds = total_time_limit_seconds - total_run_seconds;
 					LOGINFO("Remaining time: " + std::to_string(remaining_time_seconds) + " seconds", LOG_TYPES::INFO, 3);
 
 					return remaining_time_seconds > 0 ? remaining_time_seconds : 0; // Prevent negative values
