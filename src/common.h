@@ -351,4 +351,96 @@ std::type_info const& var_type(V const& v)
 	return std::visit( [](auto&&x)->decltype(auto){ return typeid(x); }, v );
 }
 
+// ##########################################################################################################################################
+
+namespace Slurm
+{
+	/**
+	* @brief Checks if the current environment is a SLURM job.
+	*
+	* This function determines whether the code is running within a SLURM job
+	* by checking for the presence of the "SLURM_JOB_ID" environment variable.
+	*
+	* @return true if the "SLURM_JOB_ID" environment variable is set, indicating
+	*         that the code is running within a SLURM job; false otherwise.
+	*/
+	inline bool is_slurm()
+	{
+		return std::getenv("SLURM_JOB_ID") != nullptr;
+	}
+	
+	// ######################################################################################################################################
+
+	/**
+	* @brief Get the remaining time for the current SLURM job.
+	*
+	* This function checks if the current environment is a SLURM environment and retrieves the remaining time
+	* for the current SLURM job by executing the SLURM command `scontrol show job $SLURM_JOB_ID`. The remaining
+	* time is parsed from the command output and converted from HH:MM:SS format to seconds.
+	*
+	* @return The remaining time in seconds if the environment is SLURM and the time can be parsed successfully,
+	*         otherwise returns -1.
+	*/
+	inline int get_remaining_time()
+	{
+		if (!is_slurm())
+			return -1;
+
+		std::string command 	= "scontrol show job $SLURM_JOB_ID";		// SLURM command to get the remaining time
+		std::string output;													// output of the command
+		std::array<char, 128> buffer;										// buffer for the output	
+
+    	// Execute command and capture output
+		FILE* pipe 				= popen(command.c_str(), "r");
+		if (!pipe) 
+			return -1;
+
+		while (fgets(buffer.data(), buffer.size(), pipe) != nullptr)
+			output 				+= buffer.data();
+		pclose(pipe);
+
+		std::string key 		= "TimeLimit=";								// Parse the remaining time from SLURM output
+		auto pos 				= output.find(key);
+		if (pos != std::string::npos) 
+		{
+			std::istringstream iss(output.substr(pos + key.size()));
+			std::string time_str;
+			iss >> time_str;
+
+			// Convert HH:MM:SS to seconds
+			int hours, minutes, seconds;
+			if (sscanf(time_str.c_str(), "%d:%d:%d", &hours, &minutes, &seconds) == 3)
+				return hours * 3600 + minutes * 60 + seconds;
+		}
+		return -1;
+	}
+
+	// ######################################################################################################################################
+
+	/**
+	* @brief Checks if the remaining time is less than the specified threshold.
+	* 
+	* This function determines if the remaining time in a SLURM job is less than
+	* a given limit. If the code is not running under SLURM, it will return false.
+	* 
+	* @param _limit The threshold for remaining time in seconds. Default is 1000 seconds.
+	* @return true if the remaining time is less than the specified threshold, false otherwise.
+	*/
+	inline bool is_overtime(int _limit = 1000)
+	{
+		if (!is_slurm())
+			return false;
+
+		int remaining_time = get_remaining_time();
+
+		if (remaining_time == -1)
+			return false;
+		
+		LOGINFO("Remaining time in SLURM job: " + std::to_string(remaining_time) + " seconds", LOG_TYPES::INFO, 3);
+		return remaining_time < _limit;
+	}
+
+	// ######################################################################################################################################
+};
+
 #endif // !COMMON_H

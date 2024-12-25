@@ -112,13 +112,15 @@ public:
 
 	// ############# E L A P S E D #############
 
-	template<typename _T1, typename = typename std::enable_if<std::is_arithmetic<_T1>::value, _T1>::type>
-	std::string elapsed(_T1 _point, _T1 _start = 0, TimePrecision _prec = TimePrecision::MICROSECONDS);
-	template<typename _T1, typename = typename std::enable_if<std::is_arithmetic<_T1>::value, _T1>::type>
-	std::string elapsed(_T1 _point, TimePrecision _prec = TimePrecision::MICROSECONDS);
+	template <typename _T1, typename = typename std::enable_if<std::is_arithmetic<_T1>::value, _T1>::type, typename _R = std::string>
+	_R elapsed(_T1 _point, _T1 _start = 0, TimePrecision _prec = TimePrecision::MICROSECONDS);
+	template <typename _T1, typename = typename std::enable_if<std::is_arithmetic<_T1>::value, _T1>::type, typename _R = std::string>
+	_R elapsed(_T1 _point, TimePrecision _prec = TimePrecision::MICROSECONDS);
 
-	std::string elapsed(const std::string& _point, const std::string& _since, TimePrecision _prec = TimePrecision::MICROSECONDS);
-	std::string elapsed(const std::string& _point, TimePrecision _prec = TimePrecision::MICROSECONDS);
+	template <typename _R = std::string>
+	_R elapsed(const std::string& _point, const std::string& _since, TimePrecision _prec = TimePrecision::MICROSECONDS);
+	template <typename _R = std::string>
+	_R elapsed(const std::string& _point, TimePrecision _prec = TimePrecision::MICROSECONDS);
 };
 
 // ##################################################################################################################################

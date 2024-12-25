@@ -1,5 +1,9 @@
+#ifndef __TIME_H__
+#define __TIME_H__
+
 #include "../src/Include/time.h"
 #include <map>
+#include <type_traits>
 
 // #################################################################################################################################################
 
@@ -101,120 +105,237 @@ clk::time_point Timer::end() const
 
 // #################################################################################################################################################
 
-/*
+/**
 * @brief Get the elapsed time at given indices
 * @param _point specific ending timepoint idx
 * @param _point specific staring timepoint idx
 * @param _prec precision to be used
 * @returns string with a timestamp
 */
-template<typename _T1, typename _T2>
-std::string Timer::elapsed(_T1 _point, _T1 _start, TimePrecision _prec)
+template<typename _T1, typename _T2, typename _R>
+_R Timer::elapsed(_T1 _point, _T1 _start, TimePrecision _prec)
 {
-    switch (_prec)
+    if constexpr (std::is_same_v<_R, std::string>)
     {
-    case TimePrecision::MICROSECONDS:
-        return TMUS(this->_timestamps[_point], this->_timestamps[_start]);
-        break;
-    case TimePrecision::MILLISECONDS:
-        return TMS(this->_timestamps[_point], this->_timestamps[_start]);
-        break;
-    case TimePrecision::SECONDS:
-        return TS(this->_timestamps[_point], this->_timestamps[_start]);
-        break;
-    default:
-        return TMUS(this->_timestamps[_point], this->_timestamps[_start]);
-        break;
+        switch (_prec)
+        {
+        case TimePrecision::MICROSECONDS:
+            return TMUS(this->_timestamps[_point], this->_timestamps[_start]);
+            break;
+        case TimePrecision::MILLISECONDS:
+            return TMS(this->_timestamps[_point], this->_timestamps[_start]);
+            break;
+        case TimePrecision::SECONDS:
+            return TS(this->_timestamps[_point], this->_timestamps[_start]);
+            break;
+        default:
+            return TMUS(this->_timestamps[_point], this->_timestamps[_start]);
+            break;
+        }
     }
+    else if constexpr (std::is_arithmetic<_R>::value)
+    {
+        switch (_prec)
+        {
+        case TimePrecision::MICROSECONDS:
+            return std::chrono::duration_cast<std::chrono::microseconds>(this->_timestamps[_point] - this->_timestamps[_start]).count();
+            break;
+        case TimePrecision::MILLISECONDS:
+            return std::chrono::duration_cast<std::chrono::milliseconds>(this->_timestamps[_point] - this->_timestamps[_start]).count();
+            break;
+        case TimePrecision::SECONDS:
+            return std::chrono::duration_cast<std::chrono::seconds>(this->_timestamps[_point] - this->_timestamps[_start]).count();
+            break;
+        default:
+            return std::chrono::duration_cast<std::chrono::microseconds>(this->_timestamps[_point] - this->_timestamps[_start]).count();
+            break;
+        }
+    }
+    else 
+        throw std::runtime_error("Unknown return type.");
 }
-// size_t
+
 template std::string Timer::elapsed(size_t _point, size_t _start, TimePrecision _prec);
-// int
 template std::string Timer::elapsed(int _point, int _start, TimePrecision _prec);
-// long
 template std::string Timer::elapsed(long _point, long _start, TimePrecision _prec);
-// long long
 template std::string Timer::elapsed(long long _point, long long _start, TimePrecision _prec);
+// different return type
+template long Timer::elapsed(size_t _point, size_t _start, TimePrecision _prec);
+template long Timer::elapsed(int _point, int _start, TimePrecision _prec);
+template long Timer::elapsed(long _point, long _start, TimePrecision _prec);
+template long Timer::elapsed(long long _point, long long _start, TimePrecision _prec);
+
 
 // #################################################################################################################################################
 
-template<typename _T1, typename _T2>
-std::string Timer::elapsed(_T1 _point, TimePrecision _prec)
+/**
+* @brief Measures the elapsed time from a given timestamp to the current time.
+* 
+* @tparam _T1 Type of the timestamp identifier.
+* @tparam _T2 Type of the timestamp value (not used in the function).
+* @tparam _R Return type of the elapsed time (either std::string or an arithmetic type).
+* @param _point Identifier for the timestamp to measure from.
+* @param _prec Precision of the time measurement (microseconds, milliseconds, or seconds).
+* @return _R Elapsed time in the specified precision. If _R is std::string, the time is returned as a formatted string.
+* If _R is an arithmetic type, the time is returned as a numeric value.
+* @throws std::runtime_error If the return type _R is neither std::string nor an arithmetic type.
+*/
+template<typename _T1, typename _T2, typename _R>
+_R Timer::elapsed(_T1 _point, TimePrecision _prec)
 {
-    switch (_prec)
+    if constexpr (std::is_same_v<_R, std::string>)
     {
-    case TimePrecision::MICROSECONDS:
-        return TMUS(NOW, this->_timestamps[_point]);
-        break;
-    case TimePrecision::MILLISECONDS:
-        return TMS(NOW, this->_timestamps[_point]);
-        break;
-    case TimePrecision::SECONDS:
-        return TS(NOW, this->_timestamps[_point]);
-        break;
-    default:
-        return TMUS(NOW, this->_timestamps[_point]);
-        break;
+        switch (_prec)
+        {
+        case TimePrecision::MICROSECONDS:
+            return TMUS(NOW, this->_timestamps[_point]);
+            break;
+        case TimePrecision::MILLISECONDS:
+            return TMS(NOW, this->_timestamps[_point]);
+            break;
+        case TimePrecision::SECONDS:
+            return TS(NOW, this->_timestamps[_point]);
+            break;
+        default:
+            return TMUS(NOW, this->_timestamps[_point]);
+            break;
+        }
     }
+    else if constexpr (std::is_arithmetic<_R>::value)
+    {
+        switch (_prec)
+        {
+        case TimePrecision::MICROSECONDS:
+            return std::chrono::duration_cast<std::chrono::microseconds>(NOW - this->_timestamps[_point]).count();
+            break;
+        case TimePrecision::MILLISECONDS:
+            return std::chrono::duration_cast<std::chrono::milliseconds>(NOW - this->_timestamps[_point]).count();
+            break;
+        case TimePrecision::SECONDS:
+            return std::chrono::duration_cast<std::chrono::seconds>(NOW - this->_timestamps[_point]).count();
+            break;
+        default:
+            return std::chrono::duration_cast<std::chrono::microseconds>(NOW - this->_timestamps[_point]).count();
+            break;
+        }
+    }
+    else 
+        throw std::runtime_error("Unknown return type.");
 }
 
 // size_t
 template std::string Timer::elapsed(size_t _point, TimePrecision _prec);
-// int
 template std::string Timer::elapsed(int _point, TimePrecision _prec);
-// long
 template std::string Timer::elapsed(long _point, TimePrecision _prec);
-// long long
 template std::string Timer::elapsed(long long _point, TimePrecision _prec);
+// different return type
+template long Timer::elapsed(size_t _point, TimePrecision _prec);
+template long Timer::elapsed(int _point, TimePrecision _prec);
+template long Timer::elapsed(long _point, TimePrecision _prec);
+template long Timer::elapsed(long long _point, TimePrecision _prec);
 
 // #################################################################################################################################################
 
-/*
-* @brief Get the elapsed time at given names
-* @param _point specific ending timepoint name
-* @param _point specific staring timepoint name
-* @param _prec precision to be used
-* @returns string with a timestamp
+/**
+* @brief Get the elapsed time between two named time points.
+* @param _point Name of the ending time point.
+* @param _since Name of the starting time point.
+* @param _prec Precision to be used for the elapsed time (microseconds, milliseconds, or seconds).
+* @returns Elapsed time as a string or an arithmetic type, depending on the template parameter _R.
 */
-std::string Timer::elapsed(const std::string& _point, const std::string& _since, TimePrecision _prec)
+template<typename _R>
+_R Timer::elapsed(const std::string& _point, const std::string& _since, TimePrecision _prec)
 {
-    switch (_prec) 
+    if constexpr (std::is_same_v<_R, std::string>)
     {
-    case TimePrecision::MICROSECONDS:
-        return StrParser::colorize(TMUS(this->_timestamps[this->_timestampNames[_since]], this->_timestamps[this->_timestampNames[_point]]), "red");
-        break;
-    case TimePrecision::MILLISECONDS:
-        return StrParser::colorize(TMS(this->_timestamps[this->_timestampNames[_since]], this->_timestamps[this->_timestampNames[_point]]), "red");
-        break;
-    case TimePrecision::SECONDS:
-        return StrParser::colorize(TS(this->_timestamps[this->_timestampNames[_since]], this->_timestamps[this->_timestampNames[_point]]), "red");
-        break;
-    default:
-        return StrParser::colorize(TMUS(this->_timestamps[this->_timestampNames[_since]], this->_timestamps[this->_timestampNames[_point]]), "red");
-        break;
+        switch (_prec) 
+        {
+        case TimePrecision::MICROSECONDS:
+            return StrParser::colorize(TMUS(this->_timestamps[this->_timestampNames[_since]], this->_timestamps[this->_timestampNames[_point]]), "red");
+            break;
+        case TimePrecision::MILLISECONDS:
+            return StrParser::colorize(TMS(this->_timestamps[this->_timestampNames[_since]], this->_timestamps[this->_timestampNames[_point]]), "red");
+            break;
+        case TimePrecision::SECONDS:
+            return StrParser::colorize(TS(this->_timestamps[this->_timestampNames[_since]], this->_timestamps[this->_timestampNames[_point]]), "red");
+            break;
+        default:
+            return StrParser::colorize(TMUS(this->_timestamps[this->_timestampNames[_since]], this->_timestamps[this->_timestampNames[_point]]), "red");
+            break;
+        }
     }
+    else if constexpr (std::is_arithmetic<_R>::value)
+    {
+        switch (_prec) 
+        {
+        case TimePrecision::MICROSECONDS:
+            return std::chrono::duration_cast<std::chrono::microseconds>(this->_timestamps[this->_timestampNames[_point]] - this->_timestamps[this->_timestampNames[_since]]).count();
+            break;
+        case TimePrecision::MILLISECONDS:
+            return std::chrono::duration_cast<std::chrono::milliseconds>(this->_timestamps[this->_timestampNames[_point]] - this->_timestamps[this->_timestampNames[_since]]).count();
+            break;
+        case TimePrecision::SECONDS:
+            return std::chrono::duration_cast<std::chrono::seconds>(this->_timestamps[this->_timestampNames[_point]] - this->_timestamps[this->_timestampNames[_since]]).count();
+            break;
+        default:
+            return std::chrono::duration_cast<std::chrono::microseconds>(this->_timestamps[this->_timestampNames[_point]] - this->_timestamps[this->_timestampNames[_since]]).count();
+            break;
+        }
+    }
+    else 
+        throw std::runtime_error("Unknown return type.");
 }
+
+template std::string Timer::elapsed(const std::string& _point, const std::string& _since, TimePrecision _prec);
+template long Timer::elapsed(const std::string& _point, const std::string& _since, TimePrecision _prec);
 
 // #################################################################################################################################################
 
-std::string Timer::elapsed(const std::string& _point, TimePrecision _prec)
+template<typename _R>
+_R Timer::elapsed(const std::string& _point, TimePrecision _prec)
 {
-    switch (_prec) 
+    if constexpr (std::is_same_v<_R, std::string>)
     {
-    case TimePrecision::MICROSECONDS:
-        return StrParser::colorize(TMUS(this->_timestamps[this->_timestampNames[_point]], NOW), "red");
-        break;
-    case TimePrecision::MILLISECONDS:
-        return StrParser::colorize(TMS(this->_timestamps[this->_timestampNames[_point]], NOW), "red");
-        break;
-    case TimePrecision::SECONDS:
-        return StrParser::colorize(TS(this->_timestamps[this->_timestampNames[_point]], NOW), "red");
-        break;
-    default:
-        return StrParser::colorize(TMUS(this->_timestamps[this->_timestampNames[_point]], NOW), "red");
-        break;
+        switch (_prec) 
+        {
+        case TimePrecision::MICROSECONDS:
+            return StrParser::colorize(TMUS(NOW, this->_timestamps[this->_timestampNames[_point]]), "red");
+            break;
+        case TimePrecision::MILLISECONDS:
+            return StrParser::colorize(TMS(NOW, this->_timestamps[this->_timestampNames[_point]]), "red");
+            break;
+        case TimePrecision::SECONDS:
+            return StrParser::colorize(TS(NOW, this->_timestamps[this->_timestampNames[_point]]), "red");
+            break;
+        default:
+            return StrParser::colorize(TMUS(NOW, this->_timestamps[this->_timestampNames[_point]]), "red");
+            break;
+        }
     }
+    else if constexpr (std::is_arithmetic<_R>::value)
+    {
+        switch (_prec) 
+        {
+        case TimePrecision::MICROSECONDS:
+            return std::chrono::duration_cast<std::chrono::microseconds>(NOW - this->_timestamps[this->_timestampNames[_point]]).count();
+            break;
+        case TimePrecision::MILLISECONDS:
+            return std::chrono::duration_cast<std::chrono::milliseconds>(NOW - this->_timestamps[this->_timestampNames[_point]]).count();
+            break;
+        case TimePrecision::SECONDS:
+            return std::chrono::duration_cast<std::chrono::seconds>(NOW - this->_timestamps[this->_timestampNames[_point]]).count();
+            break;
+        default:
+            return std::chrono::duration_cast<std::chrono::microseconds>(NOW - this->_timestamps[this->_timestampNames[_point]]).count();
+            break;
+        }
+    }
+    else 
+        throw std::runtime_error("Unknown return type.");
 }
+
+template std::string Timer::elapsed(const std::string& _point, TimePrecision _prec);
+template long Timer::elapsed(const std::string& _point, TimePrecision _prec);
 
 // #################################################################################################################################################
 
@@ -242,3 +363,4 @@ std::string prettyTime(std::time_t now)
 #endif
 	return std::string(buf);
 }
+#endif // __TIME_H__

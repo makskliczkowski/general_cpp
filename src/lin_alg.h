@@ -58,7 +58,13 @@ using v_mat = v_mat_1d<T>;											// 1d matrix vector
 		concept HasMatrixType = std::is_same_v<_T, arma::Mat<double>>               || 
 			std::is_same_v<_T, arma::Mat<std::complex<double>>>						||
 			std::is_same_v<_T, arma::SpMat<double>>									||
-			std::is_same_v<_T, arma::SpMat<std::complex<double>>>;
+			std::is_same_v<_T, arma::SpMat<std::complex<double>>>					||
+			std::is_same_v<_T, arma::subview<double>>								||
+			std::is_same_v<_T, arma::subview<std::complex<double>>>					||
+			std::is_same_v<_T, arma::subview_cols<double>>							||
+			std::is_same_v<_T, arma::subview_cols<std::complex<double>>>			||
+			std::is_same_v<_T, arma::subview_cube<double>>							||
+			std::is_same_v<_T, arma::subview_cube<std::complex<double>>>;
 
 		template<typename _T2, typename _T>
 		concept HasColType = std::is_same_v<_T, arma::Col<_T2>>						||
@@ -80,7 +86,7 @@ using v_mat = v_mat_1d<T>;											// 1d matrix vector
 			std::is_same_v<_T, arma::Row<u64>>										||
 			std::is_same_v<_T, arma::subview_row<double>>							||
 			std::is_same_v<_T, arma::subview_row<std::complex<double>>>				||
-			std::is_same_v<_T, arma::subview_row<u64>>;
+			std::is_same_v<_T, arma::subview_row<u64>>;								
 
 #	endif
 #else
@@ -2340,48 +2346,59 @@ namespace algebra
 
 // ###################################################### S A V E R ######################################################
 
-/*
-* @brief Save the algebraic matrix to a file with a specific path. The file can be in binary, text or HDF5 format.
-* @param _path path to the file
-* @param _file name of the file
-* @param _toSave matrix to save
-* @param _db name of the database in HDF5 file
-* @param _app append to the file?
-* @returns true if the file was saved
+/**
+* @brief Save the algebraic matrix (or subview) to a file with a specific path. The file can be in binary, text, or HDF5 format.
+* @param _path Path to the directory where the file will be saved.
+* @param _file Name of the file to save the matrix to.
+* @param _toSave Matrix or subview to save.
+* @param _db Name of the dataset in the HDF5 file (default is "weights").
+* @param _app Append to the file if true, otherwise overwrite (default is false).
+* @returns True if the file was saved successfully, false otherwise.
 */
-template <HasMatrixType _T>
+template <typename _T>
+requires HasMatrixType<_T>
 inline bool saveAlgebraic(const std::string& _path, const std::string& _file, const _T& _toSave, const std::string& _db = "weights", bool _app = false)
 {
+	// Copy the subview to a new matrix if it is a subview, otherwise return the original matrix as-is (no copy)
+	auto savable = [&]() -> decltype(auto) {
+		if constexpr (arma::is_subview<_T>::value || arma::is_subview_cols<_T>::value) {
+			return arma::Mat<typename _T::elem_type>(_toSave); // Copy subview to a new matrix
+		} else {
+			return _toSave; // Return the original matrix as-is (no copy)
+		}
+	}();
+
 #ifdef _DEBUG
-	//LOGINFO(_path + _file, LOG_TYPES::INFO, 3);
+	// LOGINFO(_path + _file, LOG_TYPES::INFO, 3);
 #endif
 	createDir(_path);
-	bool _isSaved	= false;
+	bool _isSaved = false;
+
 #ifdef HAS_CXX20
 	if (_file.ends_with(".h5"))
 #else
 	if (endsWith(_file, ".h5"))
 #endif
 	{
-		if(!_app)
-			_isSaved	= _toSave.save(arma::hdf5_name(_path + _file, _db));
+		if (!_app)
+			_isSaved = savable.save(arma::hdf5_name(_path + _file, _db));
 		else
-			_isSaved	= _toSave.save(arma::hdf5_name(_path + _file, _db, arma::hdf5_opts::append));
+			_isSaved = savable.save(arma::hdf5_name(_path + _file, _db, arma::hdf5_opts::append));
 	}
 #ifdef HAS_CXX20
 	else if (_file.ends_with(".bin"))
 #else
 	if (endsWith(_file, ".bin"))
 #endif
-		_isSaved	= _toSave.save(_path + _file);
+		_isSaved = savable.save(_path + _file);
 #ifdef HAS_CXX20
 	else if (_file.ends_with(".txt") || _file.ends_with(".dat"))
 #else
 	if (endsWith(_file, ".txt") || endsWith(_file, ".dat"))
 #endif
 	{
-		if(!_app)
-			_isSaved	= _toSave.save(_path + _file, arma::arma_ascii);
+		if (!_app)
+			_isSaved = savable.save(_path + _file, arma::arma_ascii);
 		else
 		{
 			std::ofstream _out;
@@ -2390,11 +2407,11 @@ inline bool saveAlgebraic(const std::string& _path, const std::string& _file, co
 				_out.open(_path + _file, std::ios::app);
 				_isSaved = _out.is_open();
 			}
-			catch(std::exception& e)
+			catch (std::exception& e)
 			{
-				//LOGINFO(e.what(), LOG_TYPES::ERROR, 2);
+				// LOGINFO(e.what(), LOG_TYPES::ERROR, 2);
 			}
-			_out << _toSave;
+			_out << savable;
 			_out.close();
 		}
 	}
