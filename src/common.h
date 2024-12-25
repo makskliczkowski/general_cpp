@@ -403,7 +403,7 @@ namespace Slurm
 		std::string elapsed_time_key 	= "Elapsed=";
 		auto time_limit_pos 			= output.find(time_limit_key);
 		auto elapsed_time_pos 			= output.find(elapsed_time_key);		
-		
+
 		if (time_limit_pos != std::string::npos && elapsed_time_pos != std::string::npos) 
 		{
 			std::string time_limit_str = output.substr(time_limit_pos + time_limit_key.size(), 8);
@@ -416,14 +416,17 @@ namespace Slurm
 			if (sscanf(time_limit_str.c_str(), "%d:%d:%d", &time_limit_hours, &time_limit_minutes, &time_limit_seconds) == 3)
 			{
 				int total_time_limit_seconds = time_limit_hours * 3600 + time_limit_minutes * 60 + time_limit_seconds;
+				LOGINFO("Total time limit: " + std::to_string(total_time_limit_seconds) + " seconds", LOG_TYPES::INFO, 3);
 
 				// Convert Elapsed to seconds
 				if (sscanf(elapsed_time_str.c_str(), "%d:%d:%d", &elapsed_hours, &elapsed_minutes, &elapsed_seconds) == 3)
 				{
 					int total_elapsed_seconds = elapsed_hours * 3600 + elapsed_minutes * 60 + elapsed_seconds;
+					LOGINFO("Total elapsed time: " + std::to_string(total_elapsed_seconds) + " seconds", LOG_TYPES::INFO, 3);
 
 					// Calculate remaining time by subtracting elapsed time from time limit
 					int remaining_time_seconds = total_time_limit_seconds - total_elapsed_seconds;
+					LOGINFO("Remaining time: " + std::to_string(remaining_time_seconds) + " seconds", LOG_TYPES::INFO, 3);
 
 					return remaining_time_seconds > 0 ? remaining_time_seconds : 0; // Prevent negative values
 				}
