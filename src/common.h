@@ -410,6 +410,9 @@ namespace Slurm
 				
 			std::string time_limit_str = output.substr(time_limit_pos + time_limit_key.size(), 8);
 			std::string run_time_str = output.substr(run_time_pos + run_time_key.size(), 8);
+			
+			LOGINFO("Time limit: " + time_limit_str, LOG_TYPES::INFO, 4);
+			LOGINFO("Run time: " + run_time_str, LOG_TYPES::INFO, 4);
 
 			int time_limit_hours, time_limit_minutes, time_limit_seconds;
 			int run_hours, run_minutes, run_seconds;
