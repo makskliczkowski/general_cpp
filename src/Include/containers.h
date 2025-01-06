@@ -13,7 +13,7 @@
 
 namespace Containers
 {
-	/*
+	/**
 	* @brief Zip containers toghether. 
 	* The decay_t performs the type conversions equivalent to the ones performed when passing function arguments by value. Formally:
 	* - If T is "array of U" or reference to it, the member typedef type is U*. 
