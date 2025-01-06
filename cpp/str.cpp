@@ -2,13 +2,13 @@
 
 // ######################################################## STRING RELATED FUNCTIONS ########################################################
 
-/*
+/**
 * @brief Splits string according to the delimiter
 * @param A a string to be split
 * @param delimiter A delimiter. Default = '\\t'
 * @return Split string
 */
-strVec splitStr(const std::string& s, std::string delimiter)
+strVec splitStr(std::string_view s, std::string_view delimiter)
 {
 	unsigned long long pos_start	= 0;
 	unsigned long long pos_end		= 0;
@@ -21,13 +21,13 @@ strVec splitStr(const std::string& s, std::string delimiter)
 		pos_start	= pos_end + delim_len;
 		res.push_back(token);
 	}
-	res.push_back(s.substr(pos_start));
+	res.emplace_back(s.substr(pos_start));
 	return res;
 }
 
 // ############################################################# STRING FROM CMD ############################################################
 
-/*
+/**
 * We want to handle files so let's make the c-way input a string. This way we will parse the command line arguments
 * @param argc number of main input arguments
 * @param argv main input arguments
@@ -43,12 +43,12 @@ strVec fromPtr(int argc, char** argv, unsigned int offset)
 
 // ###################################################################################################################################
 
-/*
+/**
 * @brief Checks if the string is a alphanumeric
 * @param s a string to check
 * @returns true if the string is a alphanumeric
 */
-bool StrParser::isAlphanum(const std::string &s)
+bool StrParser::isAlphanum(std::string_view s)
 {
 	for (auto& c : s)
 		if (!std::isalnum(c))
@@ -58,12 +58,12 @@ bool StrParser::isAlphanum(const std::string &s)
 
 // ###################################################################################################################################
 
-/*
+/**
 * @brief Checks if the string is a number
 * @param s a string to check
 * @returns true if the string is a number
 */
-bool StrParser::isNumber(const std::string &s)
+bool StrParser::isNumber(std::string_view s)
 {
 	for (auto& c : s)
 		if (!std::isdigit(c))
@@ -73,26 +73,26 @@ bool StrParser::isNumber(const std::string &s)
 
 // ###################################################################################################################################
 
-/*
+/**
 * @brief Checks if the string contains a substring
 * @param s a string to check
 * @param sub a substring to check
 * @returns true if the string contains a substring
 */
-bool StrParser::contanins(const std::string &s, const std::string &sub)
+bool StrParser::contanins(std::string_view s, std::string_view sub)
 {
 	return s.find(sub) != std::string::npos;
 }
 
 // ###################################################################################################################################
 
-/*
+/**
 * @brief Splits string according to the delimiter
 * @param s a string to be split
 * @param delimiter a delimiter. Default = '\\t'
 * @returns split string
 */
-strVec StrParser::split(const std::string &s, char delimiter)
+strVec StrParser::split(std::string_view s, char delimiter)
 {
 	unsigned long long pos_start	= 0;
 	unsigned long long pos_end		= 0;
@@ -105,17 +105,17 @@ strVec StrParser::split(const std::string &s, char delimiter)
 		pos_start	= pos_end + delim_len;
 		res.push_back(token);
 	}
-	res.push_back(s.substr(pos_start));
+	res.emplace_back(s.substr(pos_start));
 	return res;
 }
 
-/*
+/**
 * @brief Splits string according to the delimiter
 * @param s a string to be split
 * @param delimiter a delimiter. Default = '\\t'
 * @returns split string
 */
-strVec StrParser::split(const std::string &s, const std::string &delimiter)
+strVec StrParser::split(std::string_view s, std::string_view delimiter)
 {
 	unsigned long long pos_start	= 0;
 	unsigned long long pos_end		= 0;
@@ -128,8 +128,21 @@ strVec StrParser::split(const std::string &s, const std::string &delimiter)
 		pos_start	= pos_end + delim_len;
 		res.push_back(token);
 	}
-	res.push_back(s.substr(pos_start));
+	res.emplace_back(s.substr(pos_start));
 	return res;
+}
+
+// ###################################################################################################################################
+
+/**
+* @brief Checks if a given string ends with a specified suffix.
+* @param _str The string to be checked.
+* @param _suf The suffix to be checked for.
+* @return true if `_str` ends with `_suf`, false otherwise.
+*/
+bool StrParser::endsWith(std::string_view _str, std::string_view _suf)
+{
+	return _str.size() >= _suf.size() && 0 == _str.compare(_str.size() - _suf.size(), _suf.size(), _suf);
 }
 
 // ###################################################################################################################################

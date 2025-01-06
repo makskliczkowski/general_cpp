@@ -3,16 +3,15 @@
 
 // #################################################################################################################################################
 
-/*
+/**
 * @brief Defines an euclidean modulo denoting also the negative sign
 * @param a left side of modulo
 * @param b right side of modulo
 * @return euclidean a % b
 * @link https://en.wikipedia.org/wiki/Modulo_operation
 */
-template <typename _T>
-typename std::enable_if<std::is_integral<_T>::value, _T>::type
-modEUC(_T a, _T b)
+template <typename _T = int>
+_T modEUC(_T a, _T b) requires std::is_integral_v<_T>
 {
     _T m = a % b;
     if (m < 0) m = (b < 0) ? m - b : m + b;
@@ -133,3 +132,5 @@ namespace Threading
 
     // #################################################################################################################################
 };
+
+// #####################################################################################################################################

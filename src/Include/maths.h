@@ -16,21 +16,22 @@
 		#include <concepts>
 		#include <type_traits>
 		template<typename _T>
-		concept HasDoubleType = std::is_base_of<double, _T>::value								|| 
-								std::is_base_of<long double, _T>::value							||
-								std::is_base_of<float, _T>::value;
+		concept HasDoubleType = std::is_base_of_v<double, _T>									|| 
+								std::is_base_of_v<long double, _T>								||
+								std::is_base_of_v<float, _T>;
 
 		template<typename _T>
-		concept HasIntType	  = std::is_base_of<short, _T>::value								||
-								std::is_base_of<unsigned short, _T>::value						||
-								std::is_base_of<int, _T>::value									|| 
-								std::is_base_of<unsigned int, _T>::value						||
-								std::is_base_of<long, _T>::value								||
-								std::is_base_of<unsigned long, _T>::value						||
-								std::is_base_of<long long, _T>::value							||
-								std::is_base_of<unsigned long long, _T>::value;
+		concept HasIntType	  = std::is_base_of_v<short, _T>									||
+								std::is_base_of_v<unsigned short, _T>							||
+								std::is_base_of_v<int, _T>										|| 
+								std::is_base_of_v<unsigned int, _T>								||
+								std::is_base_of_v<long, _T>										||
+								std::is_base_of_v<unsigned long, _T>							||
+								std::is_base_of_v<long long, _T>								||
+								std::is_base_of_v<unsigned long long, _T>;
 #	endif
 #endif
+
 /*******************************
 * Contains the possible methods
 * for using math in simulation.
@@ -38,7 +39,7 @@
 
 // #################################################################
 
-/*
+/**
 * @brief Check the sign of a value
 * @param val value to be checked
 * @return sign of a variable
@@ -80,7 +81,7 @@ inline std::complex<long double> sgn(std::complex<long double> val) {
 
 // #################################################################
 
-/*
+/**
 * @brief Placeholder for non-complex values
 * @param _r casting the complex value to the correct type
 */
@@ -88,8 +89,8 @@ template <typename _T>
 inline _T toType(double _r, double _i = 0) {
 	return _T(_r, _i);
 }
-template <>
 
+template <>
 inline double toType(double _r, double _i) {
 	return _r;
 }
@@ -97,12 +98,11 @@ inline double toType(double _r, double _i) {
 // #################################################################
 
 template <typename _T>
-typename std::enable_if<std::is_integral<_T>::value, _T>::type
-modEUC(_T a, _T b);
+_T modEUC(_T a, _T b) requires std::is_integral_v<_T>;
 
 // ###############################################################################
 
-/*
+/**
 * @brief Given a sum of squares measurement and sum of the measurements
 * returns the normalized variance
 * @param _av2 sum of unnormalized squares of values
@@ -123,7 +123,7 @@ namespace Math
 
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-	/*
+	/**
 	* @brief Calculates the complex exponential of a number exp(i * x)
 	* @param _val value in the exponential
 	* @returns exponential of the number
@@ -141,7 +141,7 @@ namespace Math
 	}
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	
-	/*
+	/**
 	* @brief Calculates a safe exponential function for the given value - checks if the value is too large
 	* @param _val value to be exponentiated
 	* @returns exponential of the value
@@ -150,7 +150,7 @@ namespace Math
 	inline _T expS(_T _val)
 	{
     	constexpr double max_exp = 50; // Limit for the exponent to avoid overflow
-		if constexpr (std::is_same<_T, std::complex<double>>::value) {
+		if constexpr (std::is_same_v<_T, std::complex<double>>) {
 			// Separate real and imaginary parts
 			double real_part = std::real(_val);
 			double imag_part = std::imag(_val);
@@ -183,7 +183,7 @@ namespace Math
 
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-	/*
+	/**
 	* @brief Truncates a number at the given precision in base 10
 	* @param _val value to be truncated
 	* @returns truncated value
@@ -193,6 +193,8 @@ namespace Math
 	{
 		return std::round(_val * (_P + 1)) / (_P + 1);
 	}
+
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 }
 
 // ###############################################################################
