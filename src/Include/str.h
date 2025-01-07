@@ -75,7 +75,7 @@ inline std::string str_p(const char* v, const int n, bool scientific) {
 	return SSTR(v);
 }
 template <>
-inline std::string str_p(const strVec& v, const int n, bool scientific) {
+inline std::string str_p(strVec v, const int n, bool scientific) {
 	std::string tmp = "";
 	for (auto& i : v)
 		tmp += i + " ";

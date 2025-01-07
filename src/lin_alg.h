@@ -1767,9 +1767,9 @@ namespace algebra
         template <typename Derived, uint _order, typename _T, typename _CT>
         inline void RK_Base<Derived, _order, _T, _CT>::update(_CT& _y, double _h)
         {
-			const auto _dt = this->dt(_h, this->order_ - 1);
-            for (int _c = 0; _c < this->order_; _c++)
-                _y += (this->coefficients_[_c] * _dt) * this->k_[_c];
+			const auto _dt = this->dt(_h, this->order_ - 1);				// calculate the time step from the last coefficient
+            for (int _c = 0; _c < this->order_; _c++)						// iterate over the coefficients and update the value
+                _y += (this->coefficients_[_c] * _dt) * this->k_[_c];		// update the value using the coefficients and the k_ array
         }
 
 		/**
@@ -1794,11 +1794,11 @@ namespace algebra
 		template <typename Derived, uint _order, typename _T, typename _CT>
 		inline _CT RK_Base<Derived, _order, _T, _CT>::update(const _CT& _y, double _h)
 		{
-			const auto _dt 	= this->dt(_h, this->order_ - 1);
-			this->kout_ 	= _y;
+			const auto _dt 	= this->dt(_h, this->order_ - 1);				// calculate the time step from the last coefficient
+			this->kout_ 	= _y;											// initialize the output with the current state
 			for (int _c = 0; _c < this->order_; _c++)
 				this->kout_ += (_dt * this->coefficients_[_c]) * this->k_[_c];
-			return _y + this->kout_;
+			return _y + this->kout_;										// return the updated state
 		}
 
 		// #############################################################################################################################################
@@ -1837,8 +1837,10 @@ namespace algebra
 		};
 
 		// Adaptive step-size control implementation
+		// !TODO: Implement adaptive step-size control for the Runge-Kutta solver - check the error and adjust the step size
+		// !TODO: Create tests for the adaptive step-size control
 		template <uint _order, typename _T, typename _CT>
-		void RK<_order, _T, _CT>::adaptive_step(const fun_r_t& _f, double& _t, double& _h, _CT& _y, double _tol)
+		inline void RK<_order, _T, _CT>::adaptive_step(const fun_r_t& _f, double& _t, double& _h, _CT& _y, double _tol)
 		{
 			_CT y_temp, y_err;
 			double h_new, err;
@@ -1884,7 +1886,7 @@ namespace algebra
 		* @throws std::invalid_argument If the specified order is not supported.
 		*/
 		template <typename _T = double, typename _CT = arma::Col<_T>>
-		IVP<_T, _CT>* createRKsolver(ODE_Solvers solverType, double _tol = 1e-10)
+		inline IVP<_T, _CT>* createRKsolver(ODE_Solvers solverType, double _tol = 1e-10)
 		{
 			switch (solverType) {
 				case ODE_Solvers::Euler:
@@ -1895,10 +1897,10 @@ namespace algebra
 				case ODE_Solvers::RK4:
 					return new RK<4, _T, _CT>();
 				case ODE_Solvers::RKAdaptive:
-					throw std::runtime_error("Adaptive Runge-Kutta solver not implemented yet");
+					throw std::runtime_error("Adaptive Runge-Kutta solver not implemented yet. This is work in progress.");
 					break;
 				default:
-					throw std::invalid_argument("Unsupported Runge-Kutta solver type");
+					throw std::invalid_argument("Unsupported Runge-Kutta solver type. Supported types are Euler, Heun, RK2, RK4, and RKAdaptive.");
 			}
 		}
 
