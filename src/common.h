@@ -3,7 +3,15 @@
 * Stores all the common functions
 * used throughtly in the codes
 * REV : 01/12/2023 - Maks Kliczkowski
+* REV : 09/01/2025 - Maks Kliczkowski
+	- added new using types
 *******************************/
+
+#include <thread>
+#include <limits>
+#include <iomanip>
+#include <iostream>
+#include <variant>
 
 #ifndef COMMON_H
 #define COMMON_H
@@ -33,12 +41,6 @@
 #	include <omp.h>
 #endif
 
-#include <thread>
-#include <iomanip>
-#include <iostream>
-#include <limits>
-#include <variant>
-
 // ########################################################				 CONCEPTS				########################################################
 
 template<class T> struct is_complex						: std::false_type	{};
@@ -54,18 +56,26 @@ using ull						=					unsigned long long;
 using u64						=					ull;
 using ld						=					long double;
 
+// using types
+template <typename _T, typename _U = std::allocator<std::shared_ptr<_T>>>
+using v_sp_t 					= std::vector<std::shared_ptr<_T>, _U>;							// vector of shared pointers
+template <typename _T, typename _U = std::allocator<std::shared_ptr<_T>>>
+using v_up_t 					= std::vector<std::unique_ptr<_T>, _U>;							// vector of unique pointers
+template <typename _T, typename _U = std::allocator<_T*>>
+using v_p_t						= std::vector<_T*, _U>;											// vector of pointers
+
 // constexpressions
-constexpr long double PI		=					3.141592653589793238462643383279502884L;			// it is me, pi
-constexpr long double TWOPI		=					2.0L * PI;											// it is me, 2pi
-constexpr long double PIHALF	=					PI / 2.0L;											// it is me, half a pi
+constexpr long double PI		=					3.141592653589793238462643383279502884L;	// it is me, pi
+constexpr long double TWOPI		=					2.0L * PI;									// it is me, 2pi
+constexpr long double PIHALF	=					PI / 2.0L;									// it is me, half a pi
 constexpr long double LOG_TWO	=					0.69314718055994530941723212145818L;
 constexpr long double LOG_HALF	=					-LOG_TWO;
-constexpr cpx I					=					cpx(0, 1);											// imaginary unit
-const auto global_seed			=					std::random_device{}();								// global seed for classes
+constexpr cpx I					=					cpx(0, 1);									// imaginary unit
+const auto global_seed			=					std::random_device{}();						// global seed for classes
 
 // end lines
 #define EL std::endl
-#define stout std::cout << std::setprecision(8) << std::fixed											// standard out
+#define stout std::cout << std::setprecision(8) << std::fixed									// standard out
 #define stoutc(c) if(c) stout <<  std::setprecision(8) << std::fixed	
 
 // debug printers

@@ -186,8 +186,21 @@ public:
 
 // #####################################################################################################################
 
-/*
-* @brief Use the existing Krylov vectors to reorthogonalize them. This is done to ensure that the vector v to previous ones
+
+/**
+* @brief Reorthogonalizes a vector with respect to a set of Krylov vectors.
+*
+* This function reorthogonalizes the input vector `v` with respect to the 
+* columns of the matrix `_krylovVec` using the Lanczos method. If the dot 
+* product of `v` with any column of `_krylovVec` exceeds the tolerance `_tol`, 
+* the component of `v` in the direction of that column is subtracted from `v`.
+* Finally, the vector `v` is normalized.
+*
+* @tparam _T The type of the elements in the vector `v` and the matrix `_krylovVec`.
+* @tparam _TC The type of the Krylov vector matrix.
+* @param v The vector to be reorthogonalized.
+* @param _krylovVec The matrix containing the Krylov vectors as its columns.
+* @param _tol The tolerance value used to determine if reorthogonalization is needed.
 */
 template<class _T>
 template<class _TC>
@@ -206,7 +219,7 @@ inline void LanczosMethod<_T>::reorthogonalize(arma::Col<_T>& v, const _TC& _kry
 
 // ################################################# S Y M M E T R I C #################################################
 
-/*
+/**
 * @brief Construct the Krylov space and use Lanczos' method to diagonalize the Hamiltonian
 * @param _eigVal - eigenvalues to be saved
 * @param _eigVec - eigenvectors to be saved

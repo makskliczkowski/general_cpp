@@ -360,6 +360,104 @@ namespace algebra
 	template <>
 	inline auto cast<double>(const arma::SpMat<std::complex<double>>& x)			-> arma::SpMat<double>				{ return arma::real(x); };
 
+	// #################################################################################################################################################
+
+	/**
+	* @brief Transforms a state vector to a new basis using a unitary matrix.
+	* 
+	* This function takes a unitary matrix and a state vector, and transforms the state vector to a new basis defined by the unitary matrix.
+	* 
+	* @tparam _T The type of the elements in the matrix and vector.
+	* @tparam _MatType The type of the unitary matrix. Must be a valid Armadillo matrix type.
+	* @tparam _VecType The type of the state vector. Must be a valid Armadillo vector type or std::vector.
+	* 
+	* @param unitaryMatrix The unitary matrix used for the basis transformation.
+	* @param stateVector The state vector to be transformed.
+	* 
+	* @return The transformed state vector in the new basis.
+	* 
+	* @note The function uses static assertions to ensure that the matrix and vector types are valid.
+	*       If the element types of the matrix and vector are the same, the transformation is performed directly.
+	*       If the vector is an Armadillo vector type, it is converted to the appropriate type before transformation.
+	*       If the vector is a std::vector, it is converted to an Armadillo column vector before transformation and then converted back to std::vector.
+	*/
+	template <typename _MatType, typename _VecType>
+	inline auto change_basis(const _MatType& unitaryMatrix, const _VecType& stateVector)
+	{
+		static_assert(HasMatrixType<_MatType>, "The matrix type must be a valid Armadillo matrix type.");
+		static_assert(HasArmaVectorType<_VecType> || std::is_same_v<_VecType, std::vector<typename _VecType::value_type>>, "The vector type must be a valid Armadillo vector type or std::vector.");
+
+		using VecElemType 	= typename _VecType::value_type;
+		using MatElemType 	= typename _MatType::elem_type;
+		using CommonType 	= typename std::common_type<VecElemType, MatElemType>::type;
+
+		if constexpr (std::is_same_v<VecElemType, MatElemType>)
+		{
+			return unitaryMatrix * stateVector;
+		}
+		else if constexpr (HasArmaVectorType<_VecType>)
+		{
+			if constexpr (std::is_same_v<_VecType, arma::Col<CommonType>> || std::is_same_v<_VecType, arma::Row<CommonType>>) 
+			{
+				return unitaryMatrix * stateVector;
+			} 
+			else {
+				arma::Col<CommonType> transformedVec = unitaryMatrix * arma::conv_to<arma::Col<CommonType>>::from(stateVector);
+				return arma::conv_to<_VecType>::from(transformedVec);
+			}
+		}
+		else if constexpr (std::is_same_v<_VecType, std::vector<VecElemType>>)
+		{
+			arma::Col<CommonType> armaVec(stateVector.data(), stateVector.size(), false, true);
+			arma::Col<CommonType> transformedVec = unitaryMatrix * armaVec;
+			return std::vector<CommonType>(transformedVec.begin(), transformedVec.end());
+		}
+	}
+
+	/**
+	* @brief Changes the basis of a given matrix using a unitary matrix.
+	*
+	* This function transforms the given matrix to a new basis defined by the unitary matrix.
+	* The transformation is performed as follows: U^T * A * U, where U is the unitary matrix
+	* and A is the matrix to be transformed.
+	*
+	* @tparam _T The type of the elements in the matrices.
+	* @tparam _MatType1 The type of the unitary matrix.
+	* @tparam _MatType2 The type of the matrix to be transformed.
+	* @param unitaryMatrix The unitary matrix used for the basis change.
+	* @param matrix The matrix to be transformed.
+	* @param back If false, the transformation is performed as U * A * U^T, instead of U^T * A * U.
+	* @return The matrix transformed to the new basis.
+	*
+	* @note Both matrix types must be valid Armadillo matrix types.
+	* @note If the element types of the two matrices are different, the function will convert
+	*       the matrices to a common type before performing the transformation.
+	*/
+	template <typename _MatType1, typename _MatType2 = _MatType1>
+	inline arma::Mat<typename std::common_type<typename _MatType1::elem_type, typename _MatType2::elem_type>::type> 
+	change_basis_matrix(const _MatType1& unitaryMatrix, const _MatType2& matrix, bool back = false)
+		requires HasMatrixType<_MatType1> && HasMatrixType<_MatType2>
+	{
+		using MatElemType1 	= typename _MatType1::elem_type;
+		using MatElemType2 	= typename _MatType2::elem_type;
+		using CommonType 	= typename std::common_type<MatElemType1, MatElemType2>::type;
+
+		// if are the same inner types
+		if constexpr (std::is_same<MatElemType1, MatElemType2>::value)
+		{
+			if (!back)
+				return (unitaryMatrix * matrix) * unitaryMatrix.t();
+			else
+				return (unitaryMatrix.t() * matrix) * unitaryMatrix;
+			return (unitaryMatrix.t() * matrix) * unitaryMatrix;
+		}
+		else
+		{
+			if (!back)
+				return (unitaryMatrix * arma::conv_to<arma::Mat<CommonType>>::from(matrix)) * unitaryMatrix.t();
+			return (unitaryMatrix.t() * arma::conv_to<arma::Mat<CommonType>>::from(matrix)) * unitaryMatrix;
+		}
+	}
 
 	// #################################################################################################################################################
 	
