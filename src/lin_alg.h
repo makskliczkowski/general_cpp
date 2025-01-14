@@ -362,6 +362,12 @@ namespace algebra
 
 	// #################################################################################################################################################
 
+	// namespace Physics
+	// {
+	// 	template <typename _CT, _MT>
+	// 	inline _CT quench_state()
+	// };
+
 	/**
 	* @brief Transforms a state vector to a new basis using a unitary matrix.
 	* 
@@ -1790,6 +1796,8 @@ namespace algebra
 			virtual void update(_CT& _y, double _h) = 0; 													// update the inner state
 			virtual _CT update(const _CT& _y, double _h) = 0; 												// update the inner state
 			virtual double dt(double _h, uint i) const = 0; 												// get the timestep
+			const uint getOrder() 											const { return 1; }
+
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 		};
 
@@ -1843,6 +1851,7 @@ namespace algebra
 			// getters
 			v_1d<double> getCoefficients() 									const { return this->coefficients_; };
 			v_1d<double> getTimesteps() 									const { return this->timesteps_; };
+			const uint getOrder() 											const { return this->order_; }
 			// set
 			void setCoefficients(const v_1d<double>& _coefficients) 		{ if(_coefficients.size() == this->order_) this->coefficients_ = _coefficients; }
 			void setTimesteps(const v_1d<double>& _timesteps) 				{ if(_timesteps.size() == this->order_) this->timesteps_ = _timesteps; }

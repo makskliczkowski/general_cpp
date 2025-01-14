@@ -3,6 +3,9 @@
 * for general lattice class.
 *******************************/
 
+#include <memory>
+#include <string>
+#include <string_view>
 #ifndef COMMON_H
 	#include "common.h"
 #endif
@@ -159,6 +162,12 @@ private:
 	// ----------------------- TOPOLOGY -----------------------
 public:
 	virtual v_1d<uint> get_flux_sites(int X, int Y, int Z = 0) const { return {}; };									// returns the sites where the flux is applied
+
+	// ---
+
+	static bool save_bonds(std::shared_ptr<Lattice> _lat, const std::string& _dir, const std::string& _name = "history.h5");
+
+	// --------------------------------------------------------
 };
 
 #endif // !LATTICE_H

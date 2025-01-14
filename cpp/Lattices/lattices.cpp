@@ -231,3 +231,27 @@ arma::Mat<cpx> Lattice::calculate_dft_vectors(bool phase)
 }
 
 // ####################################################################################################
+
+bool Lattice::save_bonds(std::shared_ptr<Lattice> _lat, const std::string &_dir, const std::string& _name)
+{
+	if (_lat && _lat->type_ == LatticeTypes::HON)
+	{
+		const auto Ns = _lat->get_Ns();
+
+		arma::Mat<double> bonds_ = -arma::Mat<double>(Ns, 3, arma::fill::ones);
+		for (int i = 0; i < Ns; ++i)
+		{
+			uint NUM_OF_NN = (uint)_lat->get_nn_ForwardNum(i);
+			for (uint nn = 0; nn < NUM_OF_NN; nn++)
+			{
+				if (int nei = _lat->get_nnf(i, nn); nei >= 0) 
+					bonds_(i, nn) = nei;
+			}
+		}
+		saveAlgebraic(_dir, _name, bonds_, "lattice", false); 				// save the results to HDF5 file
+		return true;
+	}
+	return false;
+}
+
+// ####################################################################################################
