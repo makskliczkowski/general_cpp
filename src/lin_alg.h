@@ -671,19 +671,25 @@ namespace algebra
 			* @tparam T The type of the matrix elements.
 			*/
 			template <typename T, bool _F = false>
-			class IdentityPreconditioner : public Preconditioner<T, _F> {
-
+			class IdentityPreconditioner : public Preconditioner<T, _F> 
+			{
 			public:
 				IdentityPreconditioner()
 					: Preconditioner<T, _F>()
-					{};
+					{
+						this->type_ = 0;
+					};
 				IdentityPreconditioner(const arma::Mat<T>& A, bool _isGram, double _sigma = 0.0)
 					: Preconditioner<T, _F>(A, _isGram, _sigma)
-				{}
+				{
+					this->type_ = 0;
+				}
 
 				IdentityPreconditioner(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0)
 					: Preconditioner<T, _F>(Sp, S, _sigma)
-				{}
+				{
+					this->type_ = 0;
+				}
 
 				// -----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -723,21 +729,26 @@ namespace algebra
 				T  bigVal_			= 1e-10;	// treated as zero for 1/value
 				double tolSmall_ 	= 1.0e-10; 	// if the value is smaller than this, then 1/value is big and we create cut-off
 				T  smallVal_		= 1e10;		// treated as zero for 1/value
-				int type_ 			= 1;		// type of the preconditioner
 			public:
 
+				// -----------------------------------------------------------------------------------------------------------------------------------------
 				JacobiPreconditioner() 
 					: Preconditioner<T, _T>()
-				{};
+				{
+					this->type_ = 1;
+				};
 				// is any matrix A, not necessarily a Gram matrix. Otherwise, use isGram = true and A = S+ * S
 				JacobiPreconditioner(const arma::Mat<T>& A, bool isGram = true, double _sigma = 0.0)
 					: Preconditioner<T, _T>(A, isGram, _sigma)
-				{}
+				{
+					this->type_ = 1;
+				}
 
 				JacobiPreconditioner(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0)
 					: Preconditioner<T, _T>(Sp, S, _sigma)
-				{}
-
+				{
+					this->type_ = 1;
+				}
 				// set the preconditioner
 				void set(const arma::Mat<T>& A, bool isGram = true, double _sigma = 0.0) override
 				{
@@ -778,7 +789,7 @@ namespace algebra
 			// #################################################################################################################################################
 			
 			
-			/*
+			/**
 			* @brief Incomplete Cholesky preconditioner for the conjugate gradient method. This preconditioner is used for symmetric positive definite matrices.
 			* @tparam T The type of the matrix elements.
 			*/
@@ -788,11 +799,13 @@ namespace algebra
 			private:
 				arma::Mat<T> L_;     // lower triangular incomplete Cholesky factor
 				bool success_ 	= false;
-				int type_ 		= 2;	// type of the preconditioner
 			public:
 				IncompleteCholeskyPreconditioner()
 					: Preconditioner<T, _T>()
-				{};			
+				{
+					this->type_ = 2;
+				}
+				
 				/**
 				* @brief Constructor to initialize the preconditioner with a given matrix.
 				* @param A The matrix to decompose.
@@ -800,12 +813,15 @@ namespace algebra
 				*/
 				IncompleteCholeskyPreconditioner(const arma::Mat<T>& A, bool isGram = true, double _sigma = 0.0)
 					: Preconditioner<T, _T>(A, isGram, _sigma)
-				{}
+				{
+					this->type_ = 2;
+				}
 
 				IncompleteCholeskyPreconditioner(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0)
 					: Preconditioner<T, _T>(Sp, S, _sigma)
-				{}
-
+				{
+					this->type_ = 2;
+				}
 				// -----------------------------------------------------------------------------------------------------------------------------------------
 
 				/**
@@ -884,7 +900,7 @@ namespace algebra
 
 			// #################################################################################################################################################
 
-			/*
+			/**
 			* @brief Binormalization preconditioner for the conjugate gradient method. This preconditioner is used for symmetric positive definite matrices.
 			* Scale the matrix with a series of k diagonal matrices D1, D2, ..., Dk -> DAD = D_k ... D_2 D_1 A D_1 D_2 ... D_k
 			*/
@@ -892,12 +908,14 @@ namespace algebra
 			class BinormalizationPreconditioner : public Preconditioner<T, _T> {
 			private:
 				bool success_ 	= false;
-				int type_ 		= 3;	// type of the preconditioner
 
 			public:
 				BinormalizationPreconditioner()
 					: Preconditioner<T, _T>()
-				{};			
+				{
+					this->type_ = 3;
+				}				
+				
 				/**
 				* @brief Constructor to initialize the preconditioner with a given matrix.
 				* @param A The matrix to decompose.
@@ -905,12 +923,14 @@ namespace algebra
 				*/
 				BinormalizationPreconditioner(const arma::Mat<T>& A, bool isGram = true, double _sigma = 0.0)
 					: Preconditioner<T, _T>(A, isGram, _sigma)
-				{}
-
+				{
+					this->type_ = 3;
+				}
 				BinormalizationPreconditioner(const arma::Mat<T>& Sp, const arma::Mat<T>& S, double _sigma = 0.0)
 					: Preconditioner<T, _T>(Sp, S, _sigma)
-				{}
-
+				{
+					this->type_ = 3;
+				}
 				// -----------------------------------------------------------------------------------------------------------------------------------------
 
 				/**
@@ -1019,35 +1039,31 @@ namespace algebra
 				enum class PreconditionerType {
 					Identity
 				}; 
-			};
-
-			// -----------------------------------------------------------------------------------------------------------------------------------------
-		
+			};		
 
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 
 			template <typename T, bool _symmetric = true>
-			inline Preconditioner<T, _symmetric>* choose(Symmetric::PreconditionerType i) {
-				switch (i) {
-				case Symmetric::PreconditionerType::Identity:
-					return new IdentityPreconditioner<T, _symmetric>;
-				case Symmetric::PreconditionerType::Jacobi:
-					return new JacobiPreconditioner<T, _symmetric>;
-				case Symmetric::PreconditionerType::IncompleteCholesky:
-					return new IncompleteCholeskyPreconditioner<T, _symmetric>;
-				case Symmetric::PreconditionerType::IncompleteLU:
-					return new IncompleteLUPreconditioner<T, _symmetric>;
-				default:
-					return new IdentityPreconditioner<T, _symmetric>;
-				};
-			}
+			Preconditioner<T, _symmetric>* choose(Symmetric::PreconditionerType i);
 
 			template <typename T, bool _Sym = true>
 			inline Preconditioner<T, _Sym>* choose(int i = 0) { return choose<T, _Sym>(static_cast<Symmetric::PreconditionerType>(i)); };
 			
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 
-			inline std::string name(Symmetric::PreconditionerType i) {
+            /**
+            * @brief Returns the name of the given preconditioner type.
+            *
+            * @param i The preconditioner type.
+            * @return A string representing the name of the preconditioner type.
+            *         Possible return values are:
+            *         - "Identity" for Symmetric::PreconditionerType::Identity
+            *         - "Jacobi" for Symmetric::PreconditionerType::Jacobi
+            *         - "Incomplete Cholesky" for Symmetric::PreconditionerType::IncompleteCholesky
+            *         - "Incomplete LU" for Symmetric::PreconditionerType::IncompleteLU
+            *         - "None" for any other value
+            */
+            inline std::string name(Symmetric::PreconditionerType i) {
 				switch (i) {
 				case Symmetric::PreconditionerType::Identity:
 					return "Identity";
@@ -1058,10 +1074,9 @@ namespace algebra
 				case Symmetric::PreconditionerType::IncompleteLU:
 					return "Incomplete LU";
 				default:
-					return "Identity";
+					return "None";
 				};
 			}
-
 			inline std::string name(int i = 0) { return name(static_cast<Symmetric::PreconditionerType>(i)); };
 			
 			// -----------------------------------------------------------------------------------------------------------------------------------------
@@ -1874,9 +1889,9 @@ namespace algebra
         template <typename Derived, uint _order, typename _T, typename _CT>
         inline void RK_Base<Derived, _order, _T, _CT>::update(_CT& _y, double _h)
         {
-			const auto _dt = this->dt(_h, this->order_ - 1);				// calculate the time step from the last coefficient
+			// const auto _dt = this->dt(_h, this->order_ - 1);				// calculate the time step from the last coefficient
             for (int _c = 0; _c < this->order_; _c++)						// iterate over the coefficients and update the value
-                _y += (this->coefficients_[_c] * _dt) * this->k_[_c];		// update the value using the coefficients and the k_ array
+                _y += (this->coefficients_[_c] * _h) * this->k_[_c];		// update the value using the coefficients and the k_ array
         }
 
 		/**
@@ -1901,10 +1916,10 @@ namespace algebra
 		template <typename Derived, uint _order, typename _T, typename _CT>
 		inline _CT RK_Base<Derived, _order, _T, _CT>::update(const _CT& _y, double _h)
 		{
-			const auto _dt 	= this->dt(_h, this->order_ - 1);				// calculate the time step from the last coefficient
+			// const auto _dt 	= this->dt(_h, this->order_ - 1);				// calculate the time step from the last coefficient
 			this->kout_ 	= _y;											// initialize the output with the current state
 			for (int _c = 0; _c < this->order_; _c++)
-				this->kout_ += (_dt * this->coefficients_[_c]) * this->k_[_c];
+				this->kout_ += (_h * this->coefficients_[_c]) * this->k_[_c];
 			return _y + this->kout_;										// return the updated state
 		}
 
@@ -1975,8 +1990,8 @@ namespace algebra
 			Euler,
 			Heun,
 			RK2,
-			RK4,
-			RKAdaptive
+			RK4 		= 4,
+			RKAdaptive 	= 5
 		};
 
 		/**

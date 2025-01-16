@@ -300,15 +300,17 @@ namespace Threading
 		std::vector<std::thread> workers_;
 		std::queue<Task> taskQueue_;
 		std::condition_variable cv_;
+		std::condition_variable waitCv_;
 		std::mutex queueMutex_;
 		bool stop_ = false;
-
+    	std::atomic<size_t> activeTasks_{0}; 										// Tracks active tasks
 	public:
 		ThreadPool(size_t numThreads = std::thread::hardware_concurrency());
 		~ThreadPool();
 
 		void submit(Task task);
 		void shutdown();
+		void waitAll();
 
 		// mutex for the thread pool
 		std::mutex& mutex() 				{ return this->queueMutex_; }

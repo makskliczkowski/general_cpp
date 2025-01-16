@@ -9,6 +9,86 @@
 // ##########################################################################################################################################
 
 /**
+* @brief Resets the random number generator with a new seed.
+* 
+* This function deletes the existing random number generator (if any) and 
+* creates a new one with the provided seed.
+* 
+* @tparam _T The type parameter for the MonteCarloSolver.
+* @tparam _stateType The type parameter for the state.
+* @tparam _CT The type parameter for the configuration.
+* @param _seed The seed value to initialize the random number generator.
+*/
+template <typename _T, typename _stateType, typename _CT>
+void MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>::reset_random(size_t _seed)
+{
+    if(this->ran_) 
+        delete this->ran_;
+    this->ran_ = new randomGen(_seed);
+}
+// template instantiation
+template void MonteCarlo::MonteCarloSolver<double, arma::Col<double>, arma::Mat<double>>::reset_random(size_t);
+template void MonteCarlo::MonteCarloSolver<float, arma::Col<float>, arma::Mat<float>>::reset_random(size_t);
+template void MonteCarlo::MonteCarloSolver<std::complex<double>, arma::Col<std::complex<double>>, arma::Mat<std::complex<double>>>::reset_random(size_t);
+
+// ##########################################################################################################################################
+
+// constructors
+template <typename _T, typename _stateType, typename _CT>
+MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>::MonteCarloSolver(const MonteCarloSolver<_T, _stateType, _CT>& _n)
+{
+    // copy the random generator - !TODO: should copy the seed???
+    size_t seed_ [[maybe_unused]] = _n.ran_->seed();
+    this->ran_          = new randomGen();
+    // copy the progress bar
+    this->pBar_         = new pBar();
+    // copy the information
+    this->info_         = _n.info_;
+    // copy the Hamiltonian
+    this->accepted_     = _n.accepted_;
+    this->total_        = _n.total_;
+    this->lastLoss_     = _n.lastLoss_;
+    this->beta_         = _n.beta_;
+    this->info_         = _n.info_;
+    this->replica_      = _n.replica_;
+}
+
+/**
+* @brief Move constructor for MonteCarloSolver.
+*
+* This constructor initializes a MonteCarloSolver object by moving the resources
+* from another MonteCarloSolver object. It transfers ownership of the random 
+* generator, progress bar, and other relevant information from the source object 
+* to the newly created object.
+*
+* @tparam _T The type parameter for the solver.
+* @tparam _stateType The type parameter for the state.
+* @tparam _CT The type parameter for the configuration.
+* @param _n The MonteCarloSolver object to move from.
+*/
+template <typename _T, typename _stateType, typename _CT>
+MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>::MonteCarloSolver(MonteCarloSolver<_T, _stateType, _CT>&& _n)
+{
+    // move the random generator
+    this->ran_          = _n.ran_;
+    _n.ran_             = nullptr;
+    // move the progress bar
+    this->pBar_         = _n.pBar_;
+    _n.pBar_            = nullptr;
+    // move the information
+    this->info_         = std::move(_n.info_);
+    // move the Hamiltonian
+    this->accepted_     = _n.accepted_;
+    this->total_        = _n.total_;
+    this->lastLoss_     = _n.lastLoss_;
+    this->beta_         = _n.beta_;
+    this->info_         = std::move(_n.info_);
+    this->replica_      = _n.replica_;
+}
+
+// ##########################################################################################################################################
+
+/**
 * @brief Logs the configuration details of the MCS training process.
 *
 * This function constructs a formatted string containing various parameters
@@ -212,8 +292,28 @@ namespace MonteCarlo
 
     // #################################################################################################################################
 
+    template <typename _T, typename _stateType, typename _Config_t>
+    MonteCarloSolver<_T, _stateType, _Config_t>::MonteCarloSolver()
+    {
+        this->ran_  = new randomGen();
+    }
+    // template instantiation
+    template MonteCarloSolver<double, double, arma::Col<double>>::MonteCarloSolver();
+    template MonteCarloSolver<float, float, arma::Col<float>>::MonteCarloSolver();
+    template MonteCarloSolver<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>::MonteCarloSolver();
+    // mix
+    template MonteCarloSolver<double, std::complex<double>, arma::Col<std::complex<double>>>::MonteCarloSolver();
+    template MonteCarloSolver<std::complex<double>, double, arma::Col<double>>::MonteCarloSolver();
+
+    // #################################################################################################################################
+
     template <typename T, typename U, typename V>
-    MonteCarloSolver<T, U, V>::~MonteCarloSolver() {}
+    MonteCarloSolver<T, U, V>::~MonteCarloSolver() 
+    {
+        if (this->pBar_)
+            delete this->pBar_;
+        this->pBar_ = nullptr;
+    }
 
     // template instantiation
     template MonteCarloSolver<double, double, arma::Col<double>>::~MonteCarloSolver();
@@ -231,10 +331,12 @@ namespace MonteCarlo
 {
     // #################################################################################################################################
 
-    // template instantiation
-    template ParallelTempering<double, double, arma::Col<double>>::ParallelTempering();
-    template ParallelTempering<float, float, arma::Col<float>>::ParallelTempering();
-    template ParallelTempering<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>::ParallelTempering();
+    // template class instantiation
+    template class ParallelTempering<double, double, arma::Col<double>>;
+    template class ParallelTempering<float, float, arma::Col<float>>;
+    template class ParallelTempering<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>;
+    template class ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>;
+    template class ParallelTempering<std::complex<double>, double, arma::Col<double>>;
 
     // #################################################################################################################################
 
@@ -250,29 +352,64 @@ namespace MonteCarlo
     template ParallelTempering<double, double, arma::Col<double>>::~ParallelTempering();
     template ParallelTempering<float, float, arma::Col<float>>::~ParallelTempering();
     template ParallelTempering<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>::~ParallelTempering();
+    template ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::~ParallelTempering();
+    template ParallelTempering<std::complex<double>, double, arma::Col<double>>::~ParallelTempering();
 
     // #################################################################################################################################
 
+    /**
+    * @brief Constructor for the ParallelTempering class.
+    *
+    * This constructor initializes the ParallelTempering object with the given parameters.
+    *
+    * @tparam _T The type of the elements.
+    * @tparam _stateType The type of the state.
+    * @tparam _Config_t The type of the configuration.
+    * @param _MCS A pointer to the solver.
+    * @param _betas A vector of beta values.
+    * @param _nSolvers The number of solvers.
+    *
+    * @throws std::invalid_argument If the number of solvers is less than 1.
+    * @throws std::invalid_argument If the number of solvers does not match the number of betas.
+    *
+    * This constructor performs the following steps:
+    * - Initializes the thread pool with the number of solvers.
+    * - Checks if the number of solvers is valid.
+    * - Checks if the number of solvers matches the number of betas.
+    * - If no betas are provided, initializes the betas with default values.
+    * - Adds the provided solver to the list of solvers.
+    * - Replicates the solver for the number of solvers.
+    * - Sets the beta value for each solver.
+    * - Initializes various counters and containers.
+    */
     template <typename _T, class _stateType, class _Config_t>
     ParallelTempering<_T, _stateType, _Config_t>::ParallelTempering(Solver_p _MCS, const std::vector<double>& _betas, size_t _nSolvers)
         : threadPool_(_nSolvers), nSolvers_(_nSolvers), betas_(_betas), lastLosses_(_nSolvers, 0.0), accepted_(_nSolvers, 0), total_(_nSolvers, 0)
     {
         if (_nSolvers < 1)
-            throw std::invalid_argument("The number of solvers must be greater than 0.");
+            throw std::invalid_argument("The number of solvers must be greater than 1.");
         if (_nSolvers != this->betas_.size() && this->betas_.size() != 0)
             throw std::invalid_argument("The number of solvers must match the number of betas.");
         else if (this->betas_.size() == 0)
         {
             this->betas_ = std::vector<double>(_nSolvers);
             for (size_t i = 0; i < _nSolvers; ++i)
+            {
                 this->betas_[i] = 1.0 / (double)(i + 1);
+            }
         }
 
         this->MCSs_.push_back(_MCS);
         this->replicate(this->nSolvers_);
+        // Initialize the counters
+        for (size_t i = 0; i < this->nSolvers_; ++i)
+        {
+            this->MCSs_[i]->setBeta(this->betas_[i]);
+        }
 
         // Initialize the counters
         this->finished_     = std::vector<bool>(this->nSolvers_, false);
+        this->errors_       = std::vector<bool>(this->nSolvers_, false);
         this->total_        = std::vector<u64>(this->nSolvers_, 0);
         this->accepted_     = std::vector<u64>(this->nSolvers_, 0);
         this->losses_       = v_1d<Container_t>(this->nSolvers_);
@@ -284,26 +421,50 @@ namespace MonteCarlo
     template ParallelTempering<double, double, arma::Col<double>>::ParallelTempering(Solver_p, const std::vector<double>&, size_t);
     template ParallelTempering<float, float, arma::Col<float>>::ParallelTempering(Solver_p, const std::vector<double>&, size_t);
     template ParallelTempering<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>::ParallelTempering(Solver_p, const std::vector<double>&, size_t);
+    template ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::ParallelTempering(Solver_p, const std::vector<double>&, size_t);
+    template ParallelTempering<std::complex<double>, double, arma::Col<double>>::ParallelTempering(Solver_p, const std::vector<double>&, size_t);
 
     // #################################################################################################################################
 
     template <typename _T, class _stateType, class _Config_t>
     void ParallelTempering<_T, _stateType, _Config_t>::replicate(size_t _nSolvers)
     {
-        if (_nSolvers < 2)
+        if (_nSolvers < 1)
             throw std::invalid_argument("The number of solvers must be greater than 1.");
 
-        for (size_t i = 1; i < _nSolvers; ++i)
-            this->MCSs_.push_back(this->MCSs_[0]->clone());        
+        for (size_t i = 1; i < _nSolvers; ++i) {
+            auto _MCS = this->MCSs_[0]->clone();
+            _MCS->setReplica(i);
+            this->MCSs_.push_back(_MCS);        
+        }
     }
 
     // template instantiation
     template void ParallelTempering<double, double, arma::Col<double>>::replicate(size_t);
     template void ParallelTempering<float, float, arma::Col<float>>::replicate(size_t);
     template void ParallelTempering<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>::replicate(size_t);
+    template void ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::replicate(size_t);
+    template void ParallelTempering<std::complex<double>, double, arma::Col<double>>::replicate(size_t);
 
     // #################################################################################################################################
 
+    /**
+    * @brief Constructs a ParallelTempering object.
+    *
+    * This constructor initializes the ParallelTempering object with the given Monte Carlo solvers and beta values.
+    * It sets up the thread pool, initializes the solvers and beta values, and prepares various counters and containers
+    * for tracking the progress and results of the parallel tempering process.
+    *
+    * @tparam _T The type of the data used in the solvers.
+    * @tparam _stateType The type of the state used in the solvers.
+    * @tparam _Config_t The type of the configuration used in the solvers.
+    * @param _MCSs A vector of shared pointers to the Monte Carlo solvers.
+    * @param _betas A vector of beta values corresponding to each solver. If empty, beta values will be initialized
+    *               to 1.0 / (i + 1) for each solver.
+    *
+    * @throws std::invalid_argument If the number of solvers is less than 1 or if the number of solvers does not match
+    *                               the number of beta values provided (unless the beta vector is empty).
+    */
     template <typename _T, class _stateType, class _Config_t>
     ParallelTempering<_T, _stateType, _Config_t>::ParallelTempering(const std::vector<Solver_p>& _MCSs, const std::vector<double>& _betas)
         : threadPool_(_MCSs.size()), nSolvers_(_MCSs.size()), MCSs_(_MCSs), betas_(_betas), lastLosses_(_MCSs.size(), 0.0), accepted_(_MCSs.size(), 0), total_(_MCSs.size(), 0)
@@ -315,12 +476,16 @@ namespace MonteCarlo
         else if (this->betas_.size() == 0)
         {
             this->betas_ = std::vector<double>(this->nSolvers_);
-            for (size_t i = 0; i < this->nSolvers_; ++i)
+            for (size_t i = 0; i < this->nSolvers_; ++i) 
+            {
                 this->betas_[i] = 1.0 / (double)(i + 1);
+                this->MCSs_[i]->setBeta(this->betas_[i]);
+            }
         }
 
         // Initialize the counters
         this->finished_     = std::vector<bool>(this->nSolvers_, false);
+        this->errors_       = std::vector<bool>(this->nSolvers_, false);
         this->total_        = std::vector<u64>(this->nSolvers_, 0);
         this->accepted_     = std::vector<u64>(this->nSolvers_, 0);
         this->losses_       = v_1d<Container_t>(this->nSolvers_);
@@ -332,6 +497,8 @@ namespace MonteCarlo
     template ParallelTempering<double, double, arma::Col<double>>::ParallelTempering(const std::vector<Solver_p>&, const std::vector<double>&);
     template ParallelTempering<float, float, arma::Col<float>>::ParallelTempering(const std::vector<Solver_p>&, const std::vector<double>&);
     template ParallelTempering<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>::ParallelTempering(const std::vector<Solver_p>&, const std::vector<double>&);
+    template ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::ParallelTempering(const std::vector<Solver_p>&, const std::vector<double>&);
+    template ParallelTempering<std::complex<double>, double, arma::Col<double>>::ParallelTempering(const std::vector<Solver_p>&, const std::vector<double>&);
 
     // #################################################################################################################################
 
@@ -360,7 +527,8 @@ namespace MonteCarlo
                                             const bool randomStart,
                                             Timer& _timer)
     {
-
+        const size_t local_start    = 0;
+        const size_t local_end      = this->nSolvers_;
         if constexpr (useMPI)
         {
 #ifndef MC_ENABLE_MPI
@@ -371,52 +539,46 @@ namespace MonteCarlo
         MPI_Comm_size(MPI_COMM_WORLD, &size);
 
         // Determine the range of solvers for this rank
-        const size_t local_start = (this->nSolvers_ / size) * rank;
-        const size_t local_end = (rank == size - 1) ? this->nSolvers_ : local_start + (this->nSolvers_ / size);
-
-        for (size_t j = local_start; j < local_end; ++j)
-        {
-            if (!this->finished_[j])
-                this->finished_[j] = this->MCSs_[j]->trainStep(i, this->losses_[j], this->meanLosses_[j], 
-                                                this->stdLosses_[j], _par, quiet, randomStart, _timer);
+        local_start = (this->nSolvers_ / size) * rank;
+        local_end   = (rank == size - 1) ? this->nSolvers_ : local_start + (this->nSolvers_ / size);
+#endif
         }
-        
+
+        // Submit tasks to the thread pool
+        for (size_t j = local_start; j < local_end; ++j) 
+        {
+            if (this->finished_[j]) 
+                continue;
+
+            if (j == 0)
+                continue; // only the first solver is used for now
+
+            this->threadPool_.submit([this, i, j, &_par, quiet, randomStart, &_timer]() {
+                try 
+                {                    
+                    this->finished_[j] = this->MCSs_[j]->trainStep(
+                        i, this->losses_[j], this->meanLosses_[j], this->stdLosses_[j], 
+                        _par, quiet, randomStart, _timer);
+                } 
+                catch (const std::exception& e) 
+                {
+                    std::cerr << "Solver " << j << " threw an exception: " << e.what() << std::endl;
+                    this->finished_[j]  = true; // only whenever the whole solver is done
+                    this->errors_[j]    = true; // only when the solver has an error
+                }
+            });
+        }
+        // Wait for all tasks to complete
+        this->threadPool_.waitAll(); 
+
         // update counters
         for (size_t j = local_start; j < local_end; ++j)
         {
+            if (this->finished_[j] || this->errors_[j])
+                continue;
             this->total_[j]         = this->MCSs_[j]->getTotal();
             this->accepted_[j]      = this->MCSs_[j]->getAccepted();
             this->lastLosses_[j]    = this->MCSs_[j]->getLastLoss();
-        }
-#endif
-        }
-        else
-        {
-            for (size_t j = 0; j < this->nSolvers_; ++j)
-            {
-                if (this->finished_[j])                                     // if the solver has finished, skip it
-                    continue;
-                this->threadPool_.submit([this, i, j, &_par, quiet, randomStart, &_timer]() 
-                    {
-                        this->finished_[j] = this->MCSs_[j]->trainStep(i, this->losses_[j], 
-                                                    this->meanLosses_[j], this->stdLosses_[j], 
-                                                    _par, quiet, randomStart, _timer);
-                    });
-            }
-
-            // Wait for all tasks to finish
-            {
-                std::unique_lock lock(this->threadPool_.mutex()); // Access thread pool's queue mutex
-                threadPool_.cv().wait(lock, [this]() { return threadPool_.taskQueue().empty(); });
-            }
-            
-            // update counters
-            for (size_t j = 0; j < this->nSolvers_; ++j)
-            {
-                this->total_[j]         = this->MCSs_[j]->getTotal();
-                this->accepted_[j]      = this->MCSs_[j]->getAccepted();
-                this->lastLosses_[j]    = this->MCSs_[j]->getLastLoss();
-            }
         }
     }
 
@@ -425,10 +587,12 @@ namespace MonteCarlo
     template void ParallelTempering<double>::trainStep<false>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer& _timer);
     template void ParallelTempering<float>::trainStep<false>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer& _timer);
     template void ParallelTempering<std::complex<double>>::trainStep<false>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer& _timer);
+    template void ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::trainStep<false>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer& _timer);
     // MPI
     template void ParallelTempering<double>::trainStep<true>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer& _timer);
     template void ParallelTempering<float>::trainStep<true>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer& _timer);
     template void ParallelTempering<std::complex<double>>::trainStep<true>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer& _timer);
+    template void ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::trainStep<true>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer& _timer);
 
     // #################################################################################################################################
 
@@ -447,7 +611,10 @@ namespace MonteCarlo
     template <typename _T, class _stateType, class _Config_t>
     void ParallelTempering<_T, _stateType, _Config_t>::swap(size_t i, size_t j)
     {        
-        if (i == j || i >= this->nSolvers_ || j >= this->nSolvers_ || this->finished_[i] || this->finished_[j])
+        if (i == j || i >= this->nSolvers_                  || 
+                j >= this->nSolvers_                        || 
+                this->finished_[i] || this->finished_[j]    || 
+                this->errors_[i] || this->errors_[j])
             return;
 
         // Calculate the acceptance probability
@@ -468,6 +635,7 @@ namespace MonteCarlo
     template void ParallelTempering<double>::swap(size_t i, size_t j);
     template void ParallelTempering<float>::swap(size_t i, size_t j);
     template void ParallelTempering<std::complex<double>>::swap(size_t i, size_t j);
+    template void ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::swap(size_t i, size_t j);
 
     // #################################################################################################################################
     
@@ -489,7 +657,7 @@ namespace MonteCarlo
         size_t i = 0;
         while (i < this->nSolvers_ - 1)
         {
-            if (this->finished_[i])                                 // Skip finished solvers
+            if (this->finished_[i] || this->errors_[i])             // Skip finished solvers
             {
                 ++i;
                 continue;
@@ -497,7 +665,8 @@ namespace MonteCarlo
 
             size_t j = i + 1;
             
-            while (j < this->nSolvers_ && this->finished_[j])       // Find the next unfinished solver
+            // Find the next unfinished solver
+            while (j < this->nSolvers_ && this->finished_[j] && this->errors_[j])
                 ++j;
 
             if (j < this->nSolvers_)                                // If a valid solver is found, perform the swap
@@ -514,6 +683,7 @@ namespace MonteCarlo
     template void ParallelTempering<double>::swaps();
     template void ParallelTempering<float>::swaps();
     template void ParallelTempering<std::complex<double>>::swaps();
+    template void ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::swaps();
 
     // #################################################################################################################################
 
@@ -538,13 +708,15 @@ namespace MonteCarlo
     template <typename _T, class _stateType, class _Config_t>
     void ParallelTempering<_T, _stateType, _Config_t>::trainSingle(const MCS_train_t& _par, bool quiet, bool ranStart, clk::time_point _t, uint progPrc)
     {
-        this->MCSs_[0]->train(_par, quiet, ranStart, _t, progPrc);
+        std::tie(this->meanLosses_[0], this->stdLosses_[0]) = this->MCSs_[0]->train(_par, quiet, ranStart, _t, progPrc);
     }
 
     // template instantiation
     template void ParallelTempering<double, double, arma::Col<double>>::trainSingle(const MCS_train_t&, bool, bool, clk::time_point, uint);
     template void ParallelTempering<float, float, arma::Col<float>>::trainSingle(const MCS_train_t&, bool, bool, clk::time_point, uint);
     template void ParallelTempering<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>::trainSingle(const MCS_train_t&, bool, bool, clk::time_point, uint);
+    template void ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::trainSingle(const MCS_train_t&, bool, bool, clk::time_point, uint);
+    template void ParallelTempering<std::complex<double>, double, arma::Col<double>>::trainSingle(const MCS_train_t&, bool, bool, clk::time_point, uint);
 
     // #################################################################################################################################
 
@@ -591,17 +763,25 @@ namespace MonteCarlo
                 throw std::runtime_error("MPI is not enabled in this build.");
             #endif
         }
+        // Initialize the progress bar and training information
         {
+            if (this->pBar_)
+                delete this->pBar_;
             this->pBar_ = new pBar(progPrc, _par.MC_sam_);					// set the progress bar		
+            
             _par.hi();														// set the info about training
             for (size_t i = 0; i < this->nSolvers_; ++i)
                 this->MCSs_[i]->reset(_par.nblck_);						    // reset the derivatives
         }
 
         v_1d<Timer> timers(this->nSolvers_);							    // timer for the training
+        
+        // resize the losses
         this->losses_.resize(this->nSolvers_);							    // losses for each solver
         for (size_t i = 0; i < this->nSolvers_; ++i)    
-            this->losses_[i].resize(_par.bsize_);			    	        // losses for each solver
+            this->losses_[i].resize(_par.nblck_);			    	        // losses for each solver
+        
+        // resize the means
         this->meanLosses_.resize(this->nSolvers_);				            // mean losses for each solver
         for (size_t i = 0; i < this->nSolvers_; ++i)    
             this->meanLosses_[i].resize(_par.MC_sam_);	    		        // mean losses for each solver
@@ -609,37 +789,48 @@ namespace MonteCarlo
         for (size_t i = 0; i < this->nSolvers_; ++i)    
             this->stdLosses_[i].resize(_par.MC_sam_);				        // standard deviation of the losses for each solver
         
-        for (size_t i = 0; i < this->nSolvers_; ++i) 
+        // Set the random state and the number of flips
+        for (size_t i = 0; i < this->nSolvers_; ++i)
         {
             this->MCSs_[i]->setRandomState();       	    			    // set the random state at the begining and the number of flips
             this->MCSs_[i]->setRandomFlipNum(_par.nFlip);				    // set the random state at the begining and the number of flips
         }
-    
-        for (size_t i = 0; i < _par.MC_sam_; ++i)                           // go through the training steps
+        // Perform the training steps
+        for (size_t i = 1; i <= _par.MC_sam_; ++i)                          // go through the training steps
         {
             this->trainStep<useMPI>(i, _par, quiet, ranStart, timers[i]);   // perform the training step
 
             // inform the user about the progress
             { 
-                double _bestLoss = std::numeric_limits<double>::max(), _bestAcc = 0.0;
-                size_t _bestIdx = 0, _bestAccIdx = 0;
-                std::string _prog;
+                double _bestLoss    = std::numeric_limits<double>::max(), _bestAcc = 0.0;
+                size_t _bestIdx     = 0;
+                size_t _bestAccIdx  = 0;
                 for (size_t j = 0; j < this->nSolvers_; ++j)
                 {
                     const double _currLoss = algebra::cast<double>(this->lastLosses_[j]);
                     if (_currLoss < _bestLoss)
                     {
-                        _bestLoss = _currLoss;
-                        _bestIdx = j;
+                        _bestLoss           = _currLoss;
+                        _bestIdx            = j;
+                        // update the best loss
+                        this->bestLoss_     = this->lastLosses_[j];
+                        this->bestIdx_      = j;
                     }
+                    
+                    if (this->total_[j] <= 0)
+                        continue;
+
                     const double _currAcc = (double)this->accepted_[j] / this->total_[j];
                     if (_currAcc > _bestAcc)
                     {
-                        _bestAcc = _currAcc;
-                        _bestAccIdx = j;
+                        _bestAcc            = _currAcc;
+                        _bestAccIdx         = j;
+                        // update the best acceptance
+                        this->bestAcc_      = _bestAcc;
+                        this->bestAccIdx_   = j;
                     }
                 }
-                _prog = "Iteration " + std::to_string(i) + "/" + std::to_string(_par.MC_sam_) +
+                std::string _prog = "Iteration " + std::to_string(i) + "/" + std::to_string(_par.MC_sam_) +
                     ", Best Loss: " + std::to_string(_bestLoss) +
                     ", Best Acceptance: " + std::to_string(_bestAcc * 100) + "%" +
                     ", Best Solver Index: " + std::to_string(_bestIdx) +
@@ -670,11 +861,14 @@ namespace MonteCarlo
     template void ParallelTempering<double, double, arma::Col<double>>::train<false>(const MCS_train_t&, bool, bool, clk::time_point, uint);
     template void ParallelTempering<float, float, arma::Col<float>>::train<false>(const MCS_train_t&, bool, bool, clk::time_point, uint);
     template void ParallelTempering<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>::train<false>(const MCS_train_t&, bool, bool, clk::time_point, uint);
+    template void ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::train<false>(const MCS_train_t&, bool, bool, clk::time_point, uint);
+    template void ParallelTempering<std::complex<double>, double, arma::Col<double>>::train<false>(const MCS_train_t&, bool, bool, clk::time_point, uint);
     // MPI
     template void ParallelTempering<double, double, arma::Col<double>>::train<true>(const MCS_train_t&, bool, bool, clk::time_point, uint);
     template void ParallelTempering<float, float, arma::Col<float>>::train<true>(const MCS_train_t&, bool, bool, clk::time_point, uint);
     template void ParallelTempering<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>::train<true>(const MCS_train_t&, bool, bool, clk::time_point, uint);
-
+    template void ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::train<true>(const MCS_train_t&, bool, bool, clk::time_point, uint);
+    template void ParallelTempering<std::complex<double>, double, arma::Col<double>>::train<true>(const MCS_train_t&, bool, bool, clk::time_point, uint);
     // #################################################################################################################################
     
 };

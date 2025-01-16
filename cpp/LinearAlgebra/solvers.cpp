@@ -692,13 +692,15 @@ namespace algebra
 				case Solvers::General::Type::Direct:
 					return new Direct::Direct_s<_T1, _symmetric>(_N, _eps, _max_iter, _reg, _preconditioner);
 				default:
-					return new CG::ConjugateGradient_s<_T1, _symmetric>(_N, _eps, _max_iter, _reg, _preconditioner);
+					return nullptr;
 				}
 			}
 
 			template <typename _T1, bool _symmetric>
 			Solver<_T1, _symmetric>* choose(int _type, size_t _N, double _eps, size_t _max_iter, double _reg, Precond<_T1, _symmetric>* _preconditioner) 
 			{ 
+				if (_type < 0)
+					return nullptr;
 				return choose<_T1, _symmetric>(static_cast<Solvers::General::Type>(_type), _N, _eps, _max_iter, _reg, _preconditioner); 
 			}
 

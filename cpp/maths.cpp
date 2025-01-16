@@ -54,6 +54,10 @@ namespace Threading
     * tasks until the thread pool is stopped and the task queue is empty.
     * 
     * @param numThreads The number of worker threads to create in the thread pool.
+    * @note The number of threads defaults to the number of hardware threads available on the system.
+    * @note The thread pool is started immediately after construction.
+    * @note The thread pool is stopped and joined when the destructor is called.
+    * @note The thread pool is not copyable or movable.
     */
     ThreadPool::ThreadPool(size_t numThreads) 
     {
@@ -66,15 +70,26 @@ namespace Threading
                     ThreadPool::Task task;
                     {
                         std::unique_lock lock(queueMutex_);
-                        cv_.wait(lock, [this]() { return stop_ || !taskQueue_.empty(); });
+                        this->cv_.wait(lock, [this]() { return stop_ || !taskQueue_.empty(); });
 
                         if (stop_ && taskQueue_.empty())
                             return;
 
                         task = std::move(taskQueue_.front());
-                        taskQueue_.pop();
+                        this->taskQueue_.pop();
+                        ++this->activeTasks_;
                     }
                     task();
+
+                    // Artificial waiting
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+                    // Notify that the task has been completed
+                    {
+                        std::lock_guard lock(this->queueMutex_);
+                        --this->activeTasks_;
+                    }
+                    this->waitCv_.notify_one();
                 }
             });
         }
@@ -122,7 +137,7 @@ namespace Threading
             std::lock_guard lock(this->queueMutex_);
             this->stop_ = true;
         }
-        cv_.notify_all();
+        this->cv_.notify_all();
         for (auto& worker : workers_) {
             if (worker.joinable()) {
                 worker.join();
@@ -131,6 +146,26 @@ namespace Threading
     }
 
     // #################################################################################################################################
+
+    /**
+    * @brief Waits for all tasks in the thread pool to complete.
+    *
+    * This function blocks the calling thread until all tasks in the thread pool
+    * have finished executing. It acquires a unique lock on the queue mutex and
+    * waits on a condition variable until the task queue is empty and there are
+    * no active tasks.
+    */
+    void ThreadPool::waitAll() 
+    {
+        std::unique_lock lock(this->queueMutex_);
+        waitCv_.wait(lock, [this]() 
+        {
+            return this->taskQueue_.empty() && this->activeTasks_ == 0;
+        });
+    }
+
+    // #################################################################################################################################
+
 };
 
 // #####################################################################################################################################

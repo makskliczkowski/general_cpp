@@ -56,23 +56,23 @@ namespace algebra
             _yout = _y;
             if constexpr (_order == 1)
             {
-            this->k_[0] = _f(_t, 0, _y);
+                this->k_[0] = _f(_t, this->dt(_h, 0), _y);
             }
             else if constexpr (_order == 2)
             {
-            this->k_[0] = _f(_t, 0, _y);
-            this->k_[1] = _f(_t + this->dt(_h, 1), 0, _y + this->dt(_h, 1) * this->k_[0]);
+                this->k_[0] = _f(_t, this->dt(_h, 0), _y);
+                this->k_[1] = _f(_t + this->dt(_h, 1), this->dt(_h, 1), _y + this->dt(_h, 1) * this->k_[0]);
             }
             else if constexpr (_order == 4)
             {
-            this->k_[0] = _f(_t, 0, _y);
-            this->k_[1] = _f(_t + this->dt(_h, 1), 0, _y + this->dt(_h, 1) * this->k_[0]);
-            this->k_[2] = _f(_t + this->dt(_h, 2), 0, _y + this->dt(_h, 2) * this->k_[1]);
-            this->k_[3] = _f(_t + this->dt(_h, 3), 0, _y + this->dt(_h, 3) * this->k_[2]);
+                this->k_[0] = _f(_t, this->dt(_h, 0), _y);
+                this->k_[1] = _f(_t + this->dt(_h, 1), this->dt(_h, 1), _y + this->dt(_h, 1) * this->k_[0]);
+                this->k_[2] = _f(_t + this->dt(_h, 2), this->dt(_h, 2), _y + this->dt(_h, 2) * this->k_[1]);
+                this->k_[3] = _f(_t + this->dt(_h, 3), this->dt(_h, 3), _y + this->dt(_h, 3) * this->k_[2]);
             }
             else
             {
-            throw std::runtime_error("Invalid order for the Runge-Kutta method.");
+                throw std::runtime_error("Invalid order for the Runge-Kutta method.");
             }
             this->update(_yout, _h);
         }
@@ -92,23 +92,23 @@ namespace algebra
             _yout = _y;
             if constexpr (_order == 1)
             {
-            _f(_t, this->dt(_h, 0), _y, this->k_[0]);
+                _f(_t, this->dt(_h, 0), _y, this->k_[0]);
             }
             else if constexpr (_order == 2)
             {
-            _f(_t, this->dt(_h, 0), _y, this->k_[0]);
-            _f(_t + this->dt(_h, 1), this->dt(_h, 1), _y + this->dt(_h, 1) * this->k_[0], this->k_[1]);
+                _f(_t, this->dt(_h, 0), _y, this->k_[0]);
+                _f(_t + this->dt(_h, 1), this->dt(_h, 1), _y + this->dt(_h, 1) * this->k_[0], this->k_[1]);
             }
             else if constexpr (_order == 4)
             {
-            _f(_t, this->dt(_h, 0), _y, this->k_[0]);
-            _f(_t + this->dt(_h, 1), this->dt(_h, 1), _y + this->dt(_h, 1) * this->k_[0], this->k_[1]);
-            _f(_t + this->dt(_h, 2), this->dt(_h, 2), _y + this->dt(_h, 2) * this->k_[1], this->k_[2]);
-            _f(_t + this->dt(_h, 3), this->dt(_h, 3), _y + this->dt(_h, 3) * this->k_[2], this->k_[3]);
+                _f(_t, this->dt(_h, 0), _y, this->k_[0]);
+                _f(_t + this->dt(_h, 1), this->dt(_h, 1), _y + this->dt(_h, 1) * this->k_[0], this->k_[1]);
+                _f(_t + this->dt(_h, 2), this->dt(_h, 2), _y + this->dt(_h, 2) * this->k_[1], this->k_[2]);
+                _f(_t + this->dt(_h, 3), this->dt(_h, 3), _y + this->dt(_h, 3) * this->k_[2], this->k_[3]);
             }
             else
             {
-            throw std::runtime_error("Invalid order for the Runge-Kutta method.");
+                throw std::runtime_error("Invalid order for the Runge-Kutta method.");
             }
             this->update(_yout, _h);
         }

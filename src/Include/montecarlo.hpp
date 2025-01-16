@@ -3,6 +3,7 @@
 #include "../lin_alg.h"
 #include "armadillo"
 #include <cstddef>
+#include <limits>
 #include <random>
 #include <ctime>
 #include <numeric>
@@ -120,12 +121,15 @@ namespace MonteCarlo
         const _T epsilon_ 					= 		std::numeric_limits<_T>::epsilon();     // machine epsilon
         u64 accepted_                       =       0;                                      // number of accepted steps
         u64 total_                          =       0;                                      // total number of steps
-        _T lastLoss_                        =       0.0;                                    // last loss value (used for the stopping criterion and the progress bar)
+        _T lastLoss_                        =       std::numeric_limits<double>::max();     // last loss value (used for the stopping criterion and the progress bar)
         double beta_                        =       1.0;                                    // inverse temperature, by default is 1.0 as we are in the energy based models optimization 
     public:                                                     
         virtual ~MonteCarloSolver()         =       0;                                      // virtual destructor
-
+        MonteCarloSolver();                                                                 // default constructor
+        MonteCarloSolver(const MC_t&);
+        MonteCarloSolver(MC_t&&);
     protected:                                                      
+        size_t replica_                     =       1;                                      // number of a current replica
         std::string info_                   =       "Monte Carlo Solver";                   // information about the solver
 	    randomGen* ran_                     =       nullptr;                                // consistent quick random number generator
         pBar* pBar_                         =       nullptr;								// for printing out the progress
@@ -168,12 +172,15 @@ namespace MonteCarlo
         void setRandomGen(randomGen* _ran)                                                  { this->ran_ = _ran; };
         void setProgressBar(pBar* _pBar)                                                    { this->pBar_ = _pBar; };
         void setBeta(double _beta)                                                          { this->beta_ = _beta; };
+        void setReplica(size_t _replica)                                                    { this->replica_ = _replica; };
+        void reset_random(size_t _seed);
         // virtual
         virtual void setConfig(const Config_t& _config)                                     = 0; // set the configuration
         virtual void swapConfig(MC_t_p _other)                                              = 0; // exchange information
         // reset
         virtual void reset(size_t)                                                          = 0; // reset the MCS
         virtual auto clone()                const -> MC_t_p                                 = 0; // clone the MCS
+        virtual auto clone(MC_t_p _other)  -> void                                          = 0; // clone the MCS from the other MCS
     };
 
     // #################################################################################################################################
@@ -228,6 +235,8 @@ namespace MonteCarlo
         pBar* pBar_         = nullptr;                                                                                                // progress bar
     protected:
         size_t nSolvers_;                                                                                                             // number of solvers
+        size_t bestIdx_, bestAccIdx_;                                                                                                          // index of the best solver
+        _T bestLoss_, bestAcc_;                                                                                                            // best loss
         std::vector<Solver_p> MCSs_;                                                                                                  // pointers to the Monte Carlo solvers
         std::vector<double> betas_;                                                                                                   // inverse temperatures
 
@@ -236,6 +245,7 @@ namespace MonteCarlo
         std::vector<u64> accepted_;                                                                                                   // number of accepted steps
         std::vector<u64> total_;                                                                                                      // total number of steps
         std::vector<bool> finished_;                                                                                                  // finished solvers - when the early stopping criterion is met
+        std::vector<bool> errors_;
         v_1d<Container_t> losses_;                                                                                                    // losses for each solver
         v_1d<Container_t> meanLosses_;                                                                                                // mean losses for each solver
         v_1d<Container_t> stdLosses_;                                                                                                 // standard deviation of the losses for each solver
@@ -268,14 +278,19 @@ namespace MonteCarlo
         void train(const MCS_train_t& _par, bool quiet = false, bool ranStart = false, clk::time_point _t = NOW, uint progPrc = 25);  // train the solvers
         // virtual void collect(const MCS_train_t& _par, bool quiet = false, clk::time_point _t = NOW, uint progPrc = 25) = 0; // collect the data
 
-        v_1d<Solver_p>& getSolvers()                                                        const { return this->MCSs_; };
+        const v_1d<Solver_p>& getSolvers()                                                  const { return this->MCSs_; };
 
         // SETTERS
         void setProgressBar(pBar* _pBar)                                                    { this->pBar_ = _pBar; };
 
         // GETTERS
-        auto getBetas()                                                                     const -> std::vector<double>    { return this->betas_; };
-        auto getLosses()                                                                    const -> v_1d<Container_t>&     { return this->losses_; };
+        auto getBetas()                                                                     const -> std::vector<double>        { return this->betas_; };
+        auto getLosses()                                                                    const -> const v_1d<Container_t>&   { return this->losses_; };
+        auto getMeanLosses(int _idx)                                                        const -> Container_t                { return this->meanLosses_[_idx]; };
+        auto getStdLosses(int _idx)                                                         const -> Container_t                { return this->stdLosses_[_idx]; };
+        auto getBestInfo()                                                                  const -> std::pair<size_t, _T>      { return {this->bestIdx_, this->bestLoss_}; };
+        auto getBestSolver()                                                                const -> Solver_p                   { return this->MCSs_[this->bestIdx_]; };
+        auto getBestSolver_move()                                                           const -> Solver_p                   { return std::move(this->MCSs_[this->bestIdx_]); };
     };
 
     // #################################################################################################################################
