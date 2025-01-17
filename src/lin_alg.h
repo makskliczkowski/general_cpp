@@ -614,11 +614,12 @@ namespace algebra
 
 		namespace Preconditioners {
 
-			/*
+			/**
 			* @brief Preconditioner interface for any method that can be used as a preconditioner for the conjugate gradient method.
 			*/
 			template<typename T, bool _isPositiveSemidefinite = false>
-			class Preconditioner {
+			class Preconditioner 
+			{
 			public:
 				const bool isPositiveSemidefinite_ 	= _isPositiveSemidefinite;	// is the matrix positive semidefinite
 				bool isGram_ 						= false;					// is the matrix a Gram matrix
@@ -641,6 +642,49 @@ namespace algebra
 				{
 					// this->set(Sp, S, _sigma);
 				}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+				
+				// Copy constructor
+				Preconditioner(const Preconditioner& other)
+					: isPositiveSemidefinite_(other.isPositiveSemidefinite_),
+					isGram_(other.isGram_),
+					sigma_(other.sigma_),
+					type_(other.type_) {}
+
+				// Move constructor
+				Preconditioner(Preconditioner&& other) noexcept
+					: isPositiveSemidefinite_(other.isPositiveSemidefinite_),
+					isGram_(std::exchange(other.isGram_, false)),
+					sigma_(std::exchange(other.sigma_, 0.0)),
+					type_(std::exchange(other.type_, 0)) {}
+
+				// Copy assignment operator
+				Preconditioner& operator=(const Preconditioner& other)
+				{
+					if (this != &other) {
+						isGram_ = other.isGram_;
+						sigma_ = other.sigma_;
+						type_ = other.type_;
+					}
+					return *this;
+				}
+
+				// Move assignment operator
+				Preconditioner& operator=(Preconditioner&& other) noexcept
+				{
+					if (this != &other) {
+						isGram_ = std::exchange(other.isGram_, false);
+						sigma_ = std::exchange(other.sigma_, 0.0);
+						type_ = std::exchange(other.type_, 0);
+					}
+					return *this;
+				}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+				virtual std::unique_ptr<Preconditioner> clone() const 	= 0;
+				virtual std::unique_ptr<Preconditioner> move() 			= 0;
+				virtual std::shared_ptr<Preconditioner> shared() 		= 0;
 				// -----------------------------------------------------------------------------------------------------------------------------------------
 
 				// set the preconditioner
@@ -711,6 +755,25 @@ namespace algebra
 				{
 					return r;
 				}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+
+				std::unique_ptr<Preconditioner<T, _F>> clone() const override
+				{
+					return std::make_unique<IdentityPreconditioner<T, _F>>(*this);
+				}
+
+				std::unique_ptr<Preconditioner<T, _F>> move() override
+				{
+					return std::make_unique<IdentityPreconditioner<T, _F>>(std::move(*this));
+				}
+
+				std::shared_ptr<Preconditioner<T, _F>> shared() override
+				{
+					return std::make_shared<IdentityPreconditioner<T, _F>>(*this);
+				}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
 			};	
 			
 			// #################################################################################################################################################
@@ -737,6 +800,31 @@ namespace algebra
 				{
 					this->type_ = 1;
 				};
+
+				// Copy constructor
+				JacobiPreconditioner(const JacobiPreconditioner& other)
+					: Preconditioner<T, _T>(other)
+				{
+					this->diaginv_ 	= other.diaginv_;
+					this->tolBig_ 	= other.tolBig_;
+					this->bigVal_ 	= other.bigVal_;
+					this->tolSmall_ = other.tolSmall_;
+					this->smallVal_ = other.smallVal_;
+				}
+
+				// Move constructor
+				JacobiPreconditioner(JacobiPreconditioner&& other) noexcept
+					: Preconditioner<T, _T>(std::move(other))
+				{
+					this->diaginv_ 	= std::move(other.diaginv_);
+					this->tolBig_ 	= std::exchange(other.tolBig_, 1.0e10);
+					this->bigVal_ 	= std::exchange(other.bigVal_, 1e-10);
+					this->tolSmall_ = std::exchange(other.tolSmall_, 1.0e-10);
+					this->smallVal_ = std::exchange(other.smallVal_, 1e10);
+				}		
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------				
+
 				// is any matrix A, not necessarily a Gram matrix. Otherwise, use isGram = true and A = S+ * S
 				JacobiPreconditioner(const arma::Mat<T>& A, bool isGram = true, double _sigma = 0.0)
 					: Preconditioner<T, _T>(A, isGram, _sigma)
@@ -784,6 +872,25 @@ namespace algebra
 
 				// apply the preconditioner
 				arma::Col<T> apply(const arma::Col<T>& r, double sigma = 0.0) const override { return this->diaginv_ % r; }
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+
+				std::unique_ptr<Preconditioner<T, _T>> clone() const override
+				{
+					return std::make_unique<JacobiPreconditioner<T, _T>>(*this);
+				}
+
+				std::unique_ptr<Preconditioner<T, _T>> move() override
+				{
+					return std::make_unique<JacobiPreconditioner<T, _T>>(std::move(*this));
+				}
+
+				std::shared_ptr<Preconditioner<T, _T>> shared() override
+				{
+					return std::make_shared<JacobiPreconditioner<T, _T>>(*this);
+				}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
 			};
 
 			// #################################################################################################################################################
@@ -805,6 +912,24 @@ namespace algebra
 				{
 					this->type_ = 2;
 				}
+
+				// Copy constructor
+				IncompleteCholeskyPreconditioner(const IncompleteCholeskyPreconditioner& other)
+					: Preconditioner<T, _T>(other)
+				{
+					this->L_ 		= other.L_;
+					this->success_ = other.success_;
+				}
+
+				// Move constructor
+				IncompleteCholeskyPreconditioner(IncompleteCholeskyPreconditioner&& other) noexcept
+					: Preconditioner<T, _T>(std::move(other))
+				{
+					this->L_ 		= std::move(other.L_);
+					this->success_ = std::exchange(other.success_, false);
+				}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
 				
 				/**
 				* @brief Constructor to initialize the preconditioner with a given matrix.
@@ -864,7 +989,7 @@ namespace algebra
 					}
 				}
 
-				// 
+				// -----------------------------------------------------------------------------------------------------------------------------------------
 
 				/**
 				* @brief Apply the preconditioner to a given vector.
@@ -896,6 +1021,25 @@ namespace algebra
 					} else
 						return r; // If decomposition failed, return r as is
 				}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+
+				std::unique_ptr<Preconditioner<T, _T>> clone() const override
+				{
+					return std::make_unique<IncompleteCholeskyPreconditioner<T, _T>>(*this);
+				}
+
+				std::unique_ptr<Preconditioner<T, _T>> move() override
+				{
+					return std::make_unique<IncompleteCholeskyPreconditioner<T, _T>>(std::move(*this));
+				}
+
+				std::shared_ptr<Preconditioner<T, _T>> shared() override
+				{
+					return std::make_shared<IncompleteCholeskyPreconditioner<T, _T>>(*this);
+				}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
 			};
 
 			// #################################################################################################################################################
@@ -955,6 +1099,25 @@ namespace algebra
 				{
 					// !TODO
 				}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+
+				std::unique_ptr<Preconditioner<T, _T>> clone() const override
+				{
+					return std::make_unique<BinormalizationPreconditioner<T, _T>>(*this);
+				}
+
+				std::unique_ptr<Preconditioner<T, _T>> move() override
+				{
+					return std::make_unique<BinormalizationPreconditioner<T, _T>>(std::move(*this));
+				}
+
+				std::shared_ptr<Preconditioner<T, _T>> shared() override
+				{
+					return std::make_shared<BinormalizationPreconditioner<T, _T>>(*this);
+				}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
 			};
 
 			// #################################################################################################################################################
@@ -971,6 +1134,29 @@ namespace algebra
 				IncompleteLUPreconditioner()
 					: Preconditioner<T, _T>()
 				{};
+
+				// Copy constructor
+				IncompleteLUPreconditioner(const IncompleteLUPreconditioner& other)
+					: Preconditioner<T, _T>(other)
+				{
+					this->L_ 		= other.L_;
+					this->U_ 		= other.U_;
+					this->P_ 		= other.P_;
+					this->success_ = other.success_;
+				}
+
+				// Move constructor
+				IncompleteLUPreconditioner(IncompleteLUPreconditioner&& other) noexcept
+					: Preconditioner<T, _T>(std::move(other))
+				{
+					this->L_ 		= std::move(other.L_);
+					this->U_ 		= std::move(other.U_);
+					this->P_ 		= std::move(other.P_);
+					this->success_ = std::exchange(other.success_, false);
+				}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+
 				/**
 				* @brief Constructor to initialize the preconditioner with a given matrix.
 				* @param A The matrix to decompose.
@@ -1023,6 +1209,25 @@ namespace algebra
 					// !TODO
 					return r;
 				}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+
+				std::unique_ptr<Preconditioner<T, _T>> clone() const override
+				{
+					return std::make_unique<IncompleteLUPreconditioner<T, _T>>(*this);
+				}
+
+				std::unique_ptr<Preconditioner<T, _T>> move() override
+				{
+					return std::make_unique<IncompleteLUPreconditioner<T, _T>>(std::move(*this));
+				}
+
+				std::shared_ptr<Preconditioner<T, _T>> shared() override
+				{
+					return std::make_shared<IncompleteLUPreconditioner<T, _T>>(*this);
+				}
+
+				// -----------------------------------------------------------------------------------------------------------------------------------------
 			};
 			
 
@@ -1161,7 +1366,56 @@ namespace algebra
 				virtual ~Solver()		= default;
 				Solver() 				= default;
 				Solver(size_t _N, double _eps = 1e-10, size_t _max_iter = 1000, double _reg = -1.0, Precond<_T, _symmetric>* _preconditioner = nullptr);
-
+				// Copy constructor
+				Solver(const Solver& other)
+					: type_(other.type_), isSymmetric_(other.isSymmetric_), converged_(other.converged_), isGram_(other.isGram_), N_(other.N_), iter_(other.iter_), max_iter_(other.max_iter_), eps_(other.eps_), reg_(other.reg_), precond_(other.precond_), isPreconditioned_(other.isPreconditioned_), matVecFun_(other.matVecFun_), x_(other.x_) {}
+				// Move constructor
+				Solver(Solver&& other) noexcept
+					: type_(std::exchange(other.type_, Type::Direct)), isSymmetric_(std::exchange(other.isSymmetric_, _symmetric)), converged_(std::exchange(other.converged_, false)), isGram_(std::exchange(other.isGram_, false)), N_(std::exchange(other.N_, 1)), iter_(std::exchange(other.iter_, 0)), max_iter_(std::exchange(other.max_iter_, 1000)), eps_(std::exchange(other.eps_, 1e-10)), reg_(std::exchange(other.reg_, -1.0)), precond_(std::exchange(other.precond_, nullptr)), isPreconditioned_(std::exchange(other.isPreconditioned_, false)), matVecFun_(std::exchange(other.matVecFun_, nullptr)), x_(std::move(other.x_)) {}
+				// Copy assignment
+				Solver& operator=(const Solver& other)
+				{
+					if (this != &other)
+					{
+						type_ 			= other.type_;
+						isSymmetric_ 	= other.isSymmetric_;
+						converged_ 		= other.converged_;
+						isGram_ 		= other.isGram_;
+						N_ 				= other.N_;
+						iter_ 			= other.iter_;
+						max_iter_ 		= other.max_iter_;
+						eps_ 			= other.eps_;
+						reg_ 			= other.reg_;
+						precond_ 		= other.precond_;
+						isPreconditioned_ = other.isPreconditioned_;
+						matVecFun_ 		= other.matVecFun_;
+						x_ 				= other.x_;
+					}
+					return *this;
+				}
+				// Move assignment
+				Solver& operator=(Solver&& other) noexcept
+				{
+					if (this != &other)
+					{
+						type_ 			= std::exchange(other.type_, Type::Direct);
+						isSymmetric_ 	= std::exchange(other.isSymmetric_, _symmetric);
+						converged_ 		= std::exchange(other.converged_, false);
+						isGram_ 		= std::exchange(other.isGram_, false);
+						N_ 				= std::exchange(other.N_, 1);
+						iter_ 			= std::exchange(other.iter_, 0);
+						max_iter_ 		= std::exchange(other.max_iter_, 1000);
+						eps_ 			= std::exchange(other.eps_, 1e-10);
+						reg_ 			= std::exchange(other.reg_, -1.0);
+						precond_ 		= std::exchange(other.precond_, nullptr);
+						isPreconditioned_ = std::exchange(other.isPreconditioned_, false);
+						matVecFun_ 		= std::exchange(other.matVecFun_, nullptr);
+						x_ 				= std::move(other.x_);
+					}
+					return *this;
+				}
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+				
 				virtual void init(const arma::Mat<_T>& _A, const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr);
 				virtual void init(const arma::SpMat<_T>& _A, const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr);
 				virtual void init(const arma::Mat<_T>& _S, const arma::Mat<_T>& _Sp, const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr);
@@ -1196,6 +1450,11 @@ namespace algebra
 				virtual void solve(const arma::SpMat<_T>& _S, const arma::SpMat<_T>& _Sp, const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr, Precond<_T, _symmetric>* _precond = nullptr);	// if we want to use a Fisher matrix
 				virtual void solve(_AX_fun<_T> _A, const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr, Precond<_T, _symmetric>* _precond = nullptr);										// if we want to use a matrix-vector multiplication function
 				virtual void solve(const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr, Precond<_T, _symmetric>* _precond = nullptr) = 0;													// if the matrix multiplication function is set
+				// -----------------------------------------------------------------------------------------------------------------------------------------
+				virtual std::unique_ptr<Solver<_T, _symmetric>> clone() const 	= 0;
+				virtual std::unique_ptr<Solver<_T, _symmetric>> move() 			= 0;
+				virtual std::shared_ptr<Solver<_T, _symmetric>> shared() 		= 0;
+				// -----------------------------------------------------------------------------------------------------------------------------------------
 			};	
 			// #############################################################################################################################################
 		};
@@ -1258,6 +1517,10 @@ namespace algebra
 					// ----------------------------------------------------------------------------------------------------------------------------------------
 					void solve(const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override final;
 					// ----------------------------------------------------------------------------------------------------------------------------------------
+					std::unique_ptr<Solver<_T1, _symmetric>> clone() const override final { return std::make_unique<ConjugateGradient_s<_T1, _symmetric>>(*this); }
+					std::unique_ptr<Solver<_T1, _symmetric>> move() override final { return std::make_unique<ConjugateGradient_s<_T1, _symmetric>>(std::move(*this)); }
+					std::shared_ptr<Solver<_T1, _symmetric>> shared() override final { return std::make_shared<ConjugateGradient_s<_T1, _symmetric>>(*this); }
+					// ----------------------------------------------------------------------------------------------------------------------------------------
 				};
 				// ############################################################################################################################################
 			};
@@ -1297,6 +1560,10 @@ namespace algebra
 					void init(const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr) override final;
 					// ----------------------------------------------------------------------------------------------------------------------------------------
 					void solve(const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override final;
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+					std::unique_ptr<Solver<_T1, _symmetric>> clone() const override final { return std::make_unique<MINRES_s<_T1, _symmetric>>(*this); }
+					std::unique_ptr<Solver<_T1, _symmetric>> move() override final { return std::make_unique<MINRES_s<_T1, _symmetric>>(std::move(*this)); }
+					std::shared_ptr<Solver<_T1, _symmetric>> shared() override final { return std::make_shared<MINRES_s<_T1, _symmetric>>(*this); }
 					// ----------------------------------------------------------------------------------------------------------------------------------------
 				};
 			
@@ -1409,6 +1676,10 @@ namespace algebra
 					// ----------------------------------------------------------------------------------------------------------------------------------------
 					void solve(const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override;
 					// ----------------------------------------------------------------------------------------------------------------------------------------
+					std::unique_ptr<Solver<_T1, _symmetric>> clone() const override final { return std::make_unique<MINRES_QLP_s<_T1, _symmetric>>(*this); }
+					std::unique_ptr<Solver<_T1, _symmetric>> move() override final { return std::make_unique<MINRES_QLP_s<_T1, _symmetric>>(std::move(*this)); }
+					std::shared_ptr<Solver<_T1, _symmetric>> shared() override final { return std::make_shared<MINRES_QLP_s<_T1, _symmetric>>(*this); }
+					// ----------------------------------------------------------------------------------------------------------------------------------------
 				};
 				// ############################################################################################################################################
 			};
@@ -1439,7 +1710,10 @@ namespace algebra
 					void solve(const arma::SpMat<_T1>& _A, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override;
 					void solve(const arma::Mat<_T1>& _S, const arma::Mat<_T1>& _Sp, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override;
 					void solve(const arma::SpMat<_T1>& _S, const arma::SpMat<_T1>& _Sp, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override;
-
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+					std::unique_ptr<Solver<_T1, _symmetric>> clone() const override final { return std::make_unique<PseudoInverse_s<_T1, _symmetric>>(*this); }
+					std::unique_ptr<Solver<_T1, _symmetric>> move() override final { return std::make_unique<PseudoInverse_s<_T1, _symmetric>>(std::move(*this)); }
+					std::shared_ptr<Solver<_T1, _symmetric>> shared() override final { return std::make_shared<PseudoInverse_s<_T1, _symmetric>>(*this); }
 					// ----------------------------------------------------------------------------------------------------------------------------------------
 				};
 				// ############################################################################################################################################
@@ -1472,7 +1746,10 @@ namespace algebra
 					void solve(const arma::SpMat<_T1>& _A, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override;
 					void solve(const arma::Mat<_T1>& _S, const arma::Mat<_T1>& _Sp, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override;
 					void solve(const arma::SpMat<_T1>& _S, const arma::SpMat<_T1>& _Sp, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* _precond = nullptr) override;
-
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+					std::unique_ptr<Solver<_T1, _symmetric>> clone() const override final { return std::make_unique<Direct_s<_T1, _symmetric>>(*this); }
+					std::unique_ptr<Solver<_T1, _symmetric>> move() override final { return std::make_unique<Direct_s<_T1, _symmetric>>(std::move(*this)); }
+					std::shared_ptr<Solver<_T1, _symmetric>> shared() override final { return std::make_shared<Direct_s<_T1, _symmetric>>(*this); }
 					// ----------------------------------------------------------------------------------------------------------------------------------------
 				};
 				// ############################################################################################################################################
@@ -1509,7 +1786,10 @@ namespace algebra
 					void solve(const arma::SpMat<_T1>& _A, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* = nullptr) override;
 					void solve(const arma::Mat<_T1>& _S, const arma::Mat<_T1>& _Sp, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* = nullptr) override;
 					void solve(const arma::SpMat<_T1>& _S, const arma::SpMat<_T1>& _Sp, const arma::Col<_T1>& _F, arma::Col<_T1>* _x0 = nullptr, Precond<_T1, _symmetric>* = nullptr) override;
-
+					// ----------------------------------------------------------------------------------------------------------------------------------------
+					auto clone() const 	-> std::unique_ptr<Solver<_T1, _symmetric>> override final { return std::make_unique<ARMA_s<_T1, _symmetric>>(*this); }
+					auto move() 		-> std::unique_ptr<Solver<_T1, _symmetric>> override final { return std::make_unique<ARMA_s<_T1, _symmetric>>(std::move(*this)); }
+					auto shared() 		-> std::shared_ptr<Solver<_T1, _symmetric>> override final { return std::make_shared<ARMA_s<_T1, _symmetric>>(*this); }
 					// ----------------------------------------------------------------------------------------------------------------------------------------
 				};
 			};
@@ -1589,7 +1869,7 @@ namespace algebra
 		#define MAKE_MATRIX_FREE_MULT_FISHER(_T) auto _f = [&](const arma::Col<_T>& _x, double _reg) -> arma::Col<_T> { return FisherMatrix::matrixFreeMultiplication<_T>(_DeltaO, _DeltaOConjT, _x, _reg); };
 		namespace FisherMatrix 
 		{	
-			/*
+			/**
 			* This methods are used whenever the matrix can be 
 			* decomposed into the form S = \Delta O^* \Delta O, where \Delta O is 
 			* the derivative of the observable with respect to the parameters. 
@@ -1725,7 +2005,16 @@ namespace algebra
 			~Arnoldi() 					{};
 			Arnoldi() 					= default;
 			Arnoldi(size_t _N, double _eps = 1e-10, size_t _max_iter = 1000, double _reg = -1.0, Precond<_T, _symmetric>* _preconditioner = nullptr);
-
+			// Copy constructor
+			Arnoldi(const Arnoldi<_T, _symmetric, _reorthogonalize>& _solver)
+				: General::Solver<_T, _symmetric>(_solver), reorthogonalize_(_solver.reorthogonalize_), isGram_(_solver.isGram_), invariant_(_solver.invariant_),
+				krylovDim_(_solver.krylovDim_), V_(_solver.V_), P_(_solver.P_), H_(_solver.H_), p_(_solver.p_), 
+				v_(_solver.v_), Av_(_solver.Av_), MAv_(_solver.MAv_), vnorm_(_solver.vnorm_) {}
+			// Move constructor
+			Arnoldi(Arnoldi<_T, _symmetric, _reorthogonalize>&& _solver) noexcept
+				: General::Solver<_T, _symmetric>(std::move(_solver)), reorthogonalize_(_solver.reorthogonalize_), isGram_(_solver.isGram_), invariant_(_solver.invariant_),
+				krylovDim_(_solver.krylovDim_), V_(std::move(_solver.V_)), P_(std::move(_solver.P_)), H_(std::move(_solver.H_)), p_(std::move(_solver.p_)), 
+				v_(std::move(_solver.v_)), Av_(std::move(_solver.Av_)), MAv_(std::move(_solver.MAv_)), vnorm_(_solver.vnorm_) {}
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 		
 			// single Arnoldi iteration
@@ -1747,6 +2036,9 @@ namespace algebra
 			// -----------------------------------------------------------------------------------------------------------------------------------------
 			void solve(const arma::Col<_T>& _F, arma::Col<_T>* _x0 = nullptr, Precond<_T, _symmetric>* _precond = nullptr) override final;
 			// -----------------------------------------------------------------------------------------------------------------------------------------
+			std::unique_ptr<General::Solver<_T, _symmetric>> clone() const override final { return std::make_unique<Arnoldi<_T, _symmetric, _reorthogonalize>>(*this); }
+			std::unique_ptr<General::Solver<_T, _symmetric>> move() override final { return std::make_unique<Arnoldi<_T, _symmetric, _reorthogonalize>>(std::move(*this)); }
+			std::shared_ptr<General::Solver<_T, _symmetric>> shared() override final { return std::make_shared<Arnoldi<_T, _symmetric, _reorthogonalize>>(*this); }
 		};
 
 		// #############################################################################################################################################

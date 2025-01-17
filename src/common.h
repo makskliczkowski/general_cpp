@@ -45,7 +45,7 @@
 
 template<class T> struct is_complex						: std::false_type	{};
 template<class T> struct is_complex<std::complex<T>>	: std::true_type	{};
-
+template <typename> constexpr bool always_false 		= false;
 // ########################################################			    DEFINITIONS				########################################################
 
 // using types

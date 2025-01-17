@@ -150,7 +150,7 @@ namespace MonteCarlo
                                             const MonteCarlo::MCS_train_t& _par, 
                                             const bool quiet, 
                                             const bool randomStart,
-                                            Timer& _timer)      = 0;                        // perform a single training step
+                                            Timer* _timer)      = 0;                        // perform a single training step
         virtual Container_pair_t train(     const MCS_train_t& _par, 
                                             bool quiet          = false, 
                                             bool randomStart    = false, 
@@ -181,9 +181,20 @@ namespace MonteCarlo
         virtual void reset(size_t)                                                          = 0; // reset the MCS
         virtual auto clone()                const -> MC_t_p                                 = 0; // clone the MCS
         virtual auto clone(MC_t_p _other)  -> void                                          = 0; // clone the MCS from the other MCS
+        // potential weights
+        virtual auto saveWeights(std::string _path, std::string _file) -> bool              { return true; }
+        virtual auto setWeights(std::string _path, std::string _file) -> bool               { return true; }
     };
 
     // #################################################################################################################################
+
+    enum class BetaSpacing 
+    {
+        LINEAR,
+        GEOMETRIC,
+        LOGARITHMIC,
+        ADAPTIVE
+    };  
 
     /**
     * @class ParallelTempering
@@ -242,13 +253,19 @@ namespace MonteCarlo
 
         // !!! for the future use !!!
         std::vector<_T> lastLosses_;                                                                                                  // last losses
+        std::vector<_T> lastStdLosses_;                                                                                               // last standard deviation of the losses
+        // for the training
         std::vector<u64> accepted_;                                                                                                   // number of accepted steps
         std::vector<u64> total_;                                                                                                      // total number of steps
         std::vector<bool> finished_;                                                                                                  // finished solvers - when the early stopping criterion is met
         std::vector<bool> errors_;
+        // for the simulations (multiple solvers)
         v_1d<Container_t> losses_;                                                                                                    // losses for each solver
         v_1d<Container_t> meanLosses_;                                                                                                // mean losses for each solver
         v_1d<Container_t> stdLosses_;                                                                                                 // standard deviation of the losses for each solver
+        // for the best solver
+        Container_t bestLosses_;                                                                                                      // best losses
+        Container_t bestStdLosses_;
     public:
         ParallelTempering() = default;
         ParallelTempering(Solver_p _MCS, const std::vector<double>& _betas, size_t _nSolvers);
@@ -263,7 +280,7 @@ namespace MonteCarlo
         void trainStep(size_t i, const MCS_train_t& _par, 
                                 const bool quiet, 
                                 const bool randomStart,
-                                Timer& _timer);                                                                                       // perform a single training step
+                                Timer* _timer);                                                                                       // perform a single training step
         void trainSingle(const MCS_train_t& _par, 
                                 bool quiet, 
                                 bool ranStart, 
@@ -286,11 +303,17 @@ namespace MonteCarlo
         // GETTERS
         auto getBetas()                                                                     const -> std::vector<double>        { return this->betas_; };
         auto getLosses()                                                                    const -> const v_1d<Container_t>&   { return this->losses_; };
+        auto getBestLosses()                                                                const -> Container_t                { return this->bestLosses_; };
+        auto getBestStdLosses()                                                             const -> Container_t                { return this->bestStdLosses_; };
         auto getMeanLosses(int _idx)                                                        const -> Container_t                { return this->meanLosses_[_idx]; };
         auto getStdLosses(int _idx)                                                         const -> Container_t                { return this->stdLosses_[_idx]; };
         auto getBestInfo()                                                                  const -> std::pair<size_t, _T>      { return {this->bestIdx_, this->bestLoss_}; };
         auto getBestSolver()                                                                const -> Solver_p                   { return this->MCSs_[this->bestIdx_]; };
         auto getBestSolver_move()                                                           const -> Solver_p                   { return std::move(this->MCSs_[this->bestIdx_]); };
+
+        // !!!!!!!!!
+
+        static std::vector<double> generateBetas(size_t nBetas, BetaSpacing spacing = BetaSpacing::LINEAR, double minBeta = 1e-3, double maxBeta = 1.0);
     };
 
     // #################################################################################################################################

@@ -30,6 +30,48 @@ namespace MachineLearning {
             EarlyStopping(size_t patience, double _minDelta = 1e-3)
                 : patience_(patience), minDelta_(_minDelta) {};
 
+            // ##########################
+            EarlyStopping(const EarlyStopping& other)
+                : patience_(other.patience_),
+                minDelta_(other.minDelta_),
+                best_metric_(other.best_metric_),
+                epoch_since_best_(other.epoch_since_best_),
+                stop_(other.stop_) {}
+
+            EarlyStopping(EarlyStopping&& other) noexcept
+                : patience_(std::move(other.patience_)),
+                minDelta_(std::move(other.minDelta_)),
+                best_metric_(std::move(other.best_metric_)),
+                epoch_since_best_(std::move(other.epoch_since_best_)),
+                stop_(std::move(other.stop_)) {}
+
+            EarlyStopping& operator=(const EarlyStopping& other)
+            {
+                if (this != &other) {
+                    patience_           = other.patience_;
+                    minDelta_           = other.minDelta_;
+                    best_metric_        = other.best_metric_;
+                    epoch_since_best_   = other.epoch_since_best_;
+                    stop_               = other.stop_;
+                }
+                return *this;
+            }
+
+            // Move assignment operator
+            EarlyStopping& operator=(EarlyStopping&& other) noexcept
+            {
+                if (this != &other) {
+                    patience_           = std::move(other.patience_);
+                    minDelta_           = std::move(other.minDelta_);
+                    best_metric_        = std::move(other.best_metric_);
+                    epoch_since_best_   = std::move(other.epoch_since_best_);
+                    stop_               = std::move(other.stop_);
+                }
+                return *this;
+            }
+
+            // ##########################
+
             bool operator()(size_t epoch, double _metric = 0.0)
             {
                 // check if the metric is nan or inf
@@ -68,7 +110,8 @@ namespace MachineLearning {
     public:
         int typek_              = 0;            // the type of the scheduler
         size_t max_epochs_      = 100;          // the maximum number of epochs
-        double lr_              = 1e-2;         // the initial learning rate
+        double lrini_           = 1e-2;         // the initial learning rate
+        double lr_              = 1e-2;         // the learning rate that may change
         std::vector<double> lrh_;               // learning rate history
         double lr_decay_        = 0.9;          // the learning rate decay
         size_t patience_        = 5;            // the number of epochs to wait before reducing the learning rate or stopping the training
@@ -86,10 +129,61 @@ namespace MachineLearning {
         virtual ~Parameters()   = default;
         Parameters()            = default;
         Parameters(double lr, double decay, size_t max_epochs, size_t patience = 5)
-            : max_epochs_(max_epochs), lr_(lr), lr_decay_(decay), patience_(patience) 
+            : max_epochs_(max_epochs), lrini_(lr), lr_(lr), lr_decay_(decay), patience_(patience) 
         {
             this->early_stopping_ = EarlyStoppings::EarlyStopping();
         }
+
+        Parameters(const Parameters& other)
+            : typek_(other.typek_), max_epochs_(other.max_epochs_), 
+            lrini_(other.lr_), lr_(other.lr_),
+            lrh_(other.lrh_), lr_decay_(other.lr_decay_), patience_(other.patience_),
+            early_stopping_(other.early_stopping_) {}
+
+        Parameters(Parameters&& other) noexcept
+            : typek_(other.typek_), max_epochs_(other.max_epochs_), 
+            lrini_(other.lr_), lr_(other.lr_),
+            lrh_(std::move(other.lrh_)), lr_decay_(other.lr_decay_), patience_(other.patience_),
+            early_stopping_(std::move(other.early_stopping_)) {}
+
+        Parameters& operator=(const Parameters& other)
+        {
+            if (this != &other)
+            {
+                this->typek_            = other.typek_;
+                this->max_epochs_       = other.max_epochs_;
+                this->lrini_            = other.lr_;
+                this->lr_               = other.lr_;
+                this->lrh_              = other.lrh_;
+                this->lr_decay_         = other.lr_decay_;
+                this->patience_         = other.patience_;
+                this->early_stopping_   = other.early_stopping_;
+            }
+            return *this;
+        }
+
+        Parameters& operator=(Parameters&& other) noexcept
+        {
+            if (this != &other)
+            {
+                this->typek_            = other.typek_;
+                this->max_epochs_       = other.max_epochs_;
+                this->lrini_            = other.lr_;
+                this->lr_               = other.lr_;
+                this->lrh_              = std::move(other.lrh_);
+                this->lr_decay_         = other.lr_decay_;
+                this->patience_         = other.patience_;
+                this->early_stopping_   = std::move(other.early_stopping_);
+            }
+            return *this;
+        }
+
+        // --------------------------------------------------------------------------------------------
+
+        virtual std::unique_ptr<Parameters> clone() const = 0;
+        virtual std::unique_ptr<Parameters> move() = 0;
+        virtual std::shared_ptr<Parameters> shared() = 0;
+
         // --------------------------------------------------------------------------------------------
 
         const std::vector<double>& hist() const { return this->lrh_; }
@@ -131,45 +225,86 @@ namespace MachineLearning {
             ConstantScheduler(double initial_lr, double decay_rate = 0.1, size_t max_epochs = 100)
                 : Parameters(initial_lr, decay_rate, max_epochs) { typek_ = 0; };
 
+            // --------------
+
             double operator()(size_t epoch, double _metric = 0.0) override final 
             { 
                 return this->append(this->lr_); 
             }
+
+            // --------------
+
+            std::unique_ptr<Parameters> clone() const override final    { return std::make_unique<ConstantScheduler>(*this); }
+            std::unique_ptr<Parameters> move() override final           { return std::make_unique<ConstantScheduler>(std::move(*this)); }
+            std::shared_ptr<Parameters> shared() override final         { return std::make_shared<ConstantScheduler>(*this); }
+
+            // --------------
         };
+        
+        // ##########################################################################################################################################
 
         struct ExponentialDecayScheduler : public Parameters
         {
             ExponentialDecayScheduler(double initial_lr, double decay_rate = 0.1, size_t max_epochs = 100)
                 : Parameters(initial_lr, decay_rate, max_epochs) { typek_ = 1; };
-
+            
+            // --------------
+            
             double operator()(size_t epoch, double _metric = 0.0) override final 
             { 
                 return this->append(this->lr_ * std::exp(-this->lr_decay_ * epoch)); 
             }
+
+            // --------------
+
+            std::unique_ptr<Parameters> clone() const override final    { return std::make_unique<ExponentialDecayScheduler>(*this); }
+            std::unique_ptr<Parameters> move() override final           { return std::make_unique<ExponentialDecayScheduler>(std::move(*this)); }
+            std::shared_ptr<Parameters> shared() override final         { return std::make_shared<ExponentialDecayScheduler>(*this); }
         };
 
+        // ##########################################################################################################################################
+        
         struct StepDecayScheduler : public Parameters
         {
             size_t step_size_ = 10;
 
             StepDecayScheduler(double initial_lr, double decay_rate = 0.1, size_t max_epochs = 100, size_t step_size = 10)
                 : Parameters(initial_lr, decay_rate, max_epochs), step_size_(step_size) { typek_ = 2; };
+            
+            // --------------
 
             double operator()(size_t epoch, double _metric = 0.0) override final 
             { 
                 return this->append(this->lr_ * std::pow(this->lr_decay_, std::floor(epoch / this->step_size_))); 
             }
+
+            // --------------
+
+            std::unique_ptr<Parameters> clone() const override final    { return std::make_unique<StepDecayScheduler>(*this); }
+            std::unique_ptr<Parameters> move() override final           { return std::make_unique<StepDecayScheduler>(std::move(*this)); }
+            std::shared_ptr<Parameters> shared() override final         { return std::make_shared<StepDecayScheduler>(*this); }
+
+            // --------------
         };
 
         struct CosineAnnealingScheduler : public Parameters
         {
             CosineAnnealingScheduler(double initial_lr, double decay_rate = 0.1, size_t max_epochs = 100)
                 : Parameters(initial_lr, decay_rate, max_epochs) { typek_ = 3; };
+            // --------------
 
             double operator()(size_t epoch, double _metric = 0.0) override final 
             { 
                 return this->append(this->lr_ / 2.0 * (1.0 + std::cos(M_PI * epoch / this->max_epochs_))); 
             }
+
+            // --------------
+
+            std::unique_ptr<Parameters> clone() const override final   { return std::make_unique<CosineAnnealingScheduler>(*this); }
+            std::unique_ptr<Parameters> move() override final          { return std::make_unique<CosineAnnealingScheduler>(std::move(*this)); }
+            std::shared_ptr<Parameters> shared() override final        { return std::make_shared<CosineAnnealingScheduler>(*this); }
+
+            // --------------
         };
 
         struct AdaptiveScheduler : public Parameters
@@ -210,11 +345,19 @@ namespace MachineLearning {
                 return this->append(this->lr_);
             }
 
+            // --------------
+
+            std::unique_ptr<Parameters> clone() const override final    { return std::make_unique<AdaptiveScheduler>(*this); }
+            std::unique_ptr<Parameters> move() override final           { return std::make_unique<AdaptiveScheduler>(std::move(*this)); }
+            std::shared_ptr<Parameters> shared() override final         { return std::make_shared<AdaptiveScheduler>(*this); }
+
+            // --------------
+
         };
 
         // ##########################################################################################################################################
 
-        /*
+        /**
         * @brief Creates a scheduler based on the type of scheduler requested by the user. Remember to delete the scheduler after use.
         * @param scheduler The type of scheduler to be used.
         * @param lr The initial learning rate.

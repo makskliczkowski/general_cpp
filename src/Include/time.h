@@ -131,10 +131,10 @@ std::string prettyTime(std::time_t now = std::time(0));
 
 #ifdef _DEBUG
 	#define TIMER_CREATE(TIMER) Timer TIMER;
-	#define TIMER_START_MEASURE(FUN, IF, TIMER, NAME) 	{ 		std::string tmp = "";																		\
-																if(IF) TIMER.checkpoint(NAME);																\
-															   	FUN; 																						\
-																if(IF) std::cout << "\t\t\t\t\t->" << #FUN << " took: " << TIMER.elapsed(NAME) << std::endl;\
+	#define TIMER_START_MEASURE(FUN, IF, TIMER, NAME) 	{ 		std::string tmp = "";																					\
+																if(TIMER && IF) TIMER->checkpoint(NAME);																\
+																	FUN; 																								\
+																if(TIMER && IF) std::cout << "\t\t\t\t\t->" << #FUN << " took: " << TIMER->elapsed(NAME) << std::endl;	\
 														} 
 #else
 	#define TIMER_CREATE(TIMER)

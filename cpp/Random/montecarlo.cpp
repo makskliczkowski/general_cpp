@@ -1,6 +1,7 @@
 #include "../../src/Include/random.h"
 #include "../../src/flog.h"
 #include "../../src/common.h"
+#include <limits>
 
 #ifdef MC_ENABLE_MPI
 #   include <mpi.h>
@@ -41,7 +42,7 @@ MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>::MonteCarloSolver(const MonteC
     size_t seed_ [[maybe_unused]] = _n.ran_->seed();
     this->ran_          = new randomGen();
     // copy the progress bar
-    this->pBar_         = new pBar();
+    // this->pBar_         = new pBar();
     // copy the information
     this->info_         = _n.info_;
     // copy the Hamiltonian
@@ -331,6 +332,58 @@ namespace MonteCarlo
 {
     // #################################################################################################################################
 
+    /**
+    * @brief Static function to generate beta values based on the spacing type.
+    *
+    * @param nBetas The number of beta values to generate.
+    * @param minBeta The minimum beta value (1 / max temperature).
+    * @param maxBeta The maximum beta value (1 / min temperature).
+    * @param spacing The type of spacing to use (linear, geometric, etc.).
+    * @return A vector of generated beta values.
+    */
+    template <typename _T, typename _stateType, typename _Config_t>
+    std::vector<double> ParallelTempering<_T, _stateType, _Config_t>::generateBetas(size_t nBetas, BetaSpacing spacing, double minBeta, double maxBeta) 
+    {
+        std::vector<double> betas;
+        
+        if (nBetas == 1)
+            return { 1.0 };
+
+        if (nBetas < 1 || minBeta <= 0.0 || maxBeta <= minBeta) {
+            throw std::invalid_argument("Invalid arguments for beta generation");
+        }
+
+        switch (spacing) 
+        {
+        case BetaSpacing::LINEAR:
+            for (size_t i = 0; i < nBetas; ++i) {
+                betas.push_back(minBeta + i * (maxBeta - minBeta) / (nBetas - 1));
+            }
+            break;
+        case BetaSpacing::GEOMETRIC: {
+            double ratio = std::pow(maxBeta / minBeta, 1.0 / (nBetas - 1));
+            for (size_t i = 0; i < nBetas; ++i) {
+                betas.push_back(minBeta * std::pow(ratio, i));
+            }
+            break;
+        }
+        case BetaSpacing::LOGARITHMIC:
+            for (size_t i = 0; i < nBetas; ++i) {
+                betas.push_back(minBeta + (maxBeta - minBeta) * std::log(1.0 + i) / std::log(1.0 + nBetas - 1));
+            }
+            break;
+        case BetaSpacing::ADAPTIVE:
+            throw std::runtime_error("Adaptive beta generation is not implemented yet");
+            break;
+        default:
+            throw std::invalid_argument("Unknown beta spacing type");
+        }
+
+        return betas;
+    }
+
+    // #################################################################################################################################
+
     // template class instantiation
     template class ParallelTempering<double, double, arma::Col<double>>;
     template class ParallelTempering<float, float, arma::Col<float>>;
@@ -415,6 +468,7 @@ namespace MonteCarlo
         this->losses_       = v_1d<Container_t>(this->nSolvers_);
         this->meanLosses_   = v_1d<Container_t>(this->nSolvers_);
         this->stdLosses_    = v_1d<Container_t>(this->nSolvers_);
+        this->bestLosses_.clear();
     }
 
     // template instantiation
@@ -491,6 +545,7 @@ namespace MonteCarlo
         this->losses_       = v_1d<Container_t>(this->nSolvers_);
         this->meanLosses_   = v_1d<Container_t>(this->nSolvers_);
         this->stdLosses_    = v_1d<Container_t>(this->nSolvers_);
+        this->bestLosses_.clear();
     }
 
     // template instantiation
@@ -525,7 +580,7 @@ namespace MonteCarlo
                                             const MonteCarlo::MCS_train_t& _par, 
                                             const bool quiet, 
                                             const bool randomStart,
-                                            Timer& _timer)
+                                            Timer* _timer)
     {
         const size_t local_start    = 0;
         const size_t local_end      = this->nSolvers_;
@@ -550,19 +605,19 @@ namespace MonteCarlo
             if (this->finished_[j]) 
                 continue;
 
-            if (j == 0)
-                continue; // only the first solver is used for now
-
             this->threadPool_.submit([this, i, j, &_par, quiet, randomStart, &_timer]() {
                 try 
                 {                    
                     this->finished_[j] = this->MCSs_[j]->trainStep(
                         i, this->losses_[j], this->meanLosses_[j], this->stdLosses_[j], 
-                        _par, quiet, randomStart, _timer);
+                        _par, quiet, randomStart, j == 0 ? _timer : nullptr);
                 } 
                 catch (const std::exception& e) 
                 {
-                    std::cerr << "Solver " << j << " threw an exception: " << e.what() << std::endl;
+                    LOGINFO("Error in training step for solver " + std::to_string(j) + ": " + e.what(), LOG_TYPES::ERROR, 4);
+                    this->total_[j]     = 0;
+                    this->accepted_[j]  = 0;
+                    this->lastLosses_[j]= std::numeric_limits<_T>::max();
                     this->finished_[j]  = true; // only whenever the whole solver is done
                     this->errors_[j]    = true; // only when the solver has an error
                 }
@@ -584,17 +639,17 @@ namespace MonteCarlo
 
     // template instantiation
     // no MPI
-    template void ParallelTempering<double>::trainStep<false>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer& _timer);
-    template void ParallelTempering<float>::trainStep<false>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer& _timer);
-    template void ParallelTempering<std::complex<double>>::trainStep<false>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer& _timer);
-    template void ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::trainStep<false>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer& _timer);
+    template void ParallelTempering<double>::trainStep<false>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer* _timer);
+    template void ParallelTempering<float>::trainStep<false>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer* _timer);
+    template void ParallelTempering<std::complex<double>>::trainStep<false>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer* _timer);
+    template void ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::trainStep<false>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer* _timer);
     // MPI
-    template void ParallelTempering<double>::trainStep<true>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer& _timer);
-    template void ParallelTempering<float>::trainStep<true>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer& _timer);
-    template void ParallelTempering<std::complex<double>>::trainStep<true>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer& _timer);
-    template void ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::trainStep<true>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer& _timer);
+    template void ParallelTempering<double>::trainStep<true>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer* _timer);
+    template void ParallelTempering<float>::trainStep<true>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer* _timer);
+    template void ParallelTempering<std::complex<double>>::trainStep<true>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer* _timer);
+    template void ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::trainStep<true>(size_t i, const MCS_train_t& _par, const bool quiet, const bool randomStart, Timer* _timer);
 
-    // #################################################################################################################################
+    // ######################################################################################################################################
 
     /**
     * @brief Swaps the states of two Monte Carlo simulations in the Parallel Tempering algorithm.
@@ -620,14 +675,24 @@ namespace MonteCarlo
         // Calculate the acceptance probability
         const _T _loss_i    = this->MCSs_[i]->getLastLoss();
         const _T _loss_j    = this->MCSs_[j]->getLastLoss();
-        const _T _delta     = (_loss_i - _loss_j) * (this->betas_[i] - this->betas_[j]);
+        const _T _delta     = (_loss_i - _loss_j) * ((-1) * (this->betas_[i] - this->betas_[j]));
         const _T _prob      = std::exp(_delta);
-
-        if (this->MCSs_[i]->getRandomVal() < std::abs(_prob))
+        double _absprob     = algebra::real(_prob);
+        if (this->MCSs_[i]->getRandomVal() < _absprob)
         {
             std::lock_guard<std::mutex> lock(this->swapMutex_); // use the mutex to protect the swap operation
-            this->MCSs_[i]->swapConfig(this->MCSs_[j]);         // swap the configurations
-            LOGINFO("Swapped configurations between solvers " + std::to_string(i) + " and " + std::to_string(j) + ".", LOG_TYPES::DEBUG, 3);
+            this->MCSs_[i]->setBeta(this->betas_[j]);           // set the beta value for the swapped solver
+            this->MCSs_[j]->setBeta(this->betas_[i]);           // set the beta value for the swapped solver
+            // swap betas
+            LOGINFO(std::format("Swapped solvers {} and {} with p={:.2f}", i, j, _absprob), LOG_TYPES::TRACE, 5);
+            std::swap(this->betas_[i], this->betas_[j]);        // swap the beta values
+            // swap losses
+            std::swap(this->lastLosses_[i], this->lastLosses_[j]); // swap the last losses
+            // swap counters
+            std::swap(this->total_[i], this->total_[j]);         // swap the total counts
+            std::swap(this->accepted_[i], this->accepted_[j]);   // swap the accepted counts
+            // swap configurations
+            // this->MCSs_[i]->swapConfig(this->MCSs_[j]);         // swap the configurations
         }
     }
     
@@ -637,7 +702,7 @@ namespace MonteCarlo
     template void ParallelTempering<std::complex<double>>::swap(size_t i, size_t j);
     template void ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::swap(size_t i, size_t j);
 
-    // #################################################################################################################################
+    // ######################################################################################################################################
     
     /**
     * @brief Perform swaps between solvers in parallel tempering, skipping finished solvers.
@@ -666,7 +731,7 @@ namespace MonteCarlo
             size_t j = i + 1;
             
             // Find the next unfinished solver
-            while (j < this->nSolvers_ && this->finished_[j] && this->errors_[j])
+            while (j < this->nSolvers_ && (this->finished_[j] || this->errors_[j]))
                 ++j;
 
             if (j < this->nSolvers_)                                // If a valid solver is found, perform the swap
@@ -685,7 +750,7 @@ namespace MonteCarlo
     template void ParallelTempering<std::complex<double>>::swaps();
     template void ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::swaps();
 
-    // #################################################################################################################################
+    // ######################################################################################################################################
 
     /**
     * @brief Trains a single Markov Chain Monte Carlo (MCMC) simulation without using parallel tempering.
@@ -718,7 +783,7 @@ namespace MonteCarlo
     template void ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::trainSingle(const MCS_train_t&, bool, bool, clk::time_point, uint);
     template void ParallelTempering<std::complex<double>, double, arma::Col<double>>::trainSingle(const MCS_train_t&, bool, bool, clk::time_point, uint);
 
-    // #################################################################################################################################
+    // ######################################################################################################################################
 
     /**
     * @brief Trains the Parallel Tempering model using Monte Carlo simulations.
@@ -774,7 +839,7 @@ namespace MonteCarlo
                 this->MCSs_[i]->reset(_par.nblck_);						    // reset the derivatives
         }
 
-        v_1d<Timer> timers(this->nSolvers_);							    // timer for the training
+        Timer _timer;														// timer for the training
         
         // resize the losses
         this->losses_.resize(this->nSolvers_);							    // losses for each solver
@@ -789,31 +854,48 @@ namespace MonteCarlo
         for (size_t i = 0; i < this->nSolvers_; ++i)    
             this->stdLosses_[i].resize(_par.MC_sam_);				        // standard deviation of the losses for each solver
         
+        // resize the best losses
+        this->bestLosses_.clear();										    // best losses for each solver
+        this->bestLosses_.resize(_par.MC_sam_);					            
+        this->bestStdLosses_.clear();									    // best standard deviation of the losses for each solver
+        this->bestStdLosses_.resize(_par.MC_sam_);
+
         // Set the random state and the number of flips
         for (size_t i = 0; i < this->nSolvers_; ++i)
         {
             this->MCSs_[i]->setRandomState();       	    			    // set the random state at the begining and the number of flips
             this->MCSs_[i]->setRandomFlipNum(_par.nFlip);				    // set the random state at the begining and the number of flips
         }
+        LOGINFO("", LOG_TYPES::TRACE, 30, '#', 2);
+        LOGINFO("Starting the training process.", LOG_TYPES::INFO, 2);		// inform the user about the start of the training
         // Perform the training steps
         for (size_t i = 1; i <= _par.MC_sam_; ++i)                          // go through the training steps
         {
-            this->trainStep<useMPI>(i, _par, quiet, ranStart, timers[i]);   // perform the training step
+            this->trainStep<useMPI>(i, _par, true, ranStart, &_timer);      // perform the training step
+
+            const bool _progress    = this->pBar_ && (i % pBar_->percentageSteps == 0);
+
+            if (_progress)
+                this->swaps();                                              // perform the swaps
 
             // inform the user about the progress
             { 
-                double _bestLoss    = std::numeric_limits<double>::max(), _bestAcc = 0.0;
+                double _bestLoss    = std::numeric_limits<double>::max(), _bestAcc = 0.0, _bestStd = 0.0;
                 size_t _bestIdx     = 0;
                 size_t _bestAccIdx  = 0;
                 for (size_t j = 0; j < this->nSolvers_; ++j)
                 {
-                    const double _currLoss = algebra::cast<double>(this->lastLosses_[j]);
+                    if (this->finished_[j] || this->errors_[j])
+                        continue;
+
+                    const double _currLoss = algebra::cast<double>(this->lastLosses_.at(j));
+
                     if (_currLoss < _bestLoss)
                     {
                         _bestLoss           = _currLoss;
                         _bestIdx            = j;
                         // update the best loss
-                        this->bestLoss_     = this->lastLosses_[j];
+                        this->bestLoss_     = this->lastLosses_.at(j);
                         this->bestIdx_      = j;
                     }
                     
@@ -824,12 +906,21 @@ namespace MonteCarlo
                     if (_currAcc > _bestAcc)
                     {
                         _bestAcc            = _currAcc;
+                        // _bestStd            = algebra::cast<double>(this->lastStdLosses_.at(j));
                         _bestAccIdx         = j;
                         // update the best acceptance
                         this->bestAcc_      = _bestAcc;
                         this->bestAccIdx_   = j;
+
+                        // update the best losses
+                        this->bestLosses_.at(i)     = _bestLoss;
+                        this->bestStdLosses_.at(i)  = _bestStd;        
                     }
+
+                    if (_progress)
+                        LOGINFO(std::format("[{}] For a solver {}[b={:.2e}] the loss is: {:.3e} with acceptance {:.2f}", i, j, betas_[j], _currLoss, _currAcc), LOG_TYPES::TRACE, 4);
                 }
+
                 std::string _prog = "Iteration " + std::to_string(i) + "/" + std::to_string(_par.MC_sam_) +
                     ", Best Loss: " + std::to_string(_bestLoss) +
                     ", Best Acceptance: " + std::to_string(_bestAcc * 100) + "%" +
@@ -838,16 +929,27 @@ namespace MonteCarlo
                 PROGRESS_UPD_Q(i, (*this->pBar_), _prog, !quiet);           // update the progress bar
             }
 
+            // ---------------------------------------------------------
+            if (_progress)
+            {                    
+                this->MCSs_[this->bestIdx_]->saveWeights(_par.dir + "Weights" + kPS, "weights.h5");     // save the weights (if it is supported by the solver)
+            }
+
+            // ---------------------------------------------------------
             if (std::all_of(this->finished_.begin(), this->finished_.end(), [](bool f) { return f; }))
             {
                 LOGINFO("All solvers have finished training.", LOG_TYPES::INFO, 1);
+                // clamp the best losses and the best standard deviation of the losses
+                this->bestLosses_.resize(i + 1);
+                this->bestStdLosses_.resize(i + 1);
+                this->MCSs_[this->bestIdx_]->saveWeights(_par.dir + "Weights" + kPS, "weights.h5");     // save the weights (if it is supported by the solver)
                 break;                                                      // Exit the training loop
             }
-            this->swaps();                                                  // Perform swaps between solvers                                          
+
         }
 
         if constexpr (useMPI) 
-        {                                                                    // Finalize MPI if useMPI is true
+        {                                                                   // Finalize MPI if useMPI is true
             #ifdef MC_ENABLE_MPI
                 MPI_Finalize();  // Finalize MPI environment
             #else
@@ -869,7 +971,8 @@ namespace MonteCarlo
     template void ParallelTempering<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>::train<true>(const MCS_train_t&, bool, bool, clk::time_point, uint);
     template void ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::train<true>(const MCS_train_t&, bool, bool, clk::time_point, uint);
     template void ParallelTempering<std::complex<double>, double, arma::Col<double>>::train<true>(const MCS_train_t&, bool, bool, clk::time_point, uint);
-    // #################################################################################################################################
+
+    // ######################################################################################################################################
     
 };
 
