@@ -105,29 +105,35 @@ namespace MonteCarlo
     * @var info_ Information about the solver.
     * @var ran_ Pointer to a random number generator.
     * @var pBar_ Pointer to a progress bar.
-    * @note !TODO Add more flexible configuration type for the state.
+    * @note !TODO Add more flexible configuration type for the state - to include also neural networks, etc.
     */
     template <typename _T, class _stateType	= double, class _Config_t = arma::Col<_stateType>>
     class MonteCarloSolver
     {
     public:
+        // ---------------------------------------------------------------------------------
         using Config_t                      =       _Config_t;
         using Config_cr_t                   =       const Config_t&;
         using Container_t                   =       arma::Col<_T>;
         using Container_pair_t              =       std::pair<Container_t, Container_t>;
         using MC_t                          =       MonteCarloSolver<_T, _stateType, _Config_t>;
         using MC_t_p                        =       std::shared_ptr<MC_t>;
+        // ---------------------------------------------------------------------------------
     public:
-        const _T epsilon_ 					= 		std::numeric_limits<_T>::epsilon();     // machine epsilon
+        const _T epsilon_ 					= 		std::numeric_limits<_T>::epsilon();     // machine epsilon for the data type _T
         u64 accepted_                       =       0;                                      // number of accepted steps
         u64 total_                          =       0;                                      // total number of steps
         _T lastLoss_                        =       std::numeric_limits<double>::max();     // last loss value (used for the stopping criterion and the progress bar)
+        _T lastStdLoss_                     =       0.0;                                    // last standard deviation of the loss
         double beta_                        =       1.0;                                    // inverse temperature, by default is 1.0 as we are in the energy based models optimization 
     public:                                                     
         virtual ~MonteCarloSolver()         =       0;                                      // virtual destructor
         MonteCarloSolver();                                                                 // default constructor
         MonteCarloSolver(const MC_t&);
-        MonteCarloSolver(MC_t&&);
+        MonteCarloSolver(MC_t&&) noexcept;
+        MonteCarloSolver& operator=(const MonteCarloSolver& other);
+        MonteCarloSolver& operator=(MonteCarloSolver&& other) noexcept;
+
     protected:                                                      
         size_t replica_                     =       1;                                      // number of a current replica
         std::string info_                   =       "Monte Carlo Solver";                   // information about the solver
@@ -160,20 +166,22 @@ namespace MonteCarlo
         virtual void setRandomFlipNum(uint _nFlip)                                           = 0; // set the number of flips
     public:
         // getters 
-        auto getBeta()						const -> double                                 { return this->beta_;       };
-        auto getInfo()						const -> std::string                            { return this->info_;       };
-        auto getLastLoss()					const -> _T                                     { return this->lastLoss_;   };
-        auto getRandomVal()					const -> double;
+        auto getRandomVal()					const -> double;                                // get a random value      
+        auto getBeta()						const -> double                                 { return this->beta_;                                       };
+        auto getInfo()						const -> std::string                            { return this->info_;                                       };
+        auto getLastLoss()					const -> _T                                     { return this->lastLoss_;                                   };
+        auto getLastStdLoss()				const -> _T                                     { return this->lastStdLoss_;                                };
+        auto getTotal()						const -> u64                                    { return this->total_;                                      };
+        auto getAccepted()					const -> u64                                    { return this->accepted_;                                   };
+        auto getRatio()						const -> double                                 { return (double)this->accepted_ / (double)this->total_;    };
         virtual auto getLastConfig()		const -> Config_t                               = 0; // get the last configuration
-        auto getTotal()						const -> u64                                    { return this->total_;      };
-        auto getAccepted()					const -> u64                                    { return this->accepted_;   };
-        auto getRatio()						const -> double                                 { return (double)this->accepted_ / (double)this->total_; };
+        virtual auto getConfigSize()		const -> size_t                                 = 0; // get the size of the configuration
         // setters
-        void setRandomGen(randomGen* _ran)                                                  { this->ran_ = _ran; };
-        void setProgressBar(pBar* _pBar)                                                    { this->pBar_ = _pBar; };
-        void setBeta(double _beta)                                                          { this->beta_ = _beta; };
-        void setReplica(size_t _replica)                                                    { this->replica_ = _replica; };
-        void reset_random(size_t _seed);
+        void setProgressBar(pBar* _pBar);
+        void setRandomGen(randomGen* _ran);
+        void resetRandom(size_t _seed);
+        void setReplica(size_t _replica)                                                    { this->replica_ = _replica;                                };      
+        void setBeta(double _beta)                                                          { this->beta_ = _beta;                                      };
         // virtual
         virtual void setConfig(const Config_t& _config)                                     = 0; // set the configuration
         virtual void swapConfig(MC_t_p _other)                                              = 0; // exchange information
@@ -182,8 +190,8 @@ namespace MonteCarlo
         virtual auto clone()                const -> MC_t_p                                 = 0; // clone the MCS
         virtual auto clone(MC_t_p _other)  -> void                                          = 0; // clone the MCS from the other MCS
         // potential weights
-        virtual auto saveWeights(std::string _path, std::string _file) -> bool              { return true; }
-        virtual auto setWeights(std::string _path, std::string _file) -> bool               { return true; }
+        virtual auto saveWeights(std::string _path, std::string _file) -> bool              { return true;                                              };
+        virtual auto setWeights(std::string _path, std::string _file) -> bool               { return true;                                              };
     };
 
     // #################################################################################################################################
@@ -241,9 +249,7 @@ namespace MonteCarlo
     private:
         std::mutex swapMutex_;                                                                                                        // Protects swaps in multithreaded context
         Threading::ThreadPool threadPool_;                                                                                            // Thread pool instance
-
-        // other
-        pBar* pBar_         = nullptr;                                                                                                // progress bar
+        std::unique_ptr<pBar> pBar_;                                                                                               // progress bar
     protected:
         size_t nSolvers_;                                                                                                             // number of solvers
         size_t bestIdx_, bestAccIdx_;                                                                                                          // index of the best solver
@@ -270,6 +276,11 @@ namespace MonteCarlo
         ParallelTempering() = default;
         ParallelTempering(Solver_p _MCS, const std::vector<double>& _betas, size_t _nSolvers);
         ParallelTempering(const std::vector<Solver_p>& _MCSs, const std::vector<double>& _betas);
+        ParallelTempering(Solver_p _MCS, size_t _nSolvers, BetaSpacing _spacing = BetaSpacing::LINEAR, double _minBeta = 1e-3, double _maxBeta = 1.0);
+        ParallelTempering(const std::vector<Solver_p>& _MCSs, BetaSpacing _spacing = BetaSpacing::LINEAR, double _minBeta = 1e-3, double _maxBeta = 1.0);
+        // move etc.
+        ParallelTempering(const ParallelTempering&)     = delete;
+        ParallelTempering(ParallelTempering&&) noexcept = default;
         virtual ~ParallelTempering();
     
     protected:
@@ -298,7 +309,7 @@ namespace MonteCarlo
         const v_1d<Solver_p>& getSolvers()                                                  const { return this->MCSs_; };
 
         // SETTERS
-        void setProgressBar(pBar* _pBar)                                                    { this->pBar_ = _pBar; };
+        void setProgressBar(pBar* _pBar)                                                    { this->pBar_ = std::unique_ptr<pBar>(_pBar); };
 
         // GETTERS
         auto getBetas()                                                                     const -> std::vector<double>        { return this->betas_; };

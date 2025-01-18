@@ -2,10 +2,13 @@
 #include "../../src/flog.h"
 #include "../../src/common.h"
 #include <limits>
+#include <memory>
 
 #ifdef MC_ENABLE_MPI
 #   include <mpi.h>
 #endif
+
+#define MC_PT_SWAP_CONFIG_ONLY 1
 
 // ##########################################################################################################################################
 
@@ -21,16 +24,20 @@
 * @param _seed The seed value to initialize the random number generator.
 */
 template <typename _T, typename _stateType, typename _CT>
-void MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>::reset_random(size_t _seed)
+void MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>::resetRandom(size_t _seed)
 {
     if(this->ran_) 
         delete this->ran_;
     this->ran_ = new randomGen(_seed);
 }
 // template instantiation
-template void MonteCarlo::MonteCarloSolver<double, arma::Col<double>, arma::Mat<double>>::reset_random(size_t);
-template void MonteCarlo::MonteCarloSolver<float, arma::Col<float>, arma::Mat<float>>::reset_random(size_t);
-template void MonteCarlo::MonteCarloSolver<std::complex<double>, arma::Col<std::complex<double>>, arma::Mat<std::complex<double>>>::reset_random(size_t);
+template void MonteCarlo::MonteCarloSolver<double, arma::Col<double>, arma::Mat<double>>::resetRandom(size_t);
+template void MonteCarlo::MonteCarloSolver<float, arma::Col<float>, arma::Mat<float>>::resetRandom(size_t);
+template void MonteCarlo::MonteCarloSolver<std::complex<double>, arma::Col<std::complex<double>>, arma::Mat<std::complex<double>>>::resetRandom(size_t);
+// mix
+template void MonteCarlo::MonteCarloSolver<double, arma::Col<double>, arma::Mat<float>>::resetRandom(size_t);
+template void MonteCarlo::MonteCarloSolver<float, arma::Col<float>, arma::Mat<double>>::resetRandom(size_t);
+template void MonteCarlo::MonteCarloSolver<std::complex<double>, arma::Col<std::complex<double>>, arma::Mat<std::complex<float>>>::resetRandom(size_t);
 
 // ##########################################################################################################################################
 
@@ -41,14 +48,11 @@ MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>::MonteCarloSolver(const MonteC
     // copy the random generator - !TODO: should copy the seed???
     size_t seed_ [[maybe_unused]] = _n.ran_->seed();
     this->ran_          = new randomGen();
-    // copy the progress bar
-    // this->pBar_         = new pBar();
-    // copy the information
     this->info_         = _n.info_;
-    // copy the Hamiltonian
     this->accepted_     = _n.accepted_;
     this->total_        = _n.total_;
     this->lastLoss_     = _n.lastLoss_;
+    this->lastStdLoss_  = _n.lastStdLoss_;
     this->beta_         = _n.beta_;
     this->info_         = _n.info_;
     this->replica_      = _n.replica_;
@@ -68,7 +72,7 @@ MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>::MonteCarloSolver(const MonteC
 * @param _n The MonteCarloSolver object to move from.
 */
 template <typename _T, typename _stateType, typename _CT>
-MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>::MonteCarloSolver(MonteCarloSolver<_T, _stateType, _CT>&& _n)
+MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>::MonteCarloSolver(MonteCarloSolver<_T, _stateType, _CT>&& _n) noexcept
 {
     // move the random generator
     this->ran_          = _n.ran_;
@@ -82,9 +86,60 @@ MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>::MonteCarloSolver(MonteCarloSo
     this->accepted_     = _n.accepted_;
     this->total_        = _n.total_;
     this->lastLoss_     = _n.lastLoss_;
+    this->lastStdLoss_  = _n.lastStdLoss_;
     this->beta_         = _n.beta_;
     this->info_         = std::move(_n.info_);
     this->replica_      = _n.replica_;
+    // other
+
+}
+
+// ##########################################################################################################################################
+
+template <typename _T, typename _stateType, typename _CT>
+MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>& MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>::operator=(const MonteCarloSolver<_T, _stateType, _CT>& _n)
+{
+    if (this != &_n)
+    {
+        // copy the random generator - !TODO: should copy the seed???
+        size_t seed_ [[maybe_unused]] = _n.ran_->seed();
+        this->ran_          = new randomGen();
+        this->info_         = _n.info_;
+        this->accepted_     = _n.accepted_;
+        this->total_        = _n.total_;
+        this->lastLoss_     = _n.lastLoss_;
+        this->lastStdLoss_  = _n.lastStdLoss_;
+        this->beta_         = _n.beta_;
+        this->info_         = _n.info_;
+        this->replica_      = _n.replica_;
+    }
+    return *this;
+}
+
+template <typename _T, typename _stateType, typename _CT>
+MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>& MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>::operator=(MonteCarloSolver<_T, _stateType, _CT>&& _n) noexcept
+{
+    if (this != &_n)
+    {
+        // move the random generator
+        this->ran_          = _n.ran_;
+        _n.ran_             = nullptr;
+        // move the progress bar
+        this->pBar_         = _n.pBar_;
+        _n.pBar_            = nullptr;
+        // move the information
+        this->info_         = std::move(_n.info_);
+        // move the Hamiltonian
+        this->accepted_     = _n.accepted_;
+        this->total_        = _n.total_;
+        this->lastLoss_     = _n.lastLoss_;
+        this->lastStdLoss_  = _n.lastStdLoss_;
+        this->beta_         = _n.beta_;
+        this->info_         = std::move(_n.info_);
+        this->replica_      = _n.replica_;
+        // other
+    }
+    return *this;
 }
 
 // ##########################################################################################################################################
@@ -282,7 +337,6 @@ namespace MonteCarlo
     {
         return (this->ran_) ? this->ran_->template random<double>() : 0.0;
     }
-
     // template instantiation
     template double MonteCarloSolver<double, double, arma::Col<double>>::getRandomVal() const;
     template double MonteCarloSolver<float, float, arma::Col<float>>::getRandomVal() const;
@@ -290,6 +344,63 @@ namespace MonteCarlo
     // mix
     template double MonteCarloSolver<std::complex<double>, double, arma::Col<double>>::getRandomVal() const;
     template double MonteCarloSolver<double, std::complex<double>, arma::Col<std::complex<double>>>::getRandomVal() const;
+
+    // #################################################################################################################################
+
+    /**
+    * @brief Sets the random number generator for the Monte Carlo solver.
+    * 
+    * This function sets the random number generator to be used by the Monte Carlo solver.
+    * If a random number generator is already set, it deletes the existing one before
+    * setting the new generator.
+    * 
+    * @tparam _T The type of the elements being processed by the solver.
+    * @tparam _stateType The type representing the state in the solver.
+    * @tparam _Config_t The type representing the configuration of the solver.
+    * @param _ran Pointer to the new random number generator to be used.
+    */
+    template <typename _T, typename _stateType, typename _Config_t>
+    void MonteCarloSolver<_T, _stateType, _Config_t>::setRandomGen(randomGen* _ran)
+    {
+        if (this->ran_)
+            delete this->ran_;
+        this->ran_ = _ran;
+    }
+    // template instantiation
+    template void MonteCarloSolver<double, double, arma::Col<double>>::setRandomGen(randomGen*);
+    template void MonteCarloSolver<float, float, arma::Col<float>>::setRandomGen(randomGen*);
+    template void MonteCarloSolver<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>::setRandomGen(randomGen*);
+    // mix
+    template void MonteCarloSolver<double, std::complex<double>, arma::Col<std::complex<double>>>::setRandomGen(randomGen*);
+    template void MonteCarloSolver<std::complex<double>, double, arma::Col<double>>::setRandomGen(randomGen*);
+
+    // #################################################################################################################################
+
+    /**
+    * @brief Sets the progress bar for the Monte Carlo solver.
+    * 
+    * This function sets the progress bar for the Monte Carlo solver. If a progress bar
+    * is already set, it deletes the existing progress bar before setting the new one.
+    * 
+    * @tparam _T The type of the elements being processed.
+    * @tparam _stateType The type representing the state of the solver.
+    * @tparam _Config_t The type representing the configuration of the solver.
+    * @param _pBar Pointer to the new progress bar to be set.
+    */
+    template <typename _T, typename _stateType, typename _Config_t>
+    void MonteCarloSolver<_T, _stateType, _Config_t>::setProgressBar(pBar* _pBar)
+    {
+        if (this->pBar_)
+            delete this->pBar_;
+        this->pBar_ = _pBar;
+    }
+    // template instantiation
+    template void MonteCarloSolver<double, double, arma::Col<double>>::setProgressBar(pBar*);
+    template void MonteCarloSolver<float, float, arma::Col<float>>::setProgressBar(pBar*);
+    template void MonteCarloSolver<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>::setProgressBar(pBar*);
+    // mix
+    template void MonteCarloSolver<double, std::complex<double>, arma::Col<std::complex<double>>>::setProgressBar(pBar*);
+    template void MonteCarloSolver<std::complex<double>, double, arma::Col<double>>::setProgressBar(pBar*);
 
     // #################################################################################################################################
 
@@ -314,6 +425,9 @@ namespace MonteCarlo
         if (this->pBar_)
             delete this->pBar_;
         this->pBar_ = nullptr;
+        if (this->ran_)
+            delete this->ran_;
+        this->ran_ = nullptr;
     }
 
     // template instantiation
@@ -396,9 +510,8 @@ namespace MonteCarlo
     template <typename _T, class _stateType, class _Config_t>
     ParallelTempering<_T, _stateType, _Config_t>::~ParallelTempering()
     {
-        if (this->pBar_)
-            delete this->pBar_;
-        this->pBar_ = nullptr;
+        // stop all the threads
+        this->threadPool_.shutdown();
     }
 
     // template instantiation
@@ -437,7 +550,9 @@ namespace MonteCarlo
     */
     template <typename _T, class _stateType, class _Config_t>
     ParallelTempering<_T, _stateType, _Config_t>::ParallelTempering(Solver_p _MCS, const std::vector<double>& _betas, size_t _nSolvers)
-        : threadPool_(_nSolvers), nSolvers_(_nSolvers), betas_(_betas), lastLosses_(_nSolvers, 0.0), accepted_(_nSolvers, 0), total_(_nSolvers, 0)
+        : threadPool_(_nSolvers), nSolvers_(_nSolvers), betas_(_betas), 
+        lastLosses_(_nSolvers, std::numeric_limits<_T>::max()), lastStdLosses_(_nSolvers, 0.0),
+        accepted_(_nSolvers, 0), total_(_nSolvers, 0)
     {
         if (_nSolvers < 1)
             throw std::invalid_argument("The number of solvers must be greater than 1.");
@@ -477,6 +592,75 @@ namespace MonteCarlo
     template ParallelTempering<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>::ParallelTempering(Solver_p, const std::vector<double>&, size_t);
     template ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::ParallelTempering(Solver_p, const std::vector<double>&, size_t);
     template ParallelTempering<std::complex<double>, double, arma::Col<double>>::ParallelTempering(Solver_p, const std::vector<double>&, size_t);
+
+    // #################################################################################################################################
+
+    template <typename _T, class _stateType, class _Config_t>
+    ParallelTempering<_T, _stateType, _Config_t>::ParallelTempering(Solver_p _MCS, size_t _nSolvers, BetaSpacing _spacing, double _minBeta, double _maxBeta)
+        : threadPool_(_nSolvers), nSolvers_(_nSolvers), betas_(generateBetas(_nSolvers, _spacing, _minBeta, _maxBeta)), 
+        lastLosses_(_nSolvers, std::numeric_limits<_T>::max()), lastStdLosses_(_nSolvers, 0.0),
+        accepted_(_nSolvers, 0), total_(_nSolvers, 0)
+    {
+        if (_nSolvers < 1)
+            throw std::invalid_argument("The number of solvers must be greater than 1.");
+
+        this->MCSs_.push_back(_MCS);
+        this->replicate(this->nSolvers_);
+        // Initialize the counters
+        for (size_t i = 0; i < this->nSolvers_; ++i)
+        {
+            this->MCSs_[i]->setBeta(this->betas_[i]);
+        }
+
+        // Initialize the counters
+        this->finished_     = std::vector<bool>(this->nSolvers_, false);
+        this->errors_       = std::vector<bool>(this->nSolvers_, false);
+        this->total_        = std::vector<u64>(this->nSolvers_, 0);
+        this->accepted_     = std::vector<u64>(this->nSolvers_, 0);
+        this->losses_       = v_1d<Container_t>(this->nSolvers_);
+        this->meanLosses_   = v_1d<Container_t>(this->nSolvers_);
+        this->stdLosses_    = v_1d<Container_t>(this->nSolvers_);
+        this->bestLosses_.clear();
+    }
+    // template instantiation
+    template ParallelTempering<double, double, arma::Col<double>>::ParallelTempering(Solver_p, size_t, BetaSpacing, double, double);
+    template ParallelTempering<float, float, arma::Col<float>>::ParallelTempering(Solver_p, size_t, BetaSpacing, double, double);
+    template ParallelTempering<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>::ParallelTempering(Solver_p, size_t, BetaSpacing, double, double);
+    template ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::ParallelTempering(Solver_p, size_t, BetaSpacing, double, double);
+    template ParallelTempering<std::complex<double>, double, arma::Col<double>>::ParallelTempering(Solver_p, size_t, BetaSpacing, double, double);
+
+    // #################################################################################################################################
+
+    template <typename _T, class _stateType, class _Config_t>
+    ParallelTempering<_T, _stateType, _Config_t>::ParallelTempering(const std::vector<Solver_p>& _MCSs, BetaSpacing _spacing, double _minBeta, double _maxBeta)
+        : threadPool_(_MCSs.size()), nSolvers_(_MCSs.size()), MCSs_(_MCSs), betas_(generateBetas(_MCSs.size(), _spacing, _minBeta, _maxBeta)),
+        lastLosses_(_MCSs.size(), std::numeric_limits<_T>::max()), lastStdLosses_(_MCSs.size(), 0.0),
+        accepted_(_MCSs.size(), 0), total_(_MCSs.size(), 0)
+    {
+        if (this->nSolvers_ < 1)
+            throw std::invalid_argument("The number of solvers must be greater than 0.");
+
+        // Initialize the counters
+        this->finished_     = std::vector<bool>(this->nSolvers_, false);
+        this->errors_       = std::vector<bool>(this->nSolvers_, false);
+        this->total_        = std::vector<u64>(this->nSolvers_, 0);
+        this->accepted_     = std::vector<u64>(this->nSolvers_, 0);
+        this->losses_       = v_1d<Container_t>(this->nSolvers_);
+        this->meanLosses_   = v_1d<Container_t>(this->nSolvers_);
+        this->stdLosses_    = v_1d<Container_t>(this->nSolvers_);
+        this->bestLosses_.clear();
+
+        for (size_t i = 0; i < this->nSolvers_; ++i)
+        {
+            this->MCSs_[i]->setBeta(this->betas_[i]);
+        }
+    }
+    // template instantiation
+    template ParallelTempering<double, double, arma::Col<double>>::ParallelTempering(const std::vector<Solver_p>&, BetaSpacing, double, double);
+    template ParallelTempering<float, float, arma::Col<float>>::ParallelTempering(const std::vector<Solver_p>&, BetaSpacing, double, double);
+    template ParallelTempering<std::complex<double>, std::complex<double>, arma::Col<std::complex<double>>>::ParallelTempering(const std::vector<Solver_p>&, BetaSpacing, double, double);
+    template ParallelTempering<double, std::complex<double>, arma::Col<std::complex<double>>>::ParallelTempering(const std::vector<Solver_p>&, BetaSpacing, double, double);
+    template ParallelTempering<std::complex<double>, double, arma::Col<double>>::ParallelTempering(const std::vector<Solver_p>&, BetaSpacing, double, double);
 
     // #################################################################################################################################
 
@@ -521,7 +705,9 @@ namespace MonteCarlo
     */
     template <typename _T, class _stateType, class _Config_t>
     ParallelTempering<_T, _stateType, _Config_t>::ParallelTempering(const std::vector<Solver_p>& _MCSs, const std::vector<double>& _betas)
-        : threadPool_(_MCSs.size()), nSolvers_(_MCSs.size()), MCSs_(_MCSs), betas_(_betas), lastLosses_(_MCSs.size(), 0.0), accepted_(_MCSs.size(), 0), total_(_MCSs.size(), 0)
+        : threadPool_(_MCSs.size()), nSolvers_(_MCSs.size()), MCSs_(_MCSs), betas_(_betas), 
+        lastLosses_(_MCSs.size(), std::numeric_limits<_T>::max()), lastStdLosses_(_MCSs.size(), 0.0),
+        accepted_(_MCSs.size(), 0), total_(_MCSs.size(), 0)
     {
         if (this->nSolvers_ < 1)
             throw std::invalid_argument("The number of solvers must be greater than 0.");
@@ -615,11 +801,12 @@ namespace MonteCarlo
                 catch (const std::exception& e) 
                 {
                     LOGINFO("Error in training step for solver " + std::to_string(j) + ": " + e.what(), LOG_TYPES::ERROR, 4);
-                    this->total_[j]     = 0;
-                    this->accepted_[j]  = 0;
-                    this->lastLosses_[j]= std::numeric_limits<_T>::max();
-                    this->finished_[j]  = true; // only whenever the whole solver is done
-                    this->errors_[j]    = true; // only when the solver has an error
+                    this->total_.at(j)             = 0;
+                    this->accepted_.at(j)          = 0;
+                    this->lastLosses_.at(j)        = std::numeric_limits<_T>::max();
+                    this->lastStdLosses_.at(j)     = 0.0;
+                    this->finished_.at(j)          = true; // only whenever the whole solver is done
+                    this->errors_.at(j)            = true; // only when the solver has an error
                 }
             });
         }
@@ -631,9 +818,10 @@ namespace MonteCarlo
         {
             if (this->finished_[j] || this->errors_[j])
                 continue;
-            this->total_[j]         = this->MCSs_[j]->getTotal();
-            this->accepted_[j]      = this->MCSs_[j]->getAccepted();
-            this->lastLosses_[j]    = this->MCSs_[j]->getLastLoss();
+            this->total_.at(j)         = this->MCSs_.at(j)->getTotal();
+            this->accepted_.at(j)      = this->MCSs_.at(j)->getAccepted();
+            this->lastLosses_.at(j)    = this->MCSs_.at(j)->getLastLoss();
+            this->lastStdLosses_.at(j) = this->MCSs_.at(j)->getLastStdLoss();
         }
     }
 
@@ -666,33 +854,33 @@ namespace MonteCarlo
     template <typename _T, class _stateType, class _Config_t>
     void ParallelTempering<_T, _stateType, _Config_t>::swap(size_t i, size_t j)
     {        
-        if (i == j || i >= this->nSolvers_                  || 
-                j >= this->nSolvers_                        || 
-                this->finished_[i] || this->finished_[j]    || 
-                this->errors_[i] || this->errors_[j])
+        if (i == j  || i >= this->nSolvers_ || j >= this->nSolvers_ 
+                    || this->finished_[i]   || this->finished_[j] 
+                    || this->errors_[i]     || this->errors_[j])
             return;
 
         // Calculate the acceptance probability
-        const _T _loss_i    = this->MCSs_[i]->getLastLoss();
-        const _T _loss_j    = this->MCSs_[j]->getLastLoss();
-        const _T _delta     = (_loss_i - _loss_j) * ((-1) * (this->betas_[i] - this->betas_[j]));
-        const _T _prob      = std::exp(_delta);
-        double _absprob     = algebra::real(_prob);
+        const _T _loss_i        = this->MCSs_[i]->getLastLoss();
+        const _T _loss_j        = this->MCSs_[j]->getLastLoss();
+        const _T _delta         = (_loss_i - _loss_j) * (this->betas_[i] - this->betas_[j]);
+        const double _absprob   = std::exp(algebra::real(_delta));
+        // const double _absprob   = algebra::real(std::exp(_delta));
         if (this->MCSs_[i]->getRandomVal() < _absprob)
         {
             std::lock_guard<std::mutex> lock(this->swapMutex_); // use the mutex to protect the swap operation
-            this->MCSs_[i]->setBeta(this->betas_[j]);           // set the beta value for the swapped solver
-            this->MCSs_[j]->setBeta(this->betas_[i]);           // set the beta value for the swapped solver
-            // swap betas
-            LOGINFO(std::format("Swapped solvers {} and {} with p={:.2f}", i, j, _absprob), LOG_TYPES::TRACE, 5);
+#ifdef MC_PT_SWAP_CONFIG_ONLY
+            this->MCSs_[i]->swapConfig(this->MCSs_[j]);         // swap the configurations
+#else
             std::swap(this->betas_[i], this->betas_[j]);        // swap the beta values
+            this->MCSs_[i]->setBeta(this->betas_[i]);           // set the beta value for the swapped solver
+            this->MCSs_[j]->setBeta(this->betas_[j]);           // set the beta value for the swapped solver
             // swap losses
             std::swap(this->lastLosses_[i], this->lastLosses_[j]); // swap the last losses
             // swap counters
             std::swap(this->total_[i], this->total_[j]);         // swap the total counts
             std::swap(this->accepted_[i], this->accepted_[j]);   // swap the accepted counts
-            // swap configurations
-            // this->MCSs_[i]->swapConfig(this->MCSs_[j]);         // swap the configurations
+#endif
+            LOGINFO(std::format("Swapped solvers {} and {} with p={:.2f}", i, j, _absprob), LOG_TYPES::DEBUG, 5);
         }
     }
     
@@ -734,7 +922,7 @@ namespace MonteCarlo
             while (j < this->nSolvers_ && (this->finished_[j] || this->errors_[j]))
                 ++j;
 
-            if (j < this->nSolvers_)                                // If a valid solver is found, perform the swap
+            if (j < this->nSolvers_ && i != j)                      // If a valid solver is found and i != j, perform the swap
             {
                 this->swap(i, j);
                 i = j;
@@ -743,7 +931,6 @@ namespace MonteCarlo
                 break;                                              // Exit the loop if no valid solver is found
         }
     }
-
     // template instantiation
     template void ParallelTempering<double>::swaps();
     template void ParallelTempering<float>::swaps();
@@ -771,7 +958,7 @@ namespace MonteCarlo
     * @param progPrc The progress percentage of the training.
     */
     template <typename _T, class _stateType, class _Config_t>
-    void ParallelTempering<_T, _stateType, _Config_t>::trainSingle(const MCS_train_t& _par, bool quiet, bool ranStart, clk::time_point _t, uint progPrc)
+    inline void ParallelTempering<_T, _stateType, _Config_t>::trainSingle(const MCS_train_t& _par, bool quiet, bool ranStart, clk::time_point _t, uint progPrc)
     {
         std::tie(this->meanLosses_[0], this->stdLosses_[0]) = this->MCSs_[0]->train(_par, quiet, ranStart, _t, progPrc);
     }
@@ -811,14 +998,15 @@ namespace MonteCarlo
     template <bool useMPI>
     void ParallelTempering<_T, _stateType, _Config_t>::train(const MCS_train_t& _par, bool quiet, bool ranStart, clk::time_point _t, uint progPrc)
     {
-        if (this->nSolvers_ == 1)
-        {
+        if (this->nSolvers_ == 1) {
             return this->trainSingle(_par, quiet, ranStart, _t, progPrc);
         }
 
-        if (this->nSolvers_ < 1)
+        if (this->nSolvers_ < 1) {
             throw std::invalid_argument("The number of solvers must be greater than 0.");
-
+        }
+        Timer _timer;														// timer for the training
+        
         // Initialize MPI if useMPI is true
         if constexpr (useMPI) 
         {
@@ -828,19 +1016,17 @@ namespace MonteCarlo
                 throw std::runtime_error("MPI is not enabled in this build.");
             #endif
         }
+
         // Initialize the progress bar and training information
         {
-            if (this->pBar_)
-                delete this->pBar_;
-            this->pBar_ = new pBar(progPrc, _par.MC_sam_);					// set the progress bar		
+            this->pBar_ = std::make_unique<pBar>(progPrc, _par.MC_sam_);	// set the progress bar		
             
             _par.hi();														// set the info about training
             for (size_t i = 0; i < this->nSolvers_; ++i)
                 this->MCSs_[i]->reset(_par.nblck_);						    // reset the derivatives
         }
+        const size_t _config_size = this->MCSs_[0]->getConfigSize();		// get the size of the configuration
 
-        Timer _timer;														// timer for the training
-        
         // resize the losses
         this->losses_.resize(this->nSolvers_);							    // losses for each solver
         for (size_t i = 0; i < this->nSolvers_; ++i)    
@@ -848,12 +1034,14 @@ namespace MonteCarlo
         
         // resize the means
         this->meanLosses_.resize(this->nSolvers_);				            // mean losses for each solver
-        for (size_t i = 0; i < this->nSolvers_; ++i)    
+        for (size_t i = 0; i < this->nSolvers_; ++i) {
             this->meanLosses_[i].resize(_par.MC_sam_);	    		        // mean losses for each solver
+        }    
+        // resize the standard deviations
         this->stdLosses_.resize(this->nSolvers_);					        // standard deviation of the losses for each solver
-        for (size_t i = 0; i < this->nSolvers_; ++i)    
+        for (size_t i = 0; i < this->nSolvers_; ++i) {
             this->stdLosses_[i].resize(_par.MC_sam_);				        // standard deviation of the losses for each solver
-        
+        }    
         // resize the best losses
         this->bestLosses_.clear();										    // best losses for each solver
         this->bestLosses_.resize(_par.MC_sam_);					            
@@ -866,66 +1054,75 @@ namespace MonteCarlo
             this->MCSs_[i]->setRandomState();       	    			    // set the random state at the begining and the number of flips
             this->MCSs_[i]->setRandomFlipNum(_par.nFlip);				    // set the random state at the begining and the number of flips
         }
+
+        // -------------------------------------------------------------------
         LOGINFO("", LOG_TYPES::TRACE, 30, '#', 2);
         LOGINFO("Starting the training process.", LOG_TYPES::INFO, 2);		// inform the user about the start of the training
-        // Perform the training steps
         for (size_t i = 1; i <= _par.MC_sam_; ++i)                          // go through the training steps
         {
-            this->trainStep<useMPI>(i, _par, true, ranStart, &_timer);      // perform the training step
-
+            try {
+                this->trainStep<useMPI>(i, _par, true, ranStart, &_timer);  // perform the training step
+            }
+            catch (const std::exception& e) {
+                LOGINFO("Error in training step: " + std::string(e.what()), LOG_TYPES::ERROR, 4);
+                break;
+            }  
+            // ---------------------------------------------------------------
             const bool _progress    = this->pBar_ && (i % pBar_->percentageSteps == 0);
-
-            if (_progress)
+            // ---------------------------------------------------------------
+            if (i % int(_config_size / 5))
                 this->swaps();                                              // perform the swaps
-
+            // ---------------------------------------------------------------
             // inform the user about the progress
             { 
-                double _bestLoss    = std::numeric_limits<double>::max(), _bestAcc = 0.0, _bestStd = 0.0;
-                size_t _bestIdx     = 0;
-                size_t _bestAccIdx  = 0;
+                double _bestLoss = std::numeric_limits<double>::max(), _bestAcc = 0.0, _bestStd = 0.0;
+                _T _bestLossT = 0.0;
+                size_t _bestIdx = 0, _bestAccIdx = 0;
+                if (_progress)
+                    LOGINFO(std::format("Iteration: {}", i), LOG_TYPES::TRACE, 3);
+
                 for (size_t j = 0; j < this->nSolvers_; ++j)
                 {
                     if (this->finished_[j] || this->errors_[j])
                         continue;
-
-                    const double _currLoss = algebra::cast<double>(this->lastLosses_.at(j));
+                        
+                    const _T _currLossT     = this->lastLosses_.at(j);
+                    const _T _currStdT      = this->lastStdLosses_.at(j);
+                    const double _currLoss  = algebra::cast<double>(_currLossT);
+                    const double _currStd   = algebra::cast<double>(_currStdT);
 
                     if (_currLoss < _bestLoss)
                     {
-                        _bestLoss           = _currLoss;
-                        _bestIdx            = j;
-                        // update the best loss
-                        this->bestLoss_     = this->lastLosses_.at(j);
-                        this->bestIdx_      = j;
+                        _bestLoss                   = _currLoss;
+                        _bestLossT                  = _currLossT;
+                        _bestStd                    = _currStd;
+                        _bestIdx                    = j;
+                        this->bestIdx_              = j;
+                        this->bestLosses_.at(i)     = _currLossT;
+                        this->bestStdLosses_.at(i)  = _currStdT;
                     }
-                    
+                    // -------------------------------------------------------
                     if (this->total_[j] <= 0)
                         continue;
 
-                    const double _currAcc = (double)this->accepted_[j] / this->total_[j];
+                    const double _currAcc           = (double)this->accepted_[j] / this->total_[j];
                     if (_currAcc > _bestAcc)
                     {
-                        _bestAcc            = _currAcc;
-                        // _bestStd            = algebra::cast<double>(this->lastStdLosses_.at(j));
-                        _bestAccIdx         = j;
+                        _bestAcc                    = _currAcc;
+                        _bestAccIdx                 = j;
                         // update the best acceptance
-                        this->bestAcc_      = _bestAcc;
-                        this->bestAccIdx_   = j;
-
-                        // update the best losses
-                        this->bestLosses_.at(i)     = _bestLoss;
-                        this->bestStdLosses_.at(i)  = _bestStd;        
+                        this->bestAcc_              = _bestAcc;
+                        this->bestAccIdx_           = j;
                     }
 
-                    if (_progress)
-                        LOGINFO(std::format("[{}] For a solver {}[b={:.2e}] the loss is: {:.3e} with acceptance {:.2f}", i, j, betas_[j], _currLoss, _currAcc), LOG_TYPES::TRACE, 4);
+                    if (_progress) {
+                        LOGINFO(std::format("For a solver {}[β={:.2e}] the loss is: ({:.3e},{:.3e})+-{:.3e} with acceptance {:.2f}", 
+                            j, betas_[j], _currLoss, algebra::imag(_currLossT), _currStd, _currAcc), LOG_TYPES::TRACE, 4);
+                    }
                 }
 
-                std::string _prog = "Iteration " + std::to_string(i) + "/" + std::to_string(_par.MC_sam_) +
-                    ", Best Loss: " + std::to_string(_bestLoss) +
-                    ", Best Acceptance: " + std::to_string(_bestAcc * 100) + "%" +
-                    ", Best Solver Index: " + std::to_string(_bestIdx) +
-                    ", Best Acceptance Solver Index: " + std::to_string(_bestAccIdx);
+                std::string _prog = std::format("Iter {}/{}, Best Loss: ({:.3e},{:.3e})+-{:.3e}, Best Acc: {:.2f}%, Best Solver: {}(β={:.2e}), Best Acc Solver: {}",
+                    i, _par.MC_sam_, _bestLoss, algebra::imag(_bestLossT), std::abs(_bestStd), _bestAcc * 100, _bestIdx, betas_[_bestIdx], _bestAccIdx);
                 PROGRESS_UPD_Q(i, (*this->pBar_), _prog, !quiet);           // update the progress bar
             }
 
@@ -945,7 +1142,6 @@ namespace MonteCarlo
                 this->MCSs_[this->bestIdx_]->saveWeights(_par.dir + "Weights" + kPS, "weights.h5");     // save the weights (if it is supported by the solver)
                 break;                                                      // Exit the training loop
             }
-
         }
 
         if constexpr (useMPI) 
