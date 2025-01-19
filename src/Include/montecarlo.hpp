@@ -127,7 +127,7 @@ namespace MonteCarlo
         // ---------------------------------------------------------------------------------
         using Config_t                      =       _Config_t;
         using Config_cr_t                   =       const Config_t&;
-        using Container_t                   =       MCS_CONTAINER<_stateType>;
+        using Container_t                   =       MCS_CONTAINER<_T>;
         using Container_pair_t              =       std::pair<Container_t, Container_t>;
         using MC_t                          =       MonteCarloSolver<_T, _stateType, _Config_t>;
         using MC_t_p                        =       std::shared_ptr<MC_t>;
@@ -158,11 +158,13 @@ namespace MonteCarlo
         virtual void init()					=       0;                                      // initialize the MCS (e.g., set the random state, etc.)
     public:                                                     
         virtual void setRandomState(bool x = true) = 0;                                     // set the random state of the MCS
+    // *****************************************************************************************************************************
         // functions that need to be implemented for other problems
         virtual bool trainStop(size_t i,    const MCS_train_t& _par, 
                                             _T _currLoss, 
                                             _T _currstd = 0.0, 
                                             bool _quiet = false) = 0;                       // check if the training should be stopped
+
         virtual bool trainStep(size_t i,    Container_t& En,
                                             Container_t& meanEn, 
                                             Container_t& stdEn, 
@@ -170,11 +172,13 @@ namespace MonteCarlo
                                             const bool quiet, 
                                             const bool randomStart,
                                             Timer* _timer)      = 0;                        // perform a single training step
+
         virtual Container_pair_t train(     const MCS_train_t& _par, 
                                             bool quiet          = false, 
                                             bool randomStart    = false, 
                                             clk::time_point _t  = NOW, 
                                             uint progPrc        = 25) = 0;                  // train the MCS
+    // *****************************************************************************************************************************
     public:
         virtual void setRandomFlipNum(uint _nFlip)                                           = 0; // set the number of flips
     public:
@@ -216,6 +220,8 @@ namespace MonteCarlo
         LOGARITHMIC,
         ADAPTIVE
     };  
+    
+    // #################################################################################################################################
 
     /**
     * @class ParallelTempering
@@ -262,11 +268,11 @@ namespace MonteCarlo
     private:
         std::mutex swapMutex_;                                                                                                        // Protects swaps in multithreaded context
         Threading::ThreadPool threadPool_;                                                                                            // Thread pool instance
-        std::unique_ptr<pBar> pBar_;                                                                                               // progress bar
+        std::unique_ptr<pBar> pBar_;                                                                                                  // progress bar
     protected:
         size_t nSolvers_;                                                                                                             // number of solvers
-        size_t bestIdx_, bestAccIdx_;                                                                                                          // index of the best solver
-        _T bestLoss_, bestAcc_;                                                                                                            // best loss
+        size_t bestIdx_, bestAccIdx_;                                                                                                 // index of the best solver
+        _T bestLoss_, bestAcc_;                                                                                                       // best loss
         std::vector<Solver_p> MCSs_;                                                                                                  // pointers to the Monte Carlo solvers
         std::vector<double> betas_;                                                                                                   // inverse temperatures
 
@@ -286,16 +292,17 @@ namespace MonteCarlo
         Container_t bestLosses_;                                                                                                      // best losses
         Container_t bestStdLosses_;
     public:
+        // *****************************************************************************************************************************
         ParallelTempering() = default;
         ParallelTempering(Solver_p _MCS, const std::vector<double>& _betas, size_t _nSolvers);
         ParallelTempering(const std::vector<Solver_p>& _MCSs, const std::vector<double>& _betas);
         ParallelTempering(Solver_p _MCS, size_t _nSolvers, BetaSpacing _spacing = BetaSpacing::LINEAR, double _minBeta = 1e-3, double _maxBeta = 1.0);
         ParallelTempering(const std::vector<Solver_p>& _MCSs, BetaSpacing _spacing = BetaSpacing::LINEAR, double _minBeta = 1e-3, double _maxBeta = 1.0);
-        // move etc.
+        // *****************************************************************************************************************************
         ParallelTempering(const ParallelTempering&)     = delete;
         ParallelTempering(ParallelTempering&&) noexcept = default;
         virtual ~ParallelTempering();
-    
+        // *****************************************************************************************************************************
     protected:
         void replicate(size_t _nSolvers);                                                                                             // replicate the configurations
 
