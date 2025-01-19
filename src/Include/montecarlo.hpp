@@ -42,13 +42,26 @@ namespace MonteCarlo
 class randomGen;
 class pBar;
 
-#define MCS_PUBLIC_TYPES(_T, _ST, _CT) public:                                                  \
-                    using MC_t = typename MonteCarlo::MonteCarloSolver<_T, _stateType, _CT<_stateType>>; \
-                    using MC_t_p = std::shared_ptr<MC_t>;                                       \
-                    using Container_t = typename MC_t::Container_t;                                      \
-                    using Container_pair_t = typename MC_t::Container_pair_t;                            \
-                    using Config_t = typename MC_t::Config_t;                                            \
-                    using Config_cr_t = typename MC_t::Config_cr_t;                                      \
+#define MCS_USE_ARMA_CONTAINER
+// #define MCS_USE_STD_CONTAINER
+#ifdef MCS_USE_ARMA_CONTAINER
+template <typename _stateType>
+using MCS_CONTAINER = arma::Col<_stateType>;
+#   ifdef MCS_USE_STD_CONTAINER
+#       undef MCS_USE_STD_CONTAINER
+#   endif
+#elif defined MCS_USE_STD_CONTAINER
+template <typename _stateType>
+using MCS_CONTAINER = std::vector<_stateType>;
+#endif
+
+#define MCS_PUBLIC_TYPES(_T, _ST, _CT) public:                                                              \
+                    using MC_t = typename MonteCarlo::MonteCarloSolver<_T, _stateType, _CT<_stateType>>;    \
+                    using MC_t_p = std::shared_ptr<MC_t>;                                                   \
+                    using Container_t = typename MC_t::Container_t;                                         \
+                    using Container_pair_t = typename MC_t::Container_pair_t;                               \
+                    using Config_t = typename MC_t::Config_t;                                               \
+                    using Config_cr_t = typename MC_t::Config_cr_t;                                         \
                     using MCS_train_t = typename MonteCarlo::MCS_train_t;
 
 namespace MonteCarlo
@@ -114,7 +127,7 @@ namespace MonteCarlo
         // ---------------------------------------------------------------------------------
         using Config_t                      =       _Config_t;
         using Config_cr_t                   =       const Config_t&;
-        using Container_t                   =       arma::Col<_T>;
+        using Container_t                   =       MCS_CONTAINER<_stateType>;
         using Container_pair_t              =       std::pair<Container_t, Container_t>;
         using MC_t                          =       MonteCarloSolver<_T, _stateType, _Config_t>;
         using MC_t_p                        =       std::shared_ptr<MC_t>;
