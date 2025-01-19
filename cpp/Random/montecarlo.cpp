@@ -14,10 +14,6 @@
 
 /**
 * @brief Resets the random number generator with a new seed.
-* 
-* This function deletes the existing random number generator (if any) and 
-* creates a new one with the provided seed.
-* 
 * @tparam _T The type parameter for the MonteCarloSolver.
 * @tparam _stateType The type parameter for the state.
 * @tparam _CT The type parameter for the configuration.
@@ -26,9 +22,10 @@
 template <typename _T, typename _stateType, typename _CT>
 void MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>::resetRandom(size_t _seed)
 {
-    if(this->ran_) 
-        delete this->ran_;
-    this->ran_ = new randomGen(_seed);
+    if (this->ran_) 
+        this->ran_->seedInit(_seed);
+    else
+        this->ran_ = std::make_shared<randomGen>(_seed);
 }
 // template instantiation
 template void MonteCarlo::MonteCarloSolver<double, arma::Col<double>, arma::Mat<double>>::resetRandom(size_t);
@@ -47,7 +44,7 @@ MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>::MonteCarloSolver(const MonteC
 {
     // copy the random generator - !TODO: should copy the seed???
     size_t seed_ [[maybe_unused]] = _n.ran_->seed();
-    this->ran_          = new randomGen();
+    this->ran_          = std::make_shared<randomGen>(*_n.ran_.get());
     this->info_         = _n.info_;
     this->accepted_     = _n.accepted_;
     this->total_        = _n.total_;
@@ -75,11 +72,9 @@ template <typename _T, typename _stateType, typename _CT>
 MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>::MonteCarloSolver(MonteCarloSolver<_T, _stateType, _CT>&& _n) noexcept
 {
     // move the random generator
-    this->ran_          = _n.ran_;
-    _n.ran_             = nullptr;
+    this->ran_          = std::move(_n.ran_);
     // move the progress bar
-    this->pBar_         = _n.pBar_;
-    _n.pBar_            = nullptr;
+    this->pBar_         = std::move(_n.pBar_);
     // move the information
     this->info_         = std::move(_n.info_);
     // move the Hamiltonian
@@ -103,7 +98,7 @@ MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>& MonteCarlo::MonteCarloSolver<
     {
         // copy the random generator - !TODO: should copy the seed???
         size_t seed_ [[maybe_unused]] = _n.ran_->seed();
-        this->ran_          = new randomGen();
+        this->ran_          = std::make_shared<randomGen>(*_n.ran_.get());
         this->info_         = _n.info_;
         this->accepted_     = _n.accepted_;
         this->total_        = _n.total_;
@@ -122,11 +117,9 @@ MonteCarlo::MonteCarloSolver<_T, _stateType, _CT>& MonteCarlo::MonteCarloSolver<
     if (this != &_n)
     {
         // move the random generator
-        this->ran_          = _n.ran_;
-        _n.ran_             = nullptr;
+        this->ran_          = std::move(_n.ran_);
         // move the progress bar
-        this->pBar_         = _n.pBar_;
-        _n.pBar_            = nullptr;
+        this->pBar_         = std::move(_n.pBar_);
         // move the information
         this->info_         = std::move(_n.info_);
         // move the Hamiltonian
@@ -362,9 +355,8 @@ namespace MonteCarlo
     template <typename _T, typename _stateType, typename _Config_t>
     void MonteCarloSolver<_T, _stateType, _Config_t>::setRandomGen(randomGen* _ran)
     {
-        if (this->ran_)
-            delete this->ran_;
-        this->ran_ = _ran;
+        if (_ran)
+            this->ran_ = std::make_shared<randomGen>(*_ran);
     }
     // template instantiation
     template void MonteCarloSolver<double, double, arma::Col<double>>::setRandomGen(randomGen*);
@@ -390,9 +382,8 @@ namespace MonteCarlo
     template <typename _T, typename _stateType, typename _Config_t>
     void MonteCarloSolver<_T, _stateType, _Config_t>::setProgressBar(pBar* _pBar)
     {
-        if (this->pBar_)
-            delete this->pBar_;
-        this->pBar_ = _pBar;
+        if (_pBar)
+            this->pBar_ = std::make_unique<pBar>(*_pBar);
     }
     // template instantiation
     template void MonteCarloSolver<double, double, arma::Col<double>>::setProgressBar(pBar*);
@@ -407,7 +398,7 @@ namespace MonteCarlo
     template <typename _T, typename _stateType, typename _Config_t>
     MonteCarloSolver<_T, _stateType, _Config_t>::MonteCarloSolver()
     {
-        this->ran_  = new randomGen();
+        this->ran_ = std::make_shared<randomGen>();
     }
     // template instantiation
     template MonteCarloSolver<double, double, arma::Col<double>>::MonteCarloSolver();
@@ -422,12 +413,7 @@ namespace MonteCarlo
     template <typename T, typename U, typename V>
     MonteCarloSolver<T, U, V>::~MonteCarloSolver() 
     {
-        if (this->pBar_)
-            delete this->pBar_;
-        this->pBar_ = nullptr;
-        if (this->ran_)
-            delete this->ran_;
-        this->ran_ = nullptr;
+        DESTRUCTOR_CALL;
     }
 
     // template instantiation
@@ -860,10 +846,12 @@ namespace MonteCarlo
             return;
 
         // Calculate the acceptance probability
-        const _T _loss_i        = this->MCSs_[i]->getLastLoss();
-        const _T _loss_j        = this->MCSs_[j]->getLastLoss();
-        const _T _delta         = (_loss_i - _loss_j) * (this->betas_[i] - this->betas_[j]);
-        const double _absprob   = std::exp(algebra::real(_delta));
+        const _T _loss_i                = this->MCSs_[i]->getLastLoss();
+        const _T _loss_j                = this->MCSs_[j]->getLastLoss();
+        // const _T _delta              = (_loss_i - _loss_j) * (this->betas_[i] - this->betas_[j]);
+        const _T temp_scaled_loss_diff  = (_loss_i / this->betas_[i]) - (_loss_j / this->betas_[j]);
+        const _T _delta                 = temp_scaled_loss_diff * (this->betas_[i] - this->betas_[j]);
+        const double _absprob           = std::exp(algebra::real(_delta));
         // const double _absprob   = algebra::real(std::exp(_delta));
         if (this->MCSs_[i]->getRandomVal() < _absprob)
         {

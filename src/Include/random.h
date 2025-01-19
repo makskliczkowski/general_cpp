@@ -63,6 +63,15 @@ private:
 public:
 
 	explicit randomGen(std::uint64_t seed = std::random_device{}());
+	~randomGen() = default;
+	// copy constructor
+	randomGen(const randomGen& _n) 				: engine(_n.engine), seed_(_n.seed_) {};
+	// move constructor
+	randomGen(randomGen&& _n) noexcept 			: engine(std::move(_n.engine)), seed_(_n.seed_) {};
+	// copy assignment
+	auto operator=(const randomGen& _n) 		-> randomGen& 							{ this->engine = _n.engine; this->seed_ = _n.seed_; return *this; };
+	// move assignment
+	auto operator=(randomGen&& _n) noexcept 	-> randomGen&							{ this->engine = std::move(_n.engine); this->seed_ = _n.seed_; return *this; };
 
 	// #################### S E E D   I N I T I A L I Z E R ##################
 

@@ -137,8 +137,8 @@ namespace MonteCarlo
     protected:                                                      
         size_t replica_                     =       1;                                      // number of a current replica
         std::string info_                   =       "Monte Carlo Solver";                   // information about the solver
-	    randomGen* ran_                     =       nullptr;                                // consistent quick random number generator
-        pBar* pBar_                         =       nullptr;								// for printing out the progress
+	    std::shared_ptr<randomGen> ran_     =       nullptr;                                // consistent quick random number generator
+        std::unique_ptr<pBar> pBar_         =       nullptr;								// for printing out the progress
 
         // !!! for the future use !!!                                                       
     	virtual void setInfo()			    =		0; 	                                    // set the information about the MCS (e.g., type, number of hidden units, etc.)

@@ -190,9 +190,33 @@ namespace Binary
 
 	// ##################################### FLIP ALL #####################################
 
-	template<typename _T>
+	template <typename _T = double>
 	typename std::enable_if<std::is_arithmetic<_T>::value, _T>::type
 	flipAll(const _T& n, const size_t L) { return BinaryPowers[L] - n - 1; };
+
+	template <typename _T>
+	typename std::enable_if<std::is_arithmetic<_T>::value, void>::type
+	flipAll(std::vector<_T>& vec, double spin = 1.0) {
+		for (auto& elem : vec) {
+#ifdef SPIN
+			elem *= -1;
+#else
+			elem = (elem == spin) ? 0 : spin;
+#endif
+		}
+	}
+
+	template <typename _T>
+	typename std::enable_if<std::is_arithmetic<_T>::value, void>::type
+	flipAll(arma::Col<_T>& vec, double spin = 1.0) {
+		for (auto& elem : vec) {
+#ifdef SPIN
+			elem *= -1;
+#else
+			elem = (elem == spin) ? 0 : spin;
+#endif
+		}
+	}
 
 	// ##################################### ROTATE LEFT #####################################
 
