@@ -216,6 +216,27 @@ namespace Math
 
 namespace Threading
 {
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+	/**
+	* @brief Get the ID of the current thread.
+	* 
+	* This function returns the ID of the current thread if the template parameter `_CPU` is true.
+	* 
+	* @tparam _CPU A boolean template parameter that determines whether to return the current thread ID.
+	* @return std::thread::id The ID of the current thread if `_CPU` is true.
+	*/
+	template <bool _CPU = true>
+	inline std::thread::id id()
+	{
+		if constexpr (_CPU)
+			return std::this_thread::get_id();
+		// else
+			// return std::thread::id();
+	}
+
+	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 	/**
 	* @brief Creates futures for a class member function with arguments and returns the results.
 	* 
