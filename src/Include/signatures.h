@@ -8,7 +8,7 @@
 #ifndef SIGNATURES_H
 #define SIGNATURES_H
 
-// ################################################# C P P   V E R S I O N ##################################################
+// ################################################################################################################
 #ifndef _PRAGMA_CPP
 #define _PRAGMA_CPP
 
@@ -16,7 +16,7 @@
 #define DOES(...)											{ return (__VA_ARGS__); }								// for single line void functions
 
 #include <utility>
-// ######################################################## E N U M S #######################################################
+// ################################################################################################################
 
 #define DECL_ENUM_ELEMENT( element )		#element
 #define BEGIN_ENUM( ENUM_NAME )				static const char* eSTR##ENUM_NAME []				=
@@ -32,7 +32,7 @@
 																					index)							\
 														{ return CLASS::eSTR##ENUM_NAME [index];	};
 
-// ######################################################## C O U N T E R S ########################################################
+// ################################################################################################################
 
 #ifdef _MSC_VER
 	#include <intrin.h>
@@ -41,15 +41,38 @@
 	#define __builtin_popcountll _mm_popcnt_u64
 #endif
 
-// ######################################################## C A L L S ########################################################
+// ################################################################################################################
 #if defined(_DEBUG)
-#	define FUN_SIGNATURE		__func__
-#	define DESTRUCTOR_CALL		std::cout << FUN_SIGNATURE << "->\t destructor called" << std::endl << std::endl;
-#	define CONSTRUCTOR_CALL		std::cout << FUN_SIGNATURE << "->\t constructor called" << std::endl << std::endl;
-#else 
-#	define DESTRUCTOR_CALL 
-#	define CONSTRUCTOR_CALL
-#endif
+    #include <iostream>
+    #include <string>
+
+    // Helper macros to convert macros to string
+    #define STRINGIFY(x) #x
+    #define TOSTRING(x) STRINGIFY(x)
+
+    // Macro to extract class name, file, and line information
+    #define CLASS_NAME(type) typeid(type).name()
+    #define FUN_SIGNATURE __func__
+    #define FILE_LINE "[" << __FILE__ << ":" << __LINE__ << "]"
+
+    // Enhanced constructor/destructor call logging
+    #define DESTRUCTOR_CALL         \
+        ::std::cout << FILE_LINE << " " << FUN_SIGNATURE << " ->\t destructor called" << ::std::endl;
+    #define DESTRUCTOR_CALL_T(type) \
+        ::std::cout << FILE_LINE << " " << CLASS_NAME(type) << "::" << FUN_SIGNATURE << " ->\t destructor called" << ::std::endl;
+    #define CONSTRUCTOR_CALL        \
+        ::std::cout << FILE_LINE << " " << FUN_SIGNATURE << " ->\t constructor called" << ::std::endl;
+    #define CONSTRUCTOR_CALL_T(type)\
+        ::std::cout << FILE_LINE << " " << CLASS_NAME(type) << "::" << FUN_SIGNATURE << " ->\t constructor called" << ::std::endl;
+#else
+    // Define as empty when not in debug mode
+    #define DESTRUCTOR_CALL
+    #define DESTRUCTOR_CALL_T(type)
+    #define CONSTRUCTOR_CALL
+    #define CONSTRUCTOR_CALL_T(type)
 #endif
 
-#endif
+// ################################################################################################################
+
+#endif	// _PRAGMA_CPP
+#endif	// SIGNATURES_H

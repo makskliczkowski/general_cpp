@@ -18,12 +18,12 @@ using t_3d = std::tuple<T, T, T>;									// 3d tuple
 template<class T>
 using t_2d = std::pair<T, T>;										// 2d tuple - pair
 
-#define SSTR std::string
-#define STR std::to_string
+#define SSTR ::std::string
+#define STR ::std::to_string
 #define STRS(str) str_p(str, 2, true)
 #define STRP(str,prec) str_p(str, prec)
 #define STRPS(str, prec) str_p(str, prec, true)
-using strVec = v_1d<std::string>;
+using strVec = v_1d<::std::string>;
 
 
 // ############################################################### P R E C I S E   S T R I N G ###############################################################

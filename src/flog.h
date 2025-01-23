@@ -71,13 +71,32 @@ BEGIN_ENUM(LOG_TYPES)
 	DECL_ENUM_ELEMENT(WARNING)
 }
 END_ENUM(LOG_TYPES);
-#define LOG_INFO(TYP)								"[" + SSTR(getSTR_LOG_TYPES(TYP)) + "]"
+
+// ##########################################################################################################################################
+
+// Macro to generate a formatted log prefix based on the log type
+#define LOG_INFO(TYP) ("[" + SSTR(getSTR_LOG_TYPES(TYP)) + "]")
+
 #ifdef _DEBUG
-#	define LOG_DEBUG(MSG, INFORMATION)				LOGINFO(INFORMATION, LOG_TYPES::DEBUG, 0); LOGINFO(MSG, LOG_TYPES::DEBUG, 1)
+    // Debug log macro: logs additional debug information
+    #define LOG_DEBUG(MSG, INFORMATION) 												\
+        do { 																			\
+            LOGINFO(INFORMATION, LOG_TYPES::DEBUG, 0); 									\
+            LOGINFO(MSG, LOG_TYPES::DEBUG, 1); 											\
+        } while (0)
 #else
-#	define LOG_DEBUG(MSG, INFORMATION)								
+    // Debug macro is disabled in release mode
+    #define LOG_DEBUG(MSG, INFORMATION)
 #endif
-#define LOG_ERROR(MSG)								LOGINFO(std::string(MSG) + " -- " + std::string(__func__), LOG_TYPES::ERROR, 0); throw std::runtime_error(std::string(MSG) + " -- " + std::string(__func__))
+
+// Error log macro: logs an error message and throws an exception
+#define LOG_ERROR(MSG) 																	\
+    do { 																				\
+        ::std::string errMsg = ::std::string(MSG) + " -- " + ::std::string(__func__); 	\
+        LOGINFO(errMsg, LOG_TYPES::ERROR, 0); 											\
+        throw ::std::runtime_error(errMsg);	 											\
+    } while (0)
+// ##########################################################################################################################################
 
 // --- create log file if necessary ---
 #ifdef LOG_FILE
