@@ -42,6 +42,31 @@
 #endif
 
 // ################################################################################################################
+
+#include <string>
+#include <filesystem>
+
+/**
+* @brief Returns the canonical form of a given file path.
+*
+* This function attempts to convert the provided file path to its canonical form,
+* which is an absolute path with all symbolic links and relative path components resolved.
+* If the conversion fails for any reason, the original file path is returned.
+*
+* @param file The file path to be converted to its canonical form.
+* @return A string representing the canonical form of the file path, or the original file path if an error occurs.
+*/
+inline std::string canonical_file(const char* file)
+{
+    try {
+        return std::filesystem::canonical(file).string();
+    }
+    catch (...) {
+        return file;
+    }
+}
+#define FILE_LINE "[" << canonical_file(__FILE__) << ":" << __LINE__ << "]"
+
 #if defined(_DEBUG)
     #include <iostream>
     #include <string>
@@ -53,8 +78,7 @@
     // Macro to extract class name, file, and line information
     #define CLASS_NAME(type) typeid(type).name()
     #define FUN_SIGNATURE __func__
-    #define FILE_LINE "[" << __FILE__ << ":" << __LINE__ << "]"
-
+    
     // Enhanced constructor/destructor call logging
     #define DESTRUCTOR_CALL         \
         ::std::cout << FILE_LINE << " " << FUN_SIGNATURE << " ->\t destructor called" << ::std::endl;
