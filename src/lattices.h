@@ -152,8 +152,8 @@ public:
 
 	// ----------------------- SYMMETRY -----------------------
 	virtual t_3d<int> getNumElems() = 0;																				// returns the number of elements if the symmetry is possible
-	virtual t_3d<int> getSymPosInv(int x, int y, int z) = 0;															// from symmetrised form return coordinates
-	virtual t_3d<int> getSymPos(int x, int y, int z) = 0;																// from given coordinates return their symmetrised form
+	virtual t_3d<int> get_sym_pos_inv(int x, int y, int z) = 0;															// from symmetrised form return coordinates
+	virtual t_3d<int> get_sym_pos(int x, int y, int z) = 0;																// from given coordinates return their symmetrised form
 	virtual bool symmetry_checker(int xx, int yy, int zz) = 0;
 
 private:

@@ -74,7 +74,7 @@ public:
 	/*
 	* @brief Out of a given coordinates, get the value of element in bigger than zero form
 	*/
-	t_3d<int> getSymPos(int x, int y, int z) override {
+	t_3d<int> get_sym_pos(int x, int y, int z) override {
 		if (!this->symmetry)
 			return std::make_tuple(x + Lx - 1, y + Ly - 1, z + Lz - 1);
 		else
@@ -85,7 +85,7 @@ public:
 	* @brief Out of a given bigger than zero coordinates, 
 	* get the value of element in bigger than zero form
 	*/
-	t_3d<int> getSymPosInv(int x, int y, int z) override {
+	t_3d<int> get_sym_pos_inv(int x, int y, int z) override {
 		if (!this->symmetry)
 			return std::make_tuple(x - (Lx - 1), y - (Ly - 1), z - (Lz - 1));
 		else

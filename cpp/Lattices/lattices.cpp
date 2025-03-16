@@ -85,7 +85,7 @@ void Lattice::calculate_spatial_norm()
 		{
 			// calculate the coordinates of two site difference
 			const auto [xx, yy, zz]		= this->getSiteDifference(i, j);
-			auto [a, b, c]				= this->getSymPos(xx, yy, zz);
+			auto [a, b, c]				= this->get_sym_pos(xx, yy, zz);
 			spatialNorm[a][b][c]++;
 		}
 	}

@@ -63,12 +63,12 @@ public:
 		return std::make_tuple(2 * this->Lx - 1, 4 * this->Ly - 1, 2 * this->Lz - 1);
 	}
 
-	t_3d<int> getSymPos(int x, int y, int z) override 
+	t_3d<int> get_sym_pos(int x, int y, int z) override 
 	{
 		return std::make_tuple(x + Lx - 1, y + 2 * Ly - 1, z + Lz - 1);
 	}
 
-	t_3d<int> getSymPosInv(int x, int y, int z) override 
+	t_3d<int> get_sym_pos_inv(int x, int y, int z) override 
 	{
 		return std::make_tuple(x - (Lx - 1), y - (2 * Ly - 1), z - (Lz - 1));
 	}
