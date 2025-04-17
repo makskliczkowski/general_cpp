@@ -4,6 +4,12 @@
 #include <functional>
 #include <algorithm>
 #include <tuple>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+#include <stdexcept>
+#include <complex>
 
 #include "../Dynamic/dynamic_bitset.hpp"
 #include "linalg/generalized_matrix.h"
@@ -542,5 +548,296 @@ namespace States
 	// --------------------------------------------------------------------------
 
 };
+
+// #############################################################################
+
+namespace Simulation
+{
+	//────────────────────────────────────────────────────────────────────────────
+    // 1) type‑erasure base
+    //────────────────────────────────────────────────────────────────────────────
+    class IContainer
+    {
+    public:
+        virtual ~IContainer() = default;
+    };
+
+    //────────────────────────────────────────────────────────────────────────────
+    // 2) wrapper for any concrete container C
+    //────────────────────────────────────────────────────────────────────────────
+
+    template<typename C>
+    class ContainerHolder
+        : public IContainer
+    {
+    public:
+        C data;
+
+        // forward any ctor args to C’s ctor
+        template<typename... Args>
+        ContainerHolder(Args&&... args)
+            : data(std::forward<Args>(args)...)
+        { }
+    };
+
+    //────────────────────────────────────────────────────────────────────────────
+    // 3) Main manager: add by name or index, fetch by template
+    //────────────────────────────────────────────────────────────────────────────
+    class DataContainer
+    {
+		using uptr_t 							= std::unique_ptr<IContainer>;
+        using map_t  							= std::unordered_map<std::string, size_t>;
+		using v_uptr_t 							= std::vector<uptr_t>;
+
+		// Armadillo types
+		using acol_d 							= arma::Col<double>;
+		using amat_d 							= arma::Mat<double>;
+		using acol_c 							= arma::Col<std::complex<double>>;
+		using amat_c 							= arma::Mat<std::complex<double>>;
+		template <typename _T> using acol_t 	= arma::Col<_T>;
+		template <typename _T> using amat_t 	= arma::Mat<_T>; 
+
+		using v_amat_d 							= std::vector<amat_d>;
+		using v_acol_d 							= std::vector<acol_d>;
+		using v_amat_c 							= std::vector<amat_c>;
+		using v_acol_c 							= std::vector<acol_c>;
+		template <typename _T> using v_amat_t 	= std::vector<amat_t<_T>>;
+		template <typename _T> using v_acol_t 	= std::vector<acol_t<_T>>;
+
+    private:
+        //! preserves insertion order so index‑based get() works
+        v_uptr_t container_list_;
+        map_t name_to_index_;
+
+    public:
+
+		// ---------------------------------------------------------------------
+		
+		using iterator 							= map_t::const_iterator;
+		iterator begin() 						const { return name_to_index_.begin(); 	};
+		iterator end() 							const { return name_to_index_.end(); 	};
+
+		//! how many containers you have
+		size_t size() 							const { return container_list_.size(); }
+
+		// ---------------------------------------------------------------------
+		//! FIND
+		// ---------------------------------------------------------------------
+
+		/**
+		* @brief Finds the iterator to the container with the specified name.
+		*
+		* Searches for a container by its name in the internal map. If the container is found,
+		* returns an iterator to its entry. If the container is not found, throws a std::runtime_error.
+		*
+		* @param name The name of the container to find.
+		* @return map_t::iterator Iterator to the found container.
+		* @throws std::runtime_error If no container with the specified name exists.
+		*/
+		map_t::iterator find(const std::string& name)
+		{
+			auto it = name_to_index_.find(name);
+			if (it == name_to_index_.end())
+				throw std::runtime_error("No container named '" + name + "'");
+			return it;
+		}
+
+		// ---------------------------------------------------------------------
+		//! EREASE
+		// ---------------------------------------------------------------------
+
+        // erase by name
+        void erase(const std::string& name)
+        {
+			auto it 	= this->find(name);
+            size_t idx 	= it->second;
+
+            // remove pointer
+            container_list_.erase(container_list_.begin() + idx);
+
+            // erase map entry
+            name_to_index_.erase(it);
+
+            // decrement all indices > idx
+            for (auto &kv : name_to_index_)
+                if (kv.second > idx)  --kv.second;
+        }
+
+        // erase by insertion index
+        void erase(size_t idx)
+        {
+            if (idx >= container_list_.size())
+                throw std::out_of_range("Index out of range");
+
+            // find the name
+            std::string name;
+            for (auto &kv : name_to_index_)
+                if (kv.second == idx)
+                {
+                    name = kv.first;
+                    break;
+                }
+            if (name.empty())
+                throw std::runtime_error("No name found for index " + std::to_string(idx));
+
+            erase(name);
+        }
+
+		// ---------------------------------------------------------------------
+		//! ADD
+		// ---------------------------------------------------------------------
+
+        //! add a new container of type C, constructed with Args...
+        template<typename C, typename... Args>
+        void add(const std::string& name, Args&&... args)
+        {
+			// check if name is already in use
+            if (name_to_index_.count(name))
+                throw std::runtime_error("Container '" + name + "' already exists");
+
+            size_t idx                             = container_list_.size();
+            name_to_index_[name]                   = idx;
+            container_list_.emplace_back(
+                std::make_unique<ContainerHolder<C>>(std::forward<Args>(args)...)
+            );
+        }
+
+		// scalar vector
+		template <typename _T = double, typename = typename std::enable_if<std::is_floating_point<_T>::value>::type>
+		void add_vec_floating(const std::string& name, size_t _size)
+		{
+			this->add<std::vector<_T>>(name, _size);
+		}
+
+		// integer vector
+		template <typename _T = int, typename = typename std::enable_if<std::is_integral<_T>::value>::type>
+		void add_vec_integer(const std::string& name, size_t _size)
+		{
+			this->add<std::vector<_T>>(name, _size);
+		}
+
+		// complex column (arma::Col<std::complex<double>>)
+		void add_col_complex(const std::string& name, size_t _size, std::complex<double> val = std::complex<double>(0.0, 0.0))
+		{
+			this->add<arma::Col<std::complex<double>>>(name, _size, arma::fill::value(val));
+		}
+
+		// complex matrix (arma::Mat<std::complex<double>>)
+		void add_mat_complex(const std::string& name, size_t _rows, size_t _cols, std::complex<double> val = std::complex<double>(0.0, 0.0))
+		{
+			this->add<arma::Mat<std::complex<double>>>(name, _rows, _cols, arma::fill::value(val));
+		}
+
+		// add vector of complex matrices
+		void add_vec_mat_complex(const std::string& name, size_t _rows, size_t _cols, size_t _size, std::complex<double> val = std::complex<double>(0.0, 0.0))
+		{
+			std::vector<arma::Mat<std::complex<double>>> vec(_size, arma::Mat<std::complex<double>>(_rows, _cols, arma::fill::value(val)));
+			this->add<std::vector<arma::Mat<std::complex<double>>>>(name, std::move(vec));
+		}
+
+		// add vector of complex columns
+		void add_vec_col_complex(const std::string& name, size_t _size, size_t _rows, std::complex<double> val = std::complex<double>(0.0, 0.0))
+		{
+			std::vector<arma::Col<std::complex<double>>> vec(_size, arma::Col<std::complex<double>>(_rows, arma::fill::value(val)));
+			this->add<std::vector<arma::Col<std::complex<double>>>>(name, std::move(vec));
+		}
+
+		// add double column
+		void add_col_double(const std::string& name, size_t _size, double val = 0.0)
+		{
+			this->add<arma::Col<double>>(name, _size, arma::fill::value(val));
+		}
+
+		// add double matrix
+		void add_mat_double(const std::string& name, size_t _rows, size_t _cols, double val = 0.0)
+		{
+			this->add<arma::Mat<double>>(name, _rows, _cols, arma::fill::value(val));
+		}
+
+		// add vector of double matrices
+		void add_vec_mat_double(const std::string& name, size_t _rows, size_t _cols, size_t _size, double val = 0.0)
+		{
+			std::vector<arma::Mat<double>> vec(_size, arma::Mat<double>(_rows, _cols, arma::fill::value(val)));
+			this->add<std::vector<arma::Mat<double>>>(name, std::move(vec));
+		}
+
+		// add vector of double columns
+		void add_vec_col_double(const std::string& name, size_t _size, size_t _rows, double val = 0.0)
+		{
+			std::vector<arma::Col<double>> vec(_size, arma::Col<double>(_rows, arma::fill::value(val)));
+			this->add<std::vector<arma::Col<double>>>(name, std::move(vec));
+		}
+
+		template<typename _T = double>
+		void add_col(const std::string& name, size_t _size, _T val = _T(0))
+		{
+			this->add<arma::Col<_T>>(name, _size, arma::fill::value(val));
+		}
+
+		template<typename _T = double>
+		void add_mat(const std::string& name, size_t _rows, size_t _cols, _T val = _T(0))
+		{
+			this->add<arma::Mat<_T>>(name, _rows, _cols, arma::fill::value(val));
+		}
+
+		template<typename _T = double>
+		void add_vec_mat(const std::string& name, size_t _rows, size_t _cols, size_t _size, _T val = _T(0))
+		{
+			std::vector<arma::Mat<_T>> vec(_size, arma::Mat<_T>(_rows, _cols, arma::fill::value(val)));
+			this->add<std::vector<arma::Mat<_T>>>(name, std::move(vec));
+		}
+
+		// ---------------------------------------------------------------------
+		//! GET
+		// ---------------------------------------------------------------------
+
+        //! get by name
+
+		/**
+		* @brief Retrieves a reference to a container of type C by its name.
+		*
+		* This function searches for a container with the specified name, checks if it is of the expected type C,
+		* and returns a reference to the contained data. If the container is not found or the type does not match,
+		* a std::runtime_error is thrown.
+		*
+		* @tparam C The expected type of the container to retrieve.
+		* @param name The name of the container to retrieve.
+		* @return C& Reference to the container data of type C.
+		* @throws std::runtime_error If the container is not found or if there is a type mismatch.
+		*/
+        template<typename C>
+        C& get(const std::string& name)
+        {
+            auto it 	= this->find(name);
+            auto ptr 	= container_list_[it->second].get();
+            auto ph  	= dynamic_cast<ContainerHolder<C>*>(ptr);
+            if (!ph)
+                throw std::runtime_error("Type mismatch for container '" + name + "'");
+            return ph->data;
+        }
+
+        //! get by insertion index
+        template<typename C>
+        C& get(size_t idx)
+        {
+            if (idx >= container_list_.size())
+                throw std::out_of_range("Container index out of range");
+
+            auto ptr = container_list_[idx].get();
+            auto ph  = dynamic_cast<ContainerHolder<C>*>(ptr);
+            if (!ph)
+                throw std::runtime_error("Type mismatch for container index " + std::to_string(idx));
+            return ph->data;
+        }
+
+		// ---------------------------------------------------------------------
+
+
+    };
+
+	//────────────────────────────────────────────────────────────────────────────
+
+};
+
 
 #endif 
