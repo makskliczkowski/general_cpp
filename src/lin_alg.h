@@ -2905,6 +2905,7 @@ inline bool saveAlgebraic(const std::string& _path, const std::string& _file, co
 			_out.close();
 		}
 	}
+	std::cout << "\t\t\t\tSaved: " << _path + _file << " with db: " << _db << std::endl;
 	return _isSaved;
 }
 
@@ -2961,6 +2962,7 @@ inline bool saveAlgebraic(const std::string& _path, const std::string& _file, co
 			_out.close();
 		}
 	}
+	std::cout << "\t\t\t\tSaved: " << _path + _file << " with db: " << _db << std::endl;
 	return _isSaved;
 }
 
