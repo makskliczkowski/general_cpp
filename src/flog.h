@@ -248,12 +248,12 @@ inline void LOGINFOG(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl)
 * @param _msg message to be printed
 * @param _typ type of the message (one of INFO,	TIME, ERROR, TRACE, CHOICE, FINISH, WARNING)
 * @param _lvl tabulation level
-* @param _desiredSize width of the log columns
+* @param _desired_size width of the log columns
 * @param fill filling the empty space with that character
 */
 inline void LOGINFO(const std::string& _msg,
 					LOG_TYPES _typ,
-					unsigned int _desiredSize,
+					unsigned int _desired_size,
 					char fill,
 					unsigned int _lvl	= 0)
 {
@@ -261,14 +261,14 @@ inline void LOGINFO(const std::string& _msg,
 	auto _lvlLen	= 2 + _lvl * 3 * 2;
 
 	// check the length
-	if (_tailLen + _lvlLen >= _desiredSize)
+	if (_tailLen + _lvlLen >= _desired_size)
 	{
 		LOGINFO(_msg, _typ, _lvl);
 		return;
 	}
 
 	// check the size of the fill
-	auto fillSize	= _desiredSize - _tailLen;
+	auto fillSize	= _desired_size - _tailLen;
 	fillSize		= fillSize + (!(_tailLen == 0) ? 0 : 2);
 	fillSize		= fillSize - (!(_tailLen % 2 == 0) ? 1 : 0);
 
