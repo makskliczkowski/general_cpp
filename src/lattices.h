@@ -121,6 +121,9 @@ public:
 	auto get_spatial_norm(int x, int y, int z)				const -> int { return this->spatialNorm[x][y][z]; };		// returns the spatial norm at x,y,z
 	auto get_coordinates(int site, direction axis)			const -> int { return this->coord[site][axis]; };			// returns the given coordinate
 	auto get_Ns()											const -> uint { return this->Ns; };							// returns the number of sites
+	[[nodiscard]] bool wrong_nei(int nei) const noexcept {
+		return nei < 0 || nei >= static_cast<int>(this->Ns);
+	}
 	auto get_Dim()											const -> uint { return this->dim; };						// returns dimension of the lattice
 	auto get_info()											const -> std::string;
 

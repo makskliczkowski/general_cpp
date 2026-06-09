@@ -117,14 +117,49 @@ namespace Binary
 	template<typename _T>
 	static inline bool isPowOf2(_T x) { return (x != 0) && ((x & (x - 1)) == 0); }
 
+	// ###################################### HELPERS ######################################
+
+	template<typename Container>
+	constexpr std::size_t get_size(const Container& container)
+	{
+		if constexpr (requires { container.size(); }) {
+			return container.size();
+		} else if constexpr (requires { container.n_elem; }) {
+			return container.n_elem;
+		} else {
+			return std::size(container);
+		}
+	}
+
+	template<typename Container>
+	constexpr decltype(auto) get_element(const Container& container, std::size_t index)
+	{
+		if constexpr (requires { container[index]; }) {
+			return container[index];
+		} else if constexpr (requires { container(index); }) {
+			return container(index);
+		} else {
+			return container.at(index);
+		}
+	}
+
+	template<typename Container, typename Value>
+	constexpr void set_element(Container& container, std::size_t index, Value&& val)
+	{
+		if constexpr (requires { container[index] = std::forward<Value>(val); }) {
+			container[index] = std::forward<Value>(val);
+		} else if constexpr (requires { container(index) = std::forward<Value>(val); }) {
+			container(index) = std::forward<Value>(val);
+		} else {
+			container.at(index) = std::forward<Value>(val);
+		}
+	}
+
 	// ###################################### CHECK BIT ######################################
 
 	template<typename _T>
 	typename std::enable_if<!std::is_arithmetic<_T>::value, bool>::type
-	check(const _T& n, const int k)	{ return n[k] > 0; };
-
-	template <typename _T = double>
-	bool check(const arma::Col<_T>& n, const int k) { return n(k) > 0; };
+	check(const _T& n, const int k)	{ return get_element(n, k) > 0; };
 	
 	template<typename _T>
 	typename std::enable_if<std::is_arithmetic<_T>::value, bool>::type
@@ -136,15 +171,10 @@ namespace Binary
 	typename std::enable_if<std::is_arithmetic<_T>::value, void>::type
 	int2base(const _T& n, _VectorType& _vec, double _spin = 1.0)
 	{
-		auto _size = _vec.size();
+		auto _size = get_size(_vec);
 		for (int k = 0; k < _size; ++k)
 		{
-			if constexpr (std::is_same<_VectorType, arma::Col<_T>>::value || std::is_same<_VectorType, arma::Col<double>>::value)
-				_vec.at(k) = Binary::check(n, (_size - 1) - k) ? _spin : -_spin;
-			else if constexpr (std::is_same<_VectorType, v_1d<_T>>::value)
-				_vec[k] = Binary::check(n, (_size - 1) - k) ? _spin : -_spin;			
-			else
-				_vec.at(k) = Binary::check(n, (_size - 1) - k) ? _spin : -_spin;
+			set_element(_vec, k, Binary::check(n, k) ? _spin : -_spin);
 		}
 	}
 
@@ -152,15 +182,10 @@ namespace Binary
 	typename std::enable_if<std::is_arithmetic<_T>::value, void>::type
 	int2base(const _T& n, _VectorType& _vec)
 	{
-		auto _size = _vec.size();
+		auto _size = get_size(_vec);
 		for (int k = 0; k < _size; ++k)
 		{
-			if constexpr (std::is_same<_VectorType, arma::Col<_T>>::value)
-				_vec(k) = Binary::check(n, (_size - 1) - k);
-			else if constexpr (std::is_same<_VectorType, v_1d<_T>>::value)
-				_vec[k] = Binary::check(n, (_size - 1) - k);
-			else 
-				_vec(k) = Binary::check(n, (_size - 1) - k);
+			set_element(_vec, k, Binary::check(n, k));
 		}
 	}
 
@@ -170,10 +195,10 @@ namespace Binary
 	typename std::enable_if<std::is_arithmetic<_T>::value, _T>::type
 	base2int(const _VectorType& _vec, double _spin = 1.0)
 	{
-		auto _size	=	_vec.size();
+		auto _size	=	get_size(_vec);
 		_T val		=	0;
 		for (int k = 0; k < _size; ++k)
-			val += static_cast<_T>((_vec[_size - 1 - k] / _spin + 1.0) / 2.0) * BinaryPowers[k];
+			val += static_cast<_T>((get_element(_vec, k) / _spin + 1.0) / 2.0) * BinaryPowers[k];
 		return val;
 	}
 
@@ -181,10 +206,10 @@ namespace Binary
 	typename std::enable_if<std::is_arithmetic<_T>::value, _T>::type
 	base2int(const _VectorType& _vec, double _spin)
 	{
-		auto _size	=	_vec.size();
+		auto _size	=	get_size(_vec);
 		_T val		=	0;
 		for (int k = 0; k < _size; ++k)
-			val		+=	static_cast<_T>(_vec[_size - 1 - k]) * BinaryPowers[k];
+			val		+=	static_cast<_T>(get_element(_vec, k)) * BinaryPowers[k];
 		return val;
 	}
 
@@ -324,10 +349,11 @@ namespace Binary
 	{
 		return Binary::flipAll(prepareMask<_T, _VectorType, false>(_vec, _size), _size);
 	}
-
 };
 
-
+using Binary::get_size;
+using Binary::get_element;
+using Binary::set_element;
 
 // ########################################################				 binary search				 ########################################################
 
@@ -357,84 +383,43 @@ inline bool checkBit(ull n, int k, int base) {
 	return val;
 }
 
-template<typename _T1>
-inline bool checkBit(const v_1d<_T1>& n, uint L) {
-	return n[L] > 0;
-}
-
-template<typename _T1>
-inline bool checkBit(const arma::Col<_T1>& n, uint L) 
-{
-	return n(L) > 0;
-}
-
-template<typename _T1>
-inline bool checkBit(arma::Col<_T1>& n, uint L)
-{
-	return n(L) > 0;
+template<typename Container>
+typename std::enable_if<!std::is_arithmetic<Container>::value, bool>::type
+inline checkBit(const Container& n, uint L) {
+	return get_element(n, L) > 0;
 }
 
 // ########################################################  				  transformations   				 ########################################################
 
-template<typename _T1, typename _T2>
-inline void intToBase(_T1 idx, arma::Col<_T2>& vec, float _spin = 1.0) {
-	const uint size = (uint)vec.n_elem;
-	for (uint k = 0; k < size; k++)
-		vec(k) = checkBit(idx, (size - 1) - k);
-
+template<typename _T1, typename Container>
+inline void intToBase(_T1 idx, Container& vec, float _spin = 1.0) {
+	const auto size = get_size(vec);
+	for (std::size_t k = 0; k < size; k++)
+		set_element(vec, k, checkBit(idx, k));
 }
 
-template<typename _T1, typename _T2>
-inline void intToBase(_T1 idx, v_1d<_T2>& vec, float _spin = 1.0) {
-	const int size = vec.size();
-	for (int k = 0; k < size; k++)
-		vec[k] = checkBit(idx, (size - 1) - k);
-
-}
-
-template<typename _T1, typename _T2>
-inline void intToBaseSpin(_T1 idx, arma::Col<_T2>& vec, float _spin = 1.0) {
-	const auto size = vec.n_elem;
-	for (int k = 0; k < size; k++)
-		vec(k) = checkBit(idx, (size - 1) - k) ? _spin : -_spin;
-}
-
-template<typename _T1, typename _T2>
-inline void intToBaseSpin(_T1 idx, v_1d<_T2>& vec, float _spin = 1.0) {
-	const auto size = vec.size();
-	for (int k = 0; k < size; k++)
-		vec[k] = checkBit(idx, (size - 1) - k) ? _spin : -_spin;
+template<typename _T1, typename Container>
+inline void intToBaseSpin(_T1 idx, Container& vec, float _spin = 1.0) {
+	const auto size = get_size(vec);
+	for (std::size_t k = 0; k < size; k++)
+		set_element(vec, k, checkBit(idx, k) ? _spin : -_spin);
 }
 
 /*
-* @brief Translates the integer to a vector in a given base (with bitwise check) (arma)
+* @brief Translates the integer to a vector in a given base (with bitwise check)
 * @param idx index (integer) of a state
 * @param vec vector to be transformed onto
 * @param base base of the int
 */
-template<typename _T1, typename _T2>
-inline void intToBase(_T1 idx, arma::Col<_T2>& vec, int base) {
+template<typename _T1, typename Container>
+inline void intToBase(_T1 idx, Container& vec, int base) {
 	if (base == 2)
 		INT_TO_BASE(idx, vec);
 	else
 	{
 		auto iter = 0;
 		while (idx) {
-			vec(iter++) = idx % base;
-			idx /= base;
-		}
-	}
-}
-
-template<typename _T1, typename _T2>
-inline void intToBase(_T1 idx, v_1d<_T2>& vec, int base) {
-	if (base == 2)
-		INT_TO_BASE(idx, vec);
-	else
-	{
-		auto iter = 0;
-		while (idx) {
-			vec[iter++] = idx % base;
+			set_element(vec, iter++, idx % base);
 			idx /= base;
 		}
 	}
@@ -442,59 +427,40 @@ inline void intToBase(_T1 idx, v_1d<_T2>& vec, int base) {
 
 // ########################################################  				  base change
 
-
-template <typename _T1, typename _T2>
-inline _T1 baseToInt(const v_1d<_T2>& vec, float _spin = 1.0) {
-	const auto size = vec.size();
+template <typename _T1, typename Container>
+inline _T1 baseToInt(const Container& vec, float _spin = 1.0) {
+	const auto size = get_size(vec);
 	_T1 val = 0;
-	for (auto k = 0; k < size; k++)
-		val += static_cast<_T1>(vec[size - 1 - k]) * BinaryPowers[k];
+	for (std::size_t k = 0; k < size; k++)
+		val += static_cast<_T1>(get_element(vec, k)) * BinaryPowers[k];
 	return val;
 }
 
-template <typename _T1, typename _T2>
-inline _T1 baseToInt(const arma::Col<_T2>& vec, float _spin = 1.0) {
-	const auto size = vec.size();
+template <typename _T1, typename Container>
+inline _T1 baseToIntSpin(const Container& vec, float _spin = 1.0) {
+	const auto size = get_size(vec);
 	_T1 val = 0;
-	for (auto k = 0; k < size; k++)
-		val += static_cast<_T1>(vec(size - 1 - k)) * BinaryPowers[k];
-	return val;
-}
-
-template <typename _T1, typename _T2>
-inline _T1 baseToIntSpin(const v_1d<_T2>& vec, float _spin = 1.0) {
-	const auto size = vec.size();
-	_T1 val = 0;
-	for (auto k = 0; k < size; k++)
-		val += static_cast<_T1>((vec[size - 1 - k] / _spin + 1.0) / 2.0) * BinaryPowers[k];
-	return val;
-}
-
-template <typename _T1, typename _T2>
-inline _T1 baseToIntSpin(const arma::Col<_T2>& vec, float _spin = 1.0) {
-	const auto size = vec.size();
-	_T1 val = 0;
-	for (auto k = 0; k < size; k++)
-		val += static_cast<_T1>((vec(size - 1 - k) / _spin + 1.0) / 2.0) * BinaryPowers[k];
+	for (std::size_t k = 0; k < size; k++)
+		val += static_cast<_T1>((get_element(vec, k) / _spin + 1.0) / 2.0) * BinaryPowers[k];
 	return val;
 }
 
 /*
 *@brief Conversion from base vector to an integer
-*@param vec string
+*@param vec container
 *@param base base to covert to
 *@returns unsigned long long integer
 */
-template <typename _T1, typename _T2>
-inline _T1 baseToInt(const v_1d<_T2>& vec, int base) {
+template <typename _T1, typename Container>
+inline _T1 baseToInt(const Container& vec, int base) {
 	if (base == 2)
 		return BASE_TO_INT(vec);
 
-	const auto size = vec.size();
+	const auto size = get_size(vec);
 	_T1 val = 0;
 	_T1 exp = 1;
-	for (auto k = 0; k < size; k++) {
-		val += static_cast<_T1>(vec[size - 1 - k]) * exp;
+	for (std::size_t k = 0; k < size; k++) {
+		val += static_cast<_T1>(get_element(vec, size - 1 - k)) * exp;
 		exp *= base;
 	}
 	return val;
@@ -502,19 +468,23 @@ inline _T1 baseToInt(const v_1d<_T2>& vec, int base) {
 
 // ########################################################   				 for states operation   				 ########################################################
 
-template<typename _T1, typename _T2>
-inline _T1 cdotm(arma::Col<_T1> lv, arma::Col<_T2> rv) {
-	_T1 acc = 0;
-	for (auto i = 0; i < lv.n_elem; i++)
-		acc += std::conj(lv(i)) * rv(i);
+template<typename Container1, typename Container2>
+inline auto cdotm(const Container1& lv, const Container2& rv) {
+	using ResultType = std::decay_t<decltype(get_element(lv, 0) * get_element(rv, 0))>;
+	ResultType acc = 0;
+	const auto size = get_size(lv);
+	for (std::size_t i = 0; i < size; i++)
+		acc += std::conj(get_element(lv, i)) * get_element(rv, i);
 	return acc;
 }
 
-template<typename _T1, typename _T2>
-inline _T1 dotm(arma::Col<_T1> lv, arma::Col<_T2> rv) {
-	_T1 acc = 0;
-	for (auto i = 0; i < lv.n_elem; i++)
-		acc += lv(i) * rv(i);
+template<typename Container1, typename Container2>
+inline auto dotm(const Container1& lv, const Container2& rv) {
+	using ResultType = std::decay_t<decltype(get_element(lv, 0) * get_element(rv, 0))>;
+	ResultType acc = 0;
+	const auto size = get_size(lv);
+	for (std::size_t i = 0; i < size; i++)
+		acc += get_element(lv, i) * get_element(rv, i);
 	return acc;
 }
 
@@ -528,12 +498,14 @@ inline _T1 dotm(arma::Col<_T1> lv, arma::Col<_T2> rv) {
 *@returns rotated number
 */
 template <typename _T>
+requires std::is_integral_v<_T>
 inline _T rotateLeft(_T n, uint L) {
 	_T maxPower = BinaryPowers[uint(L - 1)];
 	return (n >= maxPower) ? (((int64_t)n - (int64_t)maxPower) * 2 + 1) : n * 2;
 }
 
 template <typename _T>
+requires std::is_integral_v<_T>
 inline _T rotateLeft(_T n, uint L, int base) {
 	_T val = rotateLeft(n, L);
 	for (int i = 0; i < base / 2 - 1; i++)
@@ -541,18 +513,17 @@ inline _T rotateLeft(_T n, uint L, int base) {
 	return val;
 }
 
-template<typename _T>
-inline void rotateLeft(v_1d<_T>& n, uint m) {
-	// rng::rotate(n.begin(), n.begin() + m, n.end());
+template<typename Container>
+requires (!std::is_integral_v<Container>)
+inline void rotateLeft(Container& n, uint m) {
 }
 
-template<typename _T>
-inline v_1d<_T> rotateLeft(const v_1d<_T>& n, uint m, int placeholder) {
-	v_1d<_T> tmp = n;
-	// rng::rotate(tmp.begin(), tmp.begin() + m, tmp.end());
+template<typename Container>
+requires (!std::is_integral_v<Container>)
+inline Container rotateLeft(const Container& n, uint m, int placeholder) {
+	Container tmp = n;
 	return tmp;
 }
-
 
 // ---------------------------------- flip all bits ----------------------------------
 
@@ -563,54 +534,34 @@ inline v_1d<_T> rotateLeft(const v_1d<_T>& n, uint m, int placeholder) {
 *@returns flipped number
 */
 template <typename _T>
+requires std::is_integral_v<_T>
 inline _T flipAll(_T n, int L) {
 	return BinaryPowers[L] - n - 1;
 }
 
-template <typename _T>
-inline v_1d<_T> flipAll(const v_1d<_T>& n, int placeholder) {
-	v_1d<_T> tmp = n;
-	for (auto i = 0; i < tmp.size(); i++) {
+template <typename Container>
+requires (!std::is_integral_v<Container>)
+inline Container flipAll(const Container& n, int placeholder) {
+	Container tmp = n;
+	const auto size = get_size(tmp);
+	for (std::size_t i = 0; i < size; i++) {
 #ifdef SPIN
-		tmp[i] *= -1;
+		set_element(tmp, i, get_element(tmp, i) * -1);
 #else 
-		tmp[i] = (tmp[i] == 1) ? 0 : 1;
+		set_element(tmp, i, (get_element(tmp, i) == 1) ? 0 : 1);
 #endif
 	}
 	return tmp;
 }
 
-template <typename _T>
-inline void flipAll(const v_1d<_T>& n) {
-	for (auto i = 0; i < n.size(); i++) {
+template <typename Container>
+inline void flipAll(Container& n) {
+	const auto size = get_size(n);
+	for (std::size_t i = 0; i < size; i++) {
 #ifdef SPIN
-		n[i] *= -1;
+		set_element(n, i, get_element(n, i) * -1);
 #else 
-		n[i] = (n[i] == 1) ? 0 : 1;
-#endif
-	}
-}
-
-template <typename _T>
-inline arma::Col<_T> flipAll(const arma::Col<_T>& n, int placeholder) {
-	arma::Col<_T> tmp = n;
-	for (auto i = 0; i < tmp.size(); i++) {
-#ifdef SPIN
-		tmp(i) *= -1;
-#else 
-		tmp(i) = (tmp(i) == 1) ? 0 : 1;
-#endif
-	}
-	return tmp;
-}
-
-template <typename _T>
-inline void flipAll(const arma::Col<_T>& n) {
-	for (auto i = 0; i < n.size(); i++) {
-#ifdef SPIN
-		n(i) *= -1;
-#else 
-		n(i) = (n(i) == 1) ? 0 : 1;
+		set_element(n, i, (get_element(n, i) == 1) ? 0 : 1);
 #endif
 	}
 }
@@ -624,55 +575,30 @@ inline void flipAll(const arma::Col<_T>& n) {
 *@returns number with k'th bit from the right flipped
 */
 template <typename _T>
+requires std::is_integral_v<_T>
 inline _T flip(_T n, int k) {
 	return checkBit(n, k) ? (_T(n) - (_T)BinaryPowers[k]) : (n + BinaryPowers[k]);
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-
-template<typename _T>
-inline v_1d<_T> flip(const v_1d<_T>& n, int k, float _spin = 1.0) {
+template<typename Container>
+requires (!std::is_integral_v<Container>)
+inline Container flip(const Container& n, int k, float _spin = 1.0) {
 	auto tmp = n;
 #ifdef SPIN
-	tmp[k] *= -1;
+	set_element(tmp, k, get_element(tmp, k) * -1.0);
 #else 
-	tmp[k] = tmp[k] == 1 ? 0 : 1;
+	set_element(tmp, k, (get_element(tmp, k) == _spin) ? 0 : _spin);
 #endif
 	return tmp;
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////
-
-template<typename _T>
-inline arma::Col<_T> flip(const arma::Col<_T>& n, int k, float _spin = 1.0) {
-	auto tmp = n;
+template<typename Container>
+requires (!std::is_integral_v<Container>)
+inline void flip(Container& n, int k, int placeholder, float _spin = 1.0) {
 #ifdef SPIN
-	tmp(k) *= -1.0;
+	set_element(n, k, get_element(n, k) * -1.0);
 #else 
-	tmp(k) = (tmp(k) == _spin) ? 0 : _spin;
-#endif
-	return tmp;
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////
-
-template<typename _T>
-inline void flip(v_1d<_T>& n, int k, int placeholer, float _spin = 1.0) {
-#ifdef SPIN
-	n[k] *= -1.0;
-#else 
-	n[k] = (n[k] == _spin) ? 0 : _spin;
-#endif
-}
-
-//////////////////////////////////////////////////////////////////////////////////////////
-
-template<typename _T>
-inline void flip(arma::Col<_T>& n, int k, int placeholer, float _spin = 1.0) {
-#ifdef SPIN
-	n(k) *= -1.0;
-#else 
-	n(k) = (n(k) > 0) ? 0.0 : 1.0;
+	set_element(n, k, (get_element(n, k) > 0) ? 0.0 : 1.0);
 #endif
 }
 
@@ -685,6 +611,7 @@ inline void flip(arma::Col<_T>& n, int k, int placeholer, float _spin = 1.0) {
 * @returns number with reversed bits moved to be maximally of size L again
 */
 template <typename _T>
+requires std::is_integral_v<_T>
 inline _T revBits(_T n, int L, int base = 2) {
 	_T rev = (lookup[n & 0xffULL] << 56)	|				// consider the first 8 bits
 		(lookup[(n >> 8) & 0xffULL] << 48)	|				// consider the next 8 bits
@@ -697,21 +624,35 @@ inline _T revBits(_T n, int L, int base = 2) {
 	return (rev >> (64 - L * (base / 2)));					// get back to the original maximal number
 }
 
-template <typename _T>
-inline v_1d<_T> revBits(const v_1d<_T>& n, int placeholder) {
-	v_1d<_T> tmp = n;
-	// rng::reverse(tmp.begin(), tmp.end());
+template <typename Container>
+requires (!std::is_integral_v<Container>)
+inline Container revBits(const Container& n, int placeholder) {
+	Container tmp = n;
+	const auto size = get_size(tmp);
+	for(std::size_t i = 0; i < size / 2; ++i) {
+		auto val1 = get_element(tmp, i);
+		auto val2 = get_element(tmp, size - 1 - i);
+		set_element(tmp, i, val2);
+		set_element(tmp, size - 1 - i, val1);
+	}
 	return tmp;
 }
 
-template <typename _T>
-inline void revBits(v_1d<_T>& n) {
-	// rng::reverse(n.begin(), n.end());
+template <typename Container>
+requires (!std::is_integral_v<Container>)
+inline void revBits(Container& n) {
+	const auto size = get_size(n);
+	for(std::size_t i = 0; i < size / 2; ++i) {
+		auto val1 = get_element(n, i);
+		auto val2 = get_element(n, size - 1 - i);
+		set_element(n, i, val2);
+		set_element(n, size - 1 - i, val1);
+	}
 }
 
-template <typename _T>
-inline arma::Col<_T> reverseBitsV(const arma::Col<_T>& n, int L) {
-	return arma::reverse(n);
+template <typename Container>
+inline Container reverseBitsV(const Container& n, int L) {
+	return revBits(n, 0);
 }
 
 #endif
