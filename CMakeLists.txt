@@ -1,150 +1,201 @@
-cmake_minimum_required(VERSION 3.23.0)
-project(GenUtils VERSION 1.1.0 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.23)
+project(GenUtils VERSION 1.2.0 LANGUAGES CXX)
 
-# Detect platform
-if (WIN32)
-    set(OS_PLATFORM "windows")
-    message(STATUS "Compiling on Windows")
-elseif (UNIX)
-    set(OS_PLATFORM "linux")
-    message(STATUS "Compiling on Linux")
-else()
-    message(FATAL_ERROR "Unsupported platform")
+# ---------------------------------------------------------------------------
+# general_cpp: utility library (logging, IO, lattices, linear algebra,
+# random, statistics)! Hello, it's a grab bag of useful stuff. 
+# The core is STL-only and always builds; Armadillo, HDF5, MKL are optional backends. 
+#
+# On macOS the Accelerate framework provides BLAS/LAPACK and MKL is never required.
+# Environment variables honoured: 
+# - ARMADILLO_INCL_DIR, 
+# - MKL_INCL_DIR,
+# - MKL_LIB_DIR, 
+# - HDF5_INCL_DIR, 
+# - HDF5_LIB_DIR 
+# (see README.md).
+# ---------------------------------------------------------------------------
+
+include(GNUInstallDirs)
+
+# Definition of options
+option(GENUTILS_USE_ARMADILLO "Enable the Armadillo linear-algebra backend" ON)
+option(GENUTILS_USE_HDF5      "Enable HDF5 file support"                    ON)
+option(GENUTILS_USE_MKL       "Enable Intel MKL acceleration (non-Apple)"   OFF)
+option(GENUTILS_BUILD_SHARED  "Build genutils as a shared library"          OFF)
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
 endif()
 
-# Set compilers
-if (OS_PLATFORM STREQUAL "windows")
-    set(CMAKE_C_COMPILER "$ENV{CC}")
-    set(CMAKE_CXX_COMPILER "$ENV{CXX}")
+# ---------------------------------------------------------------------------
+# Sources. 
+# STL-only units form the always-buildable core; the Armadillo
+# units are added only when the backend is enabled.
+# ---------------------------------------------------------------------------
+set(GENUTILS_CORE_SOURCES
+    cpp/common.cpp
+    cpp/directories.cpp
+    cpp/exceptions.cpp
+    cpp/maths.cpp
+    cpp/ml.cpp
+    cpp/signatures.cpp
+    cpp/str.cpp
+    cpp/time.cpp
+    cpp/ui.cpp
+    cpp/Lattices/lattice_symmetry.cpp
+    cpp/LinearAlgebra/lin_alg.cpp
+    cpp/LinearAlgebra/preconditioners.cpp
+)
+
+set(GENUTILS_ARMA_SOURCES
+    cpp/Lattices/lattices.cpp
+    cpp/Lattices/square.cpp
+    cpp/Lattices/triangular.cpp
+    cpp/Lattices/honeycomb.cpp
+    cpp/Lattices/hexagonal.cpp
+    cpp/LinearAlgebra/ode.cpp
+    cpp/LinearAlgebra/pfaffian.cpp
+    cpp/LinearAlgebra/solvers.cpp
+    cpp/Random/montecarlo.cpp
+)
+
+set(GENUTILS_SOURCES ${GENUTILS_CORE_SOURCES})
+if(GENUTILS_USE_ARMADILLO)
+    list(APPEND GENUTILS_SOURCES ${GENUTILS_ARMA_SOURCES})
+endif()
+
+if(GENUTILS_BUILD_SHARED)
+    add_library(genutils SHARED ${GENUTILS_SOURCES})
 else()
-    find_program(ICPX_COMPILER icpx)
-    if (ICPX_COMPILER)
-        set(CMAKE_C_COMPILER icx)
-        set(CMAKE_CXX_COMPILER icpx)
-        message(STATUS "Using Intel compilers")
+    add_library(genutils STATIC ${GENUTILS_SOURCES})
+endif()
+
+# Add an alias for convenient usage from other CMake projects via find_package(GenUtils).
+add_library(genutils::genutils ALIAS genutils)
+
+# ---------------------------------------------------------------------------
+# C++20, include directories. The public include directory is the same as the source directory
+# ---------------------------------------------------------------------------
+
+target_compile_features(genutils PUBLIC cxx_std_20)
+target_include_directories(genutils PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+
+# ---------------------------------------------------------------------------
+# Armadillo: a source tree pointed to by ARMADILLO_INCL_DIR takes precedence
+# (header-only, no wrapper); otherwise find_package. On macOS Accelerate
+# supplies BLAS/LAPACK; elsewhere BLAS/LAPACK (or MKL) is linked.
+# ---------------------------------------------------------------------------
+set(GENUTILS_ARMA_AVAILABLE OFF)
+if(GENUTILS_USE_ARMADILLO)
+    set(_genutils_arma_env "$ENV{ARMADILLO_INCL_DIR}")
+    unset(_genutils_arma_include)
+    if(_genutils_arma_env)
+        if(EXISTS "${_genutils_arma_env}/include/armadillo")
+            set(_genutils_arma_include "${_genutils_arma_env}/include")
+        elseif(EXISTS "${_genutils_arma_env}/armadillo")
+            set(_genutils_arma_include "${_genutils_arma_env}")
+        endif()
+    endif()
+
+    if(_genutils_arma_include)
+        target_compile_definitions(genutils PUBLIC
+            GENUTILS_HAS_ARMADILLO ARMA_DONT_USE_WRAPPER)
+        target_include_directories(genutils PUBLIC "${_genutils_arma_include}")
+        if(APPLE)
+            target_link_libraries(genutils PUBLIC "-framework Accelerate")
+            set(GENUTILS_ARMA_AVAILABLE ON)
+        else()
+            find_package(BLAS QUIET)
+            find_package(LAPACK QUIET)
+            if(BLAS_FOUND AND LAPACK_FOUND)
+                target_link_libraries(genutils PUBLIC ${LAPACK_LIBRARIES} ${BLAS_LIBRARIES})
+                set(GENUTILS_ARMA_AVAILABLE ON)
+            else()
+                message(WARNING "ARMADILLO_INCL_DIR set but BLAS/LAPACK not found; Armadillo disabled.")
+            endif()
+        endif()
+        if(GENUTILS_ARMA_AVAILABLE)
+            message(STATUS "GenUtils Armadillo (source tree): ${_genutils_arma_include}")
+        endif()
     else()
-        set(CMAKE_C_COMPILER "/usr/bin/gcc")
-        set(CMAKE_CXX_COMPILER "/usr/bin/g++")
-        message(STATUS "Using GCC compilers")
+        find_package(Armadillo QUIET)
+        if(ARMADILLO_FOUND)
+            target_compile_definitions(genutils PUBLIC GENUTILS_HAS_ARMADILLO)
+            target_include_directories(genutils PUBLIC ${ARMADILLO_INCLUDE_DIRS})
+            target_link_libraries(genutils PUBLIC ${ARMADILLO_LIBRARIES})
+            set(GENUTILS_ARMA_AVAILABLE ON)
+            message(STATUS "GenUtils Armadillo (system): ${ARMADILLO_INCLUDE_DIRS}")
+        endif()
+    endif()
+
+    if(NOT GENUTILS_ARMA_AVAILABLE)
+        message(WARNING "GENUTILS_USE_ARMADILLO=ON but Armadillo not found; backend disabled.")
     endif()
 endif()
 
-message(STATUS "C compiler: ${CMAKE_C_COMPILER}")
-message(STATUS "C++ compiler: ${CMAKE_CXX_COMPILER}")
-
-# Set variables for source and include directories
-set(SOURCE_DIR "${CMAKE_SOURCE_DIR}/cpp")
-set(INCLUDE_DIR "${CMAKE_SOURCE_DIR}/src")
-
-# Find source files (.cpp) and header files (.h or .hpp) recursively
-file(GLOB_RECURSE SOURCES "${SOURCE_DIR}/*.cpp")
-file(GLOB_RECURSE HEADERS "${INCLUDE_DIR}/*.h" "${INCLUDE_DIR}/*.hpp")
-
-##########################################################################
-
-# Find the path of the MKL include directory using an environment variable
-find_path(MKL_INCL_DIR
-    NAMES "mkl.h"
-    PATHS "$ENV{MKL_INCL_DIR}"
-    DOC "Path to MKL include directory"
-)
-
-# Find the path of the MKL library directory using an environment variable
-find_path(MKL_LIB_DIR
-    NAMES "mkl_core.lib" "libmkl_core.so"
-    PATHS "$ENV{MKL_LIB_DIR}" "/usr/lib" "/usr/local/lib" "/opt/intel/mkl/lib"
-    DOC "Path to MKL library directory"
-)
-
-# Find the path of the HDF5 include directory using an environment variable or common paths
-find_path(HDF5_INCL_DIR
-    NAMES "hdf5.h"
-    PATHS "$ENV{HDF5_INCL_DIR}" "/usr/include/hdf5/serial" "/usr/local/include/hdf5"
-    DOC "Path to HDF5 include directory"
-)
-
-# Find the path of the HDF5 library directory using an environment variable or common paths
-find_path(HDF5_LIB_DIR
-    NAMES "hdf5.lib" "libhdf5.so"
-    PATHS "$ENV{HDF5_LIB_DIR}" "/usr/lib" "/usr/local/lib" "/usr/lib/x86_64-linux-gnu/hdf5/serial"
-    DOC "Path to HDF5 library directory"
-)
-
-# Find the path of the HDF5 library directory
-find_library(HDF5_LIBRARIES NAMES hdf5 HINTS "$ENV{HDF5_LIB_DIR}" "/usr/lib" "/usr/local/lib" "/usr/lib/x86_64-linux-gnu/hdf5/serial")
-find_library(HDF5_HL_LIBRARIES NAMES hdf5_hl HINTS "$ENV{HDF5_LIB_DIR}" "/usr/lib" "/usr/local/lib" "/usr/lib/x86_64-linux-gnu/hdf5/serial")
-
-# Find the path of the Armadillo include directory
-find_path(ARMADILLO_INCL_DIR
-    NAMES "armadillo"
-    PATHS "$ENV{ARMADILLO_INCL_DIR}" "/usr/include" "/usr/local/include"
-    DOC "Path to Armadillo include directory"
-)
-
-##########################################################################
-
-# Print the paths found
-message(STATUS "MKL include directory: ${MKL_INCL_DIR}")
-message(STATUS "MKL library directory: ${MKL_LIB_DIR}")
-message(STATUS "Armadillo include directory: ${ARMADILLO_INCL_DIR}")
-message(STATUS "HDF5 include directory: ${HDF5_INCL_DIR}")
-message(STATUS "HDF5 library directory: ${HDF5_LIB_DIR}")
-
-# Include directories
-include_directories(
-    ${INCLUDE_DIR}
-    ${MKL_INCL_DIR}
-    ${ARMADILLO_INCL_DIR}
-    ${HDF5_INCL_DIR}
-)
-
-# Specify HDF5 library path directly if needed
-link_directories("${HDF5_LIB_DIR}")
-link_directories("${MKL_LIB_DIR}")
-link_directories("${ARMADILLO_LIB_DIR}")
-
-##########################################################################
-
-# Define the library target
-add_library(genutils SHARED ${SOURCES} ${HEADERS})
-
-# Link libraries for threading or platform-specific needs
-set(LIBRARIES)
-if (OS_PLATFORM STREQUAL "linux")
-    find_library(PTHREAD_LIBRARY pthread)
-    find_library(DL_LIBRARY dl)
-    list(APPEND LIBRARIES ${PTHREAD_LIBRARY} ${DL_LIBRARY})
-endif()
-
-# Compiler settings
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
-
-# Platform-specific flags
-if (OS_PLATFORM STREQUAL "linux")
-    if (CMAKE_CXX_COMPILER STREQUAL "icpx")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qopenmp")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -qopenmp")
+# ---------------------------------------------------------------------------
+# HDF5 (optional). find_package first, then HDF5_INCL_DIR / HDF5_LIB_DIR.
+# ---------------------------------------------------------------------------
+if(GENUTILS_USE_HDF5)
+    find_package(HDF5 QUIET COMPONENTS C)
+    if(HDF5_FOUND)
+        target_compile_definitions(genutils PUBLIC GENUTILS_HAS_HDF5 ARMA_USE_HDF5)
+        target_include_directories(genutils PUBLIC ${HDF5_INCLUDE_DIRS})
+        target_link_libraries(genutils PUBLIC ${HDF5_LIBRARIES})
+        message(STATUS "GenUtils HDF5: ${HDF5_INCLUDE_DIRS}")
     else()
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fopenmp")
+        set(_genutils_hdf5_inc "$ENV{HDF5_INCL_DIR}")
+        if(_genutils_hdf5_inc AND EXISTS "${_genutils_hdf5_inc}/hdf5.h")
+            find_library(GENUTILS_HDF5_LIB NAMES hdf5 HINTS "$ENV{HDF5_LIB_DIR}")
+            if(GENUTILS_HDF5_LIB)
+                target_compile_definitions(genutils PUBLIC GENUTILS_HAS_HDF5 ARMA_USE_HDF5)
+                target_include_directories(genutils PUBLIC "${_genutils_hdf5_inc}")
+                target_link_libraries(genutils PUBLIC "${GENUTILS_HDF5_LIB}")
+                message(STATUS "GenUtils HDF5 (env): ${_genutils_hdf5_inc}")
+            else()
+                message(STATUS "GenUtils HDF5 requested but library not found; disabled.")
+            endif()
+        else()
+            message(STATUS "GenUtils HDF5 requested but not found; disabled.")
+        endif()
     endif()
-elseif (OS_PLATFORM STREQUAL "windows")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp")
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20")
+# ---------------------------------------------------------------------------
+# MKL (optional, non-Apple acceleration). Honours MKL_INCL_DIR / MKL_LIB_DIR.
+# ---------------------------------------------------------------------------
+if(GENUTILS_USE_MKL AND NOT APPLE)
+    set(_genutils_mkl_inc "$ENV{MKL_INCL_DIR}")
+    if(_genutils_mkl_inc AND EXISTS "${_genutils_mkl_inc}/mkl.h")
+        target_compile_definitions(genutils PUBLIC GENUTILS_HAS_MKL ARMA_USE_MKL_ALLOC ARMA_USE_MKL_TYPES)
+        target_include_directories(genutils PUBLIC "${_genutils_mkl_inc}")
+        find_library(GENUTILS_MKL_CORE NAMES mkl_core HINTS "$ENV{MKL_LIB_DIR}")
+        if(GENUTILS_MKL_CORE)
+            target_link_libraries(genutils PUBLIC "${GENUTILS_MKL_CORE}")
+        endif()
+        message(STATUS "GenUtils MKL: ${_genutils_mkl_inc}")
+    else()
+        message(STATUS "GENUTILS_USE_MKL set but MKL_INCL_DIR not found; MKL disabled.")
+    endif()
+endif()
 
-# Output library settings
+# ---------------------------------------------------------------------------
+# Threads + OpenMP.
+# ---------------------------------------------------------------------------
+find_package(Threads REQUIRED)
+target_link_libraries(genutils PUBLIC Threads::Threads)
+
+find_package(OpenMP QUIET)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(genutils PUBLIC OpenMP::OpenMP_CXX)
+endif()
+
 set_target_properties(genutils PROPERTIES
     VERSION ${PROJECT_VERSION}
-    SOVERSION 1
-    OUTPUT_NAME "genutils"
     DEBUG_POSTFIX "_debug"
-    RELEASE_POSTFIX ""
 )
 
-# Link platform-specific libraries and additional libraries (MKL, Armadillo, HDF5)
-target_link_libraries(genutils PRIVATE ${LIBRARIES} ${ARMADILLO_LIBRARIES} ${MKL_LIBRARIES} ${HDF5_LIBRARIES} ${HDF5_HL_LIBRARIES})
+# ---------------------------------------------------------------------------
+#! EOF
+# ---------------------------------------------------------------------------
