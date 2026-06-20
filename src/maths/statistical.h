@@ -1,7 +1,19 @@
+/******************************************************************************
+ *
+ *  @file src/Include/statistical.h
+ *  @brief Statistical analysis utilities (binning, means, variances, correlation).
+ *
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
+ *
+ *  @copyright   (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ ******************************************************************************/
 #pragma once
 
 #ifndef ALG_H
-#include "containers.h"
+#include "../common/containers.h"
 #endif // !ALG_H
 
 // ######################################################## binning ########################################################
@@ -136,7 +148,7 @@ namespace StatisticalMeasures
 	}
 
 	// ##########################################################################################################################################
-};
+} // namespace StatisticalMeasures
 
 
 // ##########################################################################################################################################
@@ -150,7 +162,6 @@ class Histogram
 protected:
 	u64 nBins_		= 1;
 
-	arma::vec binEdgesArma_;
 	std::vector<double> binEdges_;
 	std::vector<u64> binCounts_;
 
@@ -191,14 +202,15 @@ public:
 		// get the bin edges - those are determined by the minimum and maximum values
 		if (_setBins)
 		{
-			double _min			= _values.min();
-			double _max			= _values.max();
-			this->binEdgesArma_	= arma::linspace(_min, _max, (const arma::uword)this->nBins_);
-			this->binEdges_		= arma::conv_to<v_1d<double>>::from(binEdgesArma_);
+			double _min		= _values.min();
+			double _max		= _values.max();
+			arma::vec edges	= arma::linspace(_min, _max, (const arma::uword)this->nBins_);
+			this->binEdges_	= arma::conv_to<v_1d<double>>::from(edges);
 		}
 
 		// get the histogram of counts
-		auto _binCounts		= arma::hist(_values, this->binEdgesArma_);
+		const arma::vec edges_arma = arma::conv_to<arma::vec>::from(this->binEdges_);
+		auto _binCounts		= arma::hist(_values, edges_arma);
 		this->binCounts_	= arma::conv_to<v_1d<u64>>::from(_binCounts);
 	}
 
@@ -209,14 +221,15 @@ public:
 		// get the bin edges - those are determined by the minimum and maximum values
 		if (_setBins)
 		{
-			double _min			= _values.min();
-			double _max			= _values.max();
-			this->binEdgesArma_	= arma::linspace(_min, _max, (const arma::uword)this->nBins_);
-			this->binEdges_		= arma::conv_to<v_1d<double>>::from(binEdgesArma_);
+			double _min		= _values.min();
+			double _max		= _values.max();
+			arma::vec edges	= arma::linspace(_min, _max, (const arma::uword)this->nBins_);
+			this->binEdges_	= arma::conv_to<v_1d<double>>::from(edges);
 		}
 
 		// get the histogram of counts
-		auto _binCounts		= arma::hist(_values, this->binEdgesArma_);
+		const arma::vec edges_arma = arma::conv_to<arma::vec>::from(this->binEdges_);
+		auto _binCounts		= arma::hist(_values, edges_arma);
 		this->binCounts_	= arma::conv_to<v_1d<u64>>::from(_binCounts);
 	}
 

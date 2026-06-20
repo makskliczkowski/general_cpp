@@ -1,22 +1,32 @@
-#pragma once
-/***************************************
-* Defines general logging optioons
-* APRIL 2023. UNDER CONSTANT DEVELOPMENT
-* MAKSYMILIAN KLICZKOWSKI, WUST, POLAND
-***************************************/
+/******************************************************************************
+ *
+ *  @file src/flog.h
+ *  @brief Logging utilities and level controls.
+ *
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
+ *
+ *  @copyright  : (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ ******************************************************************************/
+
 #ifndef FLOG_H
 #define FLOG_H
 
+#include <mutex>
+extern std::recursive_mutex logMutex;
+
 #ifndef FILES_H
-#	include "Include/files.h"
+#	include "files.h"
 #endif
 
 #ifndef DIRECTORIES_H
-#	include "Include/directories.h"
+#	include "directories.h"
 #endif 
 
 //#ifndef EXCEPTIONS_H
-//#	include "Include/exceptions.h"
+//#	include "exceptions.h"
 //#endif
 
 #ifndef FLOGTIME
@@ -125,6 +135,7 @@ inline void SET_LOG_TIME() {
 template <typename _T>
 inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl) 
 {
+	std::lock_guard<std::recursive_mutex> lock(logMutex);
 #ifndef _DEBUG
 	if(_typ == LOG_TYPES::DEBUG)
 		return;
@@ -154,6 +165,7 @@ inline void LOGINFO(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl)
 template<typename _T>
 inline void LOGINFOT(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl, bool _time)
 {
+	std::lock_guard<std::recursive_mutex> lock(logMutex);
 #ifndef _DEBUG
 	if(_typ == LOG_TYPES::DEBUG)
 		return;
@@ -191,6 +203,7 @@ inline void LOGINFOT(const _T& _msg, LOG_TYPES _typ, unsigned int _lvl, bool _ti
 template<>
 inline void LOGINFO(const std::string& _msg, LOG_TYPES _typ, unsigned int _lvl)
 {
+	std::lock_guard<std::recursive_mutex> lock(logMutex);
 #ifndef _DEBUG
 	if(_typ == LOG_TYPES::DEBUG)
 		return;

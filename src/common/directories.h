@@ -1,37 +1,31 @@
+/******************************************************************************
+ *
+ *  @file src/Include/directories.h
+ *  @brief Directory creation and separator utilities.
+ *
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
+ *
+ *  @copyright   (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ ******************************************************************************/
+
 #pragma once
-/*******************************
-* Contains the possible methods
-* for directories creation etc.
-*******************************/
 
 #ifndef DIRECTORIES_H
 #define DIRECTORIES_H
 
-// --- FILESYSTEM : DIRECTORY CREATION ---
-#ifdef __has_include
-#	if __has_include(<filesystem>)
-#		include <filesystem>
-#   	define have_filesystem 1
-		namespace fs = std::filesystem;
-#	elif __has_include(<experimental/filesystem>)
-#		include <experimental/filesystem>
-#include <iostream>
-#    	define have_filesystem 1
-#    	define experimental_filesystem
-		namespace fs = std::experimental::filesystem;
-#	else
-#		define have_filesystem 0
-#	endif
-#endif
+#include <filesystem>
+namespace fs = std::filesystem;
 
 // --- K PATH SEPARATOR : DIRECTORY SEPARATOR ---
-static const char* kPSep = 
+inline const std::string kPS = 
 #ifdef _WIN32 
-    R"(\)"; 
+    "\\"; 
 #else 
     "/"; 
 #endif
-const std::string kPS				=				std::string(kPSep);
 
 
 

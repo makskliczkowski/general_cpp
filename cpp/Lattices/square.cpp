@@ -1,4 +1,16 @@
-#include "../../src/Lattices/square.h"
+/******************************************************************************
+ *
+ *  @file cpp/Lattices/square.cpp
+ *  @brief Implementations for the SquareLattice class.
+ *
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
+ *
+ *  @copyright   (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ ******************************************************************************/
+#include "../../src/lattices/square.h"
 
 // ############################################################################################################################################
 
@@ -112,43 +124,58 @@ void SquareLattice::calculate_nn(bool pbcx, bool pbcy, bool pbcz)
         {
             this->nn 	= v_2d<int>(this->Ns, v_1d<int>(4, 0));
             this->nnF 	= v_2d<int>(this->Ns, v_1d<int>(4, 0));
+			// neighbors via coordinates: wrapping +-x inside the row.
+			// The previous index arithmetic _bcfun(i +- 1, Lx, pbc) mapped the
+			// result into [0, Lx) and was wrong for every row above the first.
             for (int i = 0; i < this->Ns; ++i)
             {
-				// right 
-				this->nn[i][0] = _bcfun(i + 1, this->Lx, pbcx);
+				const int x		= i % this->Lx;
+				const int y		= i / this->Lx;
+				auto _site		= [&](int _x, int _y) -> int
+				{ return (_x < 0 || _y < 0) ? -1 : _y * this->Lx + _x; };
+
+				// right
+				this->nn[i][0] = _site(_bcfun(x + 1, this->Lx, pbcx), y);
 				// top
-				this->nn[i][1] = _bcfun(i + this->Lx, this->Ns, pbcy);
+				this->nn[i][1] = _site(x, _bcfun(y + 1, this->Ly, pbcy));
 				// left
-				this->nn[i][2] = _bcfun(i - 1, this->Lx, pbcx);
+				this->nn[i][2] = _site(_bcfun(x - 1, this->Lx, pbcx), y);
 				// bottom
-				this->nn[i][3] = _bcfun(i - this->Lx, this->Ns, pbcy);
+				this->nn[i][3] = _site(x, _bcfun(y - 1, this->Ly, pbcy));
 
 				// forward
 				this->nnF[i][0] = this->nn[i][0];
 				this->nnF[i][1] = this->nn[i][1];
 				this->nnF[i][2] = -1;
 				this->nnF[i][3] = -1;
-			}	
-        }   
+			}
+        }
         break;
     case 3:
         // in addition we have the z direction
         this->nn = v_2d<int>(this->Ns, v_1d<int>(6, 0));
 		this->nnF = v_2d<int>(this->Ns, v_1d<int>(6, 0));
+		// coordinate-based: +-x wraps inside the row, +-y inside the plane.
         for (int i = 0; i < this->Ns; ++i)
         {
+			const int x		= i % this->Lx;
+			const int y		= (i / this->Lx) % this->Ly;
+			const int z		= i / (this->Lx * this->Ly);
+			auto _site		= [&](int _x, int _y, int _z) -> int
+			{ return (_x < 0 || _y < 0 || _z < 0) ? -1 : (_z * this->Ly + _y) * this->Lx + _x; };
+
 			// right
-			this->nn[i][0] = _bcfun(i + 1, this->Lx, pbcx);
+			this->nn[i][0] = _site(_bcfun(x + 1, this->Lx, pbcx), y, z);
 			// top
-			this->nn[i][1] = _bcfun(i + this->Lx, this->Ns, pbcy);
+			this->nn[i][1] = _site(x, _bcfun(y + 1, this->Ly, pbcy), z);
 			// up
-			this->nn[i][2] = _bcfun(i + this->Lx * this->Ly, this->Ns, pbcz);
+			this->nn[i][2] = _site(x, y, _bcfun(z + 1, this->Lz, pbcz));
 			// left
-			this->nn[i][3] = _bcfun(i - 1, this->Lx, pbcx);
+			this->nn[i][3] = _site(_bcfun(x - 1, this->Lx, pbcx), y, z);
 			// bottom
-			this->nn[i][4] = _bcfun(i - this->Lx, this->Ns, pbcy);
+			this->nn[i][4] = _site(x, _bcfun(y - 1, this->Ly, pbcy), z);
 			// down
-			this->nn[i][5] = _bcfun(i - this->Lx * this->Ly, this->Ns, pbcz);
+			this->nn[i][5] = _site(x, y, _bcfun(z - 1, this->Lz, pbcz));
 			// forward
 			this->nnF[i][0] = this->nn[i][0];
 			this->nnF[i][1] = this->nn[i][1];

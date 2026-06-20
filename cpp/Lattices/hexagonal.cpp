@@ -1,4 +1,16 @@
-#include "../../src/Lattices/hexagonal.h"
+/******************************************************************************
+ *
+ *  @file cpp/Lattices/hexagonal.cpp
+ *  @brief Implementations for the HexagonalLattice class.
+ *
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
+ *
+ *  @copyright   (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ ******************************************************************************/
+#include "../../src/lattices/hexagonal.h"
 
 /*
 * @brief Constructor for the hexagonal lattice
@@ -196,9 +208,9 @@ void HexagonalLattice::calculate_nn_obc()
 		// One dimension - just a chain of 2*Lx elems
 		this->nn = v_2d<int>(this->Ns, v_1d<int>(2, 0));
 		for (uint i = 0; i < this->Ns; i++) {
-			// z bond only
-			this->nn[i][0] = (i + 1) >= this->Ns ? i + 1 : -1;						// this is the neighbor top
-			this->nn[i][1] = modEUC<int>(i - 1, this->Ns);						// this is the neighbor bottom
+			// z bond only - open boundaries: no wrap at either end
+			this->nn[i][0] = ((i + 1) < this->Ns) ? int(i + 1) : -1;				// this is the neighbor top
+			this->nn[i][1] = (i >= 1) ? int(i - 1) : -1;							// this is the neighbor bottom
 		}
 		break;
 	case 2:

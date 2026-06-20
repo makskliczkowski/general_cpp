@@ -1,4 +1,17 @@
-#include "../../src/lattices.h"
+/******************************************************************************
+ *
+ *  @file cpp/Lattices/lattices.cpp
+ *  @brief Implementations for the base Lattice class methods.
+ *
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
+ *
+ *  @copyright   (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ ******************************************************************************/
+#include "../../src/lattices/lattices.h"
+#include "../../src/algebra/lin_alg.h"
 
 // ####################################################################################################
 
@@ -109,6 +122,120 @@ int Lattice::get_nei(int lat_site, int corr_len) const
 	default:
 		return modEUC<int>(lat_site + corr_len, this->Ns);
 	}
+}
+
+// ####################################################################################################
+
+/**
+* @brief Collect all forward bonds of the lattice.
+* @details Iterates the forward neighbor table nnF; slot index becomes the
+* bond type (square {0:+x, 1:+y, 2:+z}, honeycomb Kitaev {0:z, 1:y, 2:x}).
+* Slots holding -1 (no forward bond, open boundary) are skipped.
+* @returns vector of (from, to, type) forward bonds
+*/
+v_1d<LatticeBond> Lattice::get_bonds() const
+{
+	v_1d<LatticeBond> _bonds;
+	_bonds.reserve(this->Ns * 2);
+
+	for (uint i = 0; i < this->Ns; ++i)
+	{
+		if (i >= this->nnF.size())
+			break;
+		for (uint _slot = 0; _slot < this->nnF[i].size(); ++_slot)
+		{
+			const int _nei = this->nnF[i][_slot];
+			if (_nei >= 0 && _nei < int(this->Ns))
+				_bonds.push_back(LatticeBond{ i, uint(_nei), int(_slot) });
+		}
+	}
+	return _bonds;
+}
+
+// ####################################################################################################
+
+/*
+* @brief Number of valid nearest neighbors of a site (the coordination number).
+* Open-boundary missing neighbors (stored as -1) are not counted.
+*/
+uint Lattice::coordination_number(int _site) const
+{
+	if (_site < 0 || _site >= int(this->Ns) || uint(_site) >= this->nn.size())
+		return 0;
+	uint _count = 0;
+	for (const int _nei : this->nn[_site])
+		if (_nei >= 0 && _nei < int(this->Ns))
+			++_count;
+	return _count;
+}
+
+// ####################################################################################################
+
+/*
+* @brief Symmetric nearest-neighbor adjacency matrix A (Ns x Ns): A(i,j)=1 when
+* sites i and j are nearest neighbors, else 0. Built from the forward bonds and
+* symmetrized, so each undirected edge is set exactly once per direction.
+*/
+arma::SpMat<double> Lattice::adjacency_matrix() const
+{
+	arma::SpMat<double> _A(this->Ns, this->Ns);
+	for (const auto& _bond : this->get_bonds())
+	{
+		_A(_bond.from, _bond.to) = 1.0;
+		_A(_bond.to, _bond.from) = 1.0;
+	}
+	return _A;
+}
+
+// ####################################################################################################
+
+/*
+* @brief Sublattice index of every site (site = cell * sites_per_cell + sublattice).
+* For a two-site unit cell this is the bipartite (A/B) class.
+*/
+v_1d<uint> Lattice::sublattice_partition() const
+{
+	v_1d<uint> _partition(this->Ns);
+	for (uint _i = 0; _i < this->Ns; ++_i)
+		_partition[_i] = this->get_Sublattice(_i);
+	return _partition;
+}
+
+// ####################################################################################################
+
+/*
+* @brief Peierls flux phases for twisted boundary conditions. For each forward
+* bond (i -> j, in get_bonds() order) that crosses the periodic boundary along
+* an axis, the bond carries exp(i * flux_axis) (with the sign set by the
+* wrap direction); bonds that do not cross a boundary carry phase 1. A bond
+* crosses the boundary along an axis when the coordinate jump exceeds one cell.
+*/
+arma::cx_vec Lattice::boundary_flux_phases(double _flux_x, double _flux_y, double _flux_z) const
+{
+	const auto _bonds = this->get_bonds();
+	arma::cx_vec _phases(_bonds.size(), arma::fill::ones);
+	const double _flux[3] = { _flux_x, _flux_y, _flux_z };
+
+	for (std::size_t _b = 0; _b < _bonds.size(); ++_b)
+	{
+		const uint _i = _bonds[_b].from;
+		const uint _j = _bonds[_b].to;
+		double _accum = 0.0;
+		for (int _ax = 0; _ax < 3; ++_ax)
+		{
+			const int _ci = this->coord[_i][_ax];
+			const int _cj = this->coord[_j][_ax];
+			// a wrapping bond jumps by more than one cell along the axis; the
+			// sign encodes whether it wraps forward (high -> 0) or backward.
+			if (_ci - _cj > 1)
+				_accum += _flux[_ax];
+			else if (_cj - _ci > 1)
+				_accum -= _flux[_ax];
+		}
+		if (_accum != 0.0)
+			_phases(_b) = std::exp(cpx(0.0, _accum));
+	}
+	return _phases;
 }
 
 // ####################################################################################################

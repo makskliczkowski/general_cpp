@@ -1,7 +1,7 @@
-#include "../../src/lin_alg.h"
-#include "../../src/Include/maths.h"
-#include "../../src/Include/str.h"
-#include "../../src/flog.h"
+#include "../../src/algebra/lin_alg.h"
+#include "../../src/maths/maths.h"
+#include "../../src/common/str.h"
+#include "../../src/common/flog.h"
 #include "armadillo"
 #include <cassert>
 #include <complex>

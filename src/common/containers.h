@@ -1,21 +1,35 @@
+/******************************************************************************
+ *
+ *  @file src/common/containers.h
+ *  @brief Common container utilities and type aliases for the general_cpp project.
+ *
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
+ *
+ *  @copyright (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ ******************************************************************************/
+
 #ifndef CONTAINERS_H
 #define CONTAINERS_H
 
+#include <unordered_map>
 #include <functional>
 #include <algorithm>
 #include <tuple>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 #include <stdexcept>
 #include <complex>
 
-#include "../Dynamic/dynamic_bitset.hpp"
-#include "linalg/generalized_matrix.h"
-#include "maths.h"
+// -----------------------------------------------------------------------------
+#include "dynamic_bitset.hpp"
+#include "../algebra/generalized_matrix.h"
+#include "../maths/maths.h"
 
-// #################################################### G E N E R A L ####################################################
+// -----------------------------------------------------------------------------
 
 namespace Containers
 {
@@ -49,7 +63,13 @@ namespace Containers
 
 		return result;
 	}
-
+	
+	/**
+	 * @brief Unzip a vector of tuples into separate vectors.
+	 * @tparam Ts Types of the elements in the tuples.
+	 * @param zipped The vector of tuples to unzip.
+	 * @param containers The output vectors to store the unzipped elements.
+	 */
 	template<typename... Ts, typename... Containers>
 	void unzip(const std::vector<std::tuple<Ts...>>& zipped, Containers&... containers) {
 		// Reserve space in the containers
@@ -66,8 +86,15 @@ namespace Containers
 		}
 	}
 
-	// ###################################################################################################################
-
+	/**
+	 * @brief Sort a vector of tuples based on a specific element index and a custom comparison function.
+	 * @tparam _On The index of the tuple element to sort by.
+	 * @tparam Ts Types of the elements in the tuples.
+	 * @param zipped The vector of tuples to sort.
+	 * @param f The custom comparison function to determine the sorting order.
+	 * The comparison function should take two arguments of the type corresponding to the tuple element at index
+	 * _On and return a boolean indicating whether the first argument should come before the second in the sorted order.
+	 */
 	template<uint _On, typename... Ts>
 	void sort(std::vector<std::tuple<Ts...>>& zipped,
 			  std::function<bool(typename std::remove_reference_t<typename std::tuple_element<_On, std::tuple<Ts...>>>::type,
@@ -80,26 +107,24 @@ namespace Containers
 				return f(std::get<_On>(a), std::get<_On>(b));
 			});
 	}
+}; //! namespace Containers
 
-	// ###################################################################################################################
-};
+// -----------------------------------------------------------------------------
+// Type aliases for common container types
+// -----------------------------------------------------------------------------
 
-// ##################################################### V E C T O R #####################################################
-
-// ################# I S   V E C T O R #################
 template<typename T>
 struct is_vector : std::false_type {};
 template<typename T>
 struct is_vector<std::vector<T>> : std::true_type {};
 
-// #####################################################
+// -----------------------------------------------------------------------------
 
 namespace Vectors
 {
-	// ########################## C O N V E R S I O N ##########################
-
-	/*
-	* @brief Convert vector of one type to another
+	/**
+	* @brief Convert vector of one type to another. Namely, it's 
+	* a conversion betweeb types that can be constructed from each other, like int to double, or string to double.
 	* @param _v vector to convert
 	* @returns converted vector
 	*/
@@ -118,6 +143,15 @@ namespace Vectors
 		return _v;
 	}
 
+	/**
+	 * @brief Convert a vector of strings to a vector of a specified type by parsing the strings.
+	 * @tparam _T The target type to convert the strings to. This type must be constructible from a string, such as int, double, etc.
+	 * @param _v The vector of strings to convert.
+	 * @return A vector of type _T containing the converted values from the input vector of strings.
+	 * @throws std::runtime_error If any string in the input vector cannot be converted to the target type _T, an exception is thrown with an error message.
+	 * @note This function uses std::transform to apply the conversion to each element in the input vector. The conversion is
+	 * performed using a lambda function that calls std::stod (or similar functions for other types)
+	 */
 	template <typename _T>
 	inline v_1d<_T> convert(const v_1d<std::string>& _v)
 	{
@@ -131,8 +165,6 @@ namespace Vectors
 		}
 		return _out;
 	}
-
-	// -------------------------------------------------------------------------
 
 	template <>
 	inline v_1d<size_t> convert(const v_1d<std::string>& _v)
@@ -363,7 +395,7 @@ namespace Vectors
 	{
 		if (_res.size() != _toAdd.size())
 			throw std::runtime_error("Size of vectors mismatch...");
-		for (auto i = 0; i < _res.size(); ++i)
+		for (std::size_t i = 0; i < _res.size(); ++i)
 			_res[i] += _toAdd[i];
 	};
 
@@ -374,7 +406,7 @@ namespace Vectors
 		if (_res.size() != _toAdd.size())
 			throw std::runtime_error("Size of vectors mismatch...");
 		_out.resize(_res.size());
-		for (auto i = 0; i < _res.size(); ++i)
+		for (std::size_t i = 0; i < _res.size(); ++i)
 			_out[i] = _toAdd[i] + _res[i];
 		return _out;
 	};
@@ -397,7 +429,7 @@ namespace Vectors
 	{
 		if (_res.size() != _toAdd.size())
 			throw std::runtime_error("Size of vectors mismatch...");
-		for (auto i = 0; i < _res.size(); ++i)
+		for (std::size_t i = 0; i < _res.size(); ++i)
 			_res[i] -= _toAdd[i];
 	};
 
@@ -408,7 +440,7 @@ namespace Vectors
 		if (_res.size() != _toAdd.size())
 			throw std::runtime_error("Size of vectors mismatch...");
 		_out.resize(_res.size());
-		for (auto i = 0; i < _res.size(); ++i)
+		for (std::size_t i = 0; i < _res.size(); ++i)
 			_out[i] = _res[i] - _toAdd[i];
 		return _out;
 	};
@@ -452,7 +484,7 @@ namespace Vectors
 	// ############################# S O R T I N G #############################
 
 	template <class VectorIterator, typename Compare>
-	inline void bubbleSort(VectorIterator _b, VectorIterator _e, Compare compare, uint* _comparisons = nullptr)
+	inline void bubbleSort(VectorIterator _b, VectorIterator _e, Compare compare, std::size_t* _comparisons = nullptr)
 	{
 		auto _distance	= std::distance(_b, _e);
 		// return already
@@ -564,7 +596,7 @@ namespace Simulation
 
     //────────────────────────────────────────────────────────────────────────────
     // 2) wrapper for any concrete container C
-    //────────────────────────────────────────────────────────────────────────────
+    //-----
 
     template<typename C>
     class ContainerHolder
@@ -583,6 +615,7 @@ namespace Simulation
     //────────────────────────────────────────────────────────────────────────────
     // 3) Main manager: add by name or index, fetch by template
     //────────────────────────────────────────────────────────────────────────────
+
     class DataContainer
     {
 		using uptr_t 							= std::unique_ptr<IContainer>;

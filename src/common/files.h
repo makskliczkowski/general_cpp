@@ -1,8 +1,17 @@
+/******************************************************************************
+ *
+ *  @file src/Include/files.h
+ *  @brief Safe file opening and formatting utilities.
+ *
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
+ *
+ *  @copyright   (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ ******************************************************************************/
+
 #pragma once
-/*******************************
-* Contains the possible methods
-* for handling files and print.
-*******************************/
 
 #ifndef FILES_H
 #define FILES_H
@@ -12,6 +21,7 @@
 #include "time.h"
 // #include "random.h"
 
+#include <stdexcept>
 
 // ################################################## FILE AND STREAMS ##################################################
 
@@ -26,7 +36,7 @@ inline int openFile(T& file, std::string fileName, std::ios_base::openmode mode 
     {
         file.open(fileName, mode);
         if (!file.is_open()){
-            throw ("Couldn't open a file: " + fileName + "\n");
+            throw std::runtime_error("Couldn't open a file: " + fileName + "\n");
             return 0;
         }
     }

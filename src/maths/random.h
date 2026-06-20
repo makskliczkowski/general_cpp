@@ -1,8 +1,21 @@
+/******************************************************************************
+ *
+ *  @file src/Include/random.h
+ *  @brief Random number generation with Xoshiro256++ engine.
+ *
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
+ *
+ *  @copyright   (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ ******************************************************************************/
+
 #ifndef RANDOM_H
 #define RANDOM_H
 
 #include "./montecarlo.hpp"
-#include "../xoshiro_pp.h"
+#include "../common/xoshiro_pp.h"
 
 // --- RANGES ---
 #ifdef __has_include
@@ -79,9 +92,30 @@ public:
 
 	// -----------------------------------------------------------------------
 
-	auto newSeed(std::uint64_t seed)			-> void									{ this->engine = XoshiroCpp::Xoshiro256PlusPlus(randomGen::seedInit(seed)); };
+	auto newSeed(std::uint64_t seed)			-> void									{ this->engine = XoshiroCpp::Xoshiro256PlusPlus(randomGen::seedInit(seed)); this->seed_ = seed; };
 	auto seed()									const -> std::uint64_t					{ return this->seed_; }
 	auto eng()								const -> XoshiroCpp::Xoshiro256PlusPlus		{ return this->engine; }
+
+	// ############### E X P L I C I T   S E E D I N G ###############
+	// The default constructor seeds from std::random_device, i.e. a different
+	// stream on every run. Use these named factories to make the intent
+	// explicit at the call site.
+
+	/// Reproducible stream: the same seed always yields the same sequence.
+	[[nodiscard]] static randomGen reproducible(std::uint64_t seed)	{ return randomGen(seed); }
+	/// Non-reproducible stream seeded from the OS entropy source.
+	[[nodiscard]] static randomGen fromEntropy()					{ return randomGen(std::random_device{}()); }
+
+	/// Derive an independent, deterministic sub-stream from this generator's
+	/// seed and a stream index. Same parent seed + index -> same sub-stream;
+	/// different indices give well-separated streams (splitmix64 mixing).
+	/// Use for reproducible parallel work: give each worker spawn(workerId).
+	[[nodiscard]] randomGen spawn(std::uint64_t streamIndex) const
+	{
+		const std::uint64_t child = randomGen::seedInit(
+			this->seed_ + 0x9e3779b97f4a7c15ULL * (streamIndex + 1));
+		return randomGen(child);
+	}
 	// --------------------- WRAPPERS ON RANDOM FUNCTIONS ---------------------
 
 	template <typename _T, typename _T2 = _T>
@@ -166,9 +200,10 @@ public:
 
 inline randomGen::randomGen(std::uint64_t seed)
 {
+	// newSeed sets both the engine and seed_. The global C srand() is
+	// deliberately not touched: a library must not reseed the process-wide
+	// rand() state as a side effect of constructing its own generator.
 	this->newSeed(seed);
-	this->seed_ = seed;
-	srand((unsigned int)seed);
 }
 
 // ----------------------------------------------------------------------------------------------------------------------
@@ -350,7 +385,7 @@ inline _T randomGen::choice(_T begin, _T end, size_t _num)
 	while (_num--)
 	{
 		_T r = begin;
-		std::advance(r, rand() % left);
+		std::advance(r, std::uniform_int_distribution<size_t>(0, left - 1)(this->engine));
 		std::swap(*begin, *r);
 		++begin;
 		--left;
@@ -494,31 +529,31 @@ inline arma::Mat<double> randomGen::GUE(uint _x, uint _y)
 template <typename _T>
 inline arma::Mat<_T> randomGen::CUE(uint _x, uint _y)
 {
-	arma::Mat<std::complex<double>> A(_x, _y, arma::fill::zeros);
-	A.set_real(arma::Mat<double>(_x, _y, arma::fill::randn));
-	A.set_imag(arma::Mat<double>(_x, _y, arma::fill::randn));
+	arma::Mat<std::complex<double>> A(_x, _y);
+	for (uint j = 0; j < _y; ++j) {
+		for (uint i = 0; i < _x; ++i) {
+			A(i, j) = std::complex<double>(this->randomNormal(0.0, 1.0), this->randomNormal(0.0, 1.0));
+		}
+	}
 
 	arma::Mat<std::complex<double>> Q, R;
 	arma::qr(Q, R, A);
 	return Q;
-	//auto _diag	= R.diag();
-	//_diag		= _diag / arma::abs(_diag);
-	//return Q * DIAG(_diag) * Q;
 }
 
 template <>
 inline arma::Mat<double> randomGen::CUE(uint _x, uint _y)
 {
-	arma::Mat<std::complex<double>> A(_x, _y, arma::fill::zeros);
-	A.set_real(arma::Mat<double>(_x, _y, arma::fill::randn));
-	A.set_imag(arma::Mat<double>(_x, _y, arma::fill::randn));
+	arma::Mat<std::complex<double>> A(_x, _y);
+	for (uint j = 0; j < _y; ++j) {
+		for (uint i = 0; i < _x; ++i) {
+			A(i, j) = std::complex<double>(this->randomNormal(0.0, 1.0), this->randomNormal(0.0, 1.0));
+		}
+	}
 
 	arma::Mat<std::complex<double>> Q, R;
 	arma::qr(Q, R, A);
 	return arma::real(Q);
-	//auto _diag	= R.diag();
-	//_diag		= _diag / arma::abs(_diag);
-	//return Q * DIAG(_diag) * Q;
 }
 
 // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

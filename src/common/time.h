@@ -1,3 +1,17 @@
+/******************************************************************************
+ *
+ *  @file src/Include/time.h
+ *  @brief High-resolution timer, scoped timing, and time formatting.
+ *
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
+ *
+ *  @copyright   (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ ******************************************************************************/
+
+#pragma once
 #include <chrono>
 #include <iostream>
 #include <algorithm>
@@ -6,13 +20,6 @@
 #include <type_traits>
 #include "exceptions.h"
 #include "str.h"
-
-
-/*******************************
-* Contains the possible methods
-* for handling the sim time.
-*******************************/
-#pragma once
 
 // ########################################################	T I M E   F U N C T I O N S ########################################################
 #if defined (_MSC_VER)
@@ -126,6 +133,74 @@ public:
 // ##################################################################################################################################
 
 std::string prettyTime(std::time_t now = std::time(0));
+
+// ##################################################################################################################################
+
+// ######################################################## S C O P E D   T I M E R #################################################
+
+// ##################################################################################################################################
+
+/*
+* @brief RAII scope timer: times the lifetime of the object and, on
+* destruction, either reports the elapsed time to stdout (with a label) or
+* writes it into a caller-owned sink. The C++ equivalent of the Python
+* Timer used as a context manager.
+*/
+class ScopedTimer
+{
+public:
+	// report to stdout on destruction
+	explicit ScopedTimer(std::string _label)
+		: _label(std::move(_label)), _start(NOW) {}
+	// write the elapsed seconds into _sink on destruction (no printing)
+	explicit ScopedTimer(long double* _sink)
+		: _sink(_sink), _start(NOW) {}
+
+	ScopedTimer(const ScopedTimer&)				= delete;
+	ScopedTimer& operator=(const ScopedTimer&)	= delete;
+
+	// elapsed seconds so far, without ending the scope
+	[[nodiscard]] long double seconds() const	{ return t_s(this->_start); }
+
+	~ScopedTimer()
+	{
+		const long double _elapsed = t_s(this->_start);
+		if (this->_sink)
+			*this->_sink = _elapsed;
+		else
+			std::cout << this->_label << " -> time : " << _elapsed << " s" << std::endl;
+	}
+
+private:
+	std::string			_label;
+	long double*		_sink	= nullptr;
+	clk::time_point		_start;
+};
+
+#include <functional>
+#include <utility>
+#include <type_traits>
+
+/**
+* @brief Times the execution of a callable object.
+* @param func Callable object (lambda, function pointer, functor).
+* @param args Arguments to pass to the callable.
+* @return If the callable returns void, returns elapsed time in seconds as double.
+*         Otherwise, returns std::pair of the result and elapsed time in seconds.
+*/
+template <typename Func, typename... Args>
+inline auto timeCall(Func&& func, Args&&... args) {
+    auto start = clk::now();
+    if constexpr (std::is_void_v<std::invoke_result_t<Func, Args...>>) {
+        std::invoke(std::forward<Func>(func), std::forward<Args>(args)...);
+        auto end = clk::now();
+        return std::chrono::duration<double>(end - start).count();
+    } else {
+        auto result = std::invoke(std::forward<Func>(func), std::forward<Args>(args)...);
+        auto end = clk::now();
+        return std::make_pair(result, std::chrono::duration<double>(end - start).count());
+    }
+}
 
 // ##################################################################################################################################
 

@@ -40,6 +40,7 @@ set(GENUTILS_CORE_SOURCES
     cpp/maths.cpp
     cpp/ml.cpp
     cpp/signatures.cpp
+    cpp/slurm.cpp
     cpp/str.cpp
     cpp/time.cpp
     cpp/ui.cpp

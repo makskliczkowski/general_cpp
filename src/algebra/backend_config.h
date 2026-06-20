@@ -1,21 +1,13 @@
 /******************************************************************************
  *
- *  @file src/backend_config.h
+ *  @file src/Include/backend_config.h
  *  @brief Centralized Armadillo / BLAS / HDF5 / MKL backend configuration.
  *
- *  Project : general_cpp
- *  Author  : Maksymilian Kliczkowski
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
  *
- *  All third-party numeric-backend `#define`s live here, in one place, and
- *  defer to the build system. 
- * 
- *  The build communicates its choices through opt-out macros, for example:
- *    - GENUTILS_NO_ARMADILLO : do not pull Armadillo at all.
- *    - GENUTILS_NO_HDF5      : build Armadillo without HDF5 support.
- *    - GENUTILS_HAS_MKL      : opt in to MKL allocators/types (non-Apple).
- *
- *  Including this header is the single supported way to bring in Armadillo;
- *  include it before any `<armadillo>` use.
+ *  @copyright   (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
  *
  ******************************************************************************/
 

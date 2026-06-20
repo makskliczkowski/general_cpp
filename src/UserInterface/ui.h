@@ -1,3 +1,15 @@
+/******************************************************************************
+ *
+ *  @file src/UserInterface/ui.h
+ *  @brief Command-line option parsers and user interface options.
+ *
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
+ *
+ *  @copyright   (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ ******************************************************************************/
 #pragma once
 #ifndef UI_H
 #define UI_H
@@ -5,6 +17,9 @@
 #ifndef COMMON_H
 #include "../common.h"
 #endif
+// the UI builds random initial states; common.h no longer re-exports the
+// random module, so include it directly.
+#include "../maths/random.h"
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // sets the specific option that is self-explanatory

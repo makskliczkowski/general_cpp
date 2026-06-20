@@ -1,4 +1,17 @@
-#include "../src/Include/maths.h"
+/******************************************************************************
+ *
+ *  @file cpp/maths.cpp
+ *  @brief Implementations for mathematical operations and ThreadPool.
+ *
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
+ *
+ *  @copyright   (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ ******************************************************************************/
+
+#include "../src/maths/maths.h"
 
 
 // #################################################################################################################################################
@@ -80,9 +93,6 @@ namespace Threading
                         ++this->activeTasks_;
                     }
                     task();
-
-                    // Artificial waiting
-                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
                     // Notify that the task has been completed
                     {

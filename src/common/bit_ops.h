@@ -1,13 +1,13 @@
 /******************************************************************************
  *
- *  @file bit_ops.h
+ *  @file src/Include/bit_ops.h
  *  @brief Generic word-level bit operations on 64-bit integers.
  *
- *  Project     : general_cpp
- *  Author      : Maksymilian Kliczkowski
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
  *  @details Convention-free: functions act on bit indices only; any site-to-bit
  *
- *  Copyright   : (c) 2024-2026 Maksymilian Kliczkowski
+ *  @copyright   (c) 2024-2026 Maksymilian Kliczkowski
  *  SPDX-License-Identifier: MIT
  *
  ******************************************************************************/

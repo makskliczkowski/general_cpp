@@ -1,35 +1,29 @@
-/*
-* The implementation of the honeycomb lattice is based on the Lattice class.
-* The honeycomb lattice is a 2D lattice with a hexagonal structure. The lattice
-* has two sublattices, A and B, with the A sublattice sites at the center of the
-* hexagons and the B sublattice sites at the vertices of the hexagons.
-* The honeycomb lattice has two nearest neighbor vectors, nn1 and nn2, and
-* four next nearest neighbor vectors, nnn1, nnn2, nnn3, and nnn4.
-* It is based upon ladder lattice with the following structure:
-*      A B A B A B
-*     B A B A B A
-*    A B A B A B
-*   B A B A B A
-*  A B A B A B
-* B A B A B A
-* @url Check the geometry from Fig. 2 of the paper https://journals.aps.org/prresearch/pdf/10.1103/PhysRevResearch.3.013160
-*/
+/******************************************************************************
+ *
+ *  @file src/lattices/honeycomb.h
+ *  @brief Honeycomb lattice class declaration.
+ *
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
+ *  @copyright   (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ ******************************************************************************/
 
+#pragma once
 #ifndef LATTICE_H
-    #include "../lattices.h"
+#include "lattices.h"
 #endif
 
 #ifndef HONEYCOMB_H
 #define HONEYCOMB_H
 
-// ####################################################################################################
-
-class Honeycomb : public Lattice {
+class Honeycomb : public Lattice 
+{
 private:
     int Lx, Ly, Lz;
 
-    // lattice parameters
-    double a = 1, c = 1;    // lattice parameters - a and c define the lattice vectors as a(1,0) and c(1/2,sqrt(3)/2)
+    double a = 1, c = 1;
 public:
     ~Honeycomb()            { LOGINFOG(this->get_info() + " is destroyed.", LOG_TYPES::DEBUG, 3); }
     Honeycomb()             = default;
@@ -42,6 +36,8 @@ public:
     int getNorm(int x, int y, int z)                    const override { return this->spatialNorm[x][y][z]; };
     int get_nn(int _site, direction d)                  const override;
     arma::vec getRealVec(int x, int y, int z)           const override;
+    uint get_Sublattice(uint site)                      const override { return site % 2; };
+    uint get_SitesPerCell()                             const override { return 2; };
 
     // GETTERS NEIGHBORS
 	v_1d<uint> get_nn_ForwardNum(int site, v_1d<uint>)	const override { if (this->dim == 1 || site % 2 == 0) return { 0 }; else return { 1, 2 }; };
@@ -49,12 +45,9 @@ public:
 	uint get_nn_ForwardNum(int site, int num)			const override { return this->nnForward[num]; };
 	uint get_nnn_ForwardNum(int site, int num)			const override { return this->nnnForward[num]; };
 
-    // --- nn ---
+    // CALCULATORS
     void calculate_nn(bool pbcx, bool pbcy, bool pbcz)  override final;
     void calculate_nnn(bool pbcx, bool pbcy, bool pbcz) override final {};
-    // --- nnn ---
-
-    // --- coords ---
     void calculate_coordinates()                        override final;
 
     // SYMMETRIES
@@ -81,9 +74,6 @@ private:
 	void calculate_kVec() override;
 	void calculate_rVec() override;
 public:
-    // ####################################################################################################
-    // topology
-    // ####################################################################################################
     v_1d<uint> get_flux_sites(int X, int Y, int Z) const override final;
 };
 #endif // !HONEYCOMB_H

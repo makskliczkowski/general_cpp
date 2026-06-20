@@ -6,9 +6,9 @@
 * Maksymilian Kliczkowski, 2023
 *******************************/
 
-#include "../../flog.h"
-#include "../containers.h"
-#include "../random.h"
+#include "../common/flog.h"
+#include "../common/containers.h"
+#include "../maths/random.h"
 #include "armadillo"
 #include <complex>
 #include <string>

@@ -1,4 +1,4 @@
-#include "../src/flog.h"
+#include "../src/common/flog.h"
 
 /*
 * @brief create single specified directory

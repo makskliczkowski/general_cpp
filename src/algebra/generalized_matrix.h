@@ -1,13 +1,32 @@
-#pragma once
-/***************************************
-* Defines the Hamiltonian Matrix override
-* for sparse and dense matrices.
-* APRIL 2024. UNDER CONSTANT DEVELOPMENT
-* MAKSYMILIAN KLICZKOWSKI, WUST, POLAND
-***************************************/
+/******************************************************************************
+ *
+ *  @file src/Include/linalg/generalized_matrix.h
+ *  @brief Defines the GeneralizedMatrix class for handling both sparse and dense matrices.
+ *
+ *  @project general_cpp
+ *  @author Maksymilian Kliczkowski
+ *  @details This header defines the GeneralizedMatrix class, which provides a unified 
+ *  interface for working with both sparse and dense matrices using the Armadillo library. 
+ *  The class supports various matrix operations, including element access, arithmetic operations,
+ *  and matrix transformations. It is templated to support different data types.
+ *
+ *  @copyright 	: (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ *  @changelog 	: 
+ * 	- 01/06/2024 - [MK] Initial creation
+ *  - 15/06/2026 - [MK] Modernizing the class 
+ * 
+ *  @todo
+ * 	- Implement different backends for MPI parallelization, GPU acceleration, etc.
+ ******************************************************************************/
 
-#include "../../lin_alg.h"
+#pragma once
+
+#include "lin_alg.h"
 #include <complex>
+#include <functional>
+#include <stdexcept>
 
 // ############################################################################################################
 
@@ -24,9 +43,9 @@
 *
 * @section Example
 * @code
-* GeneralizedMatrix<double> mat(5, 5, true); // Create a 5x5 sparse matrix
-* mat.set(0, 0, 1.0); // Set element (0,0) to 1.0
-* mat.print(); // Print the matrix
+* 	GeneralizedMatrix<double> mat(5, 5, true); 	// Create a 5x5 sparse matrix
+* 	mat.set(0, 0, 1.0); 							// Set element (0,0) to 1.0
+* 	mat.print(); 									// Print the matrix
 * @endcode
 * @author Maksymilian Kliczkowski (WUST, Poland)
 */
@@ -46,6 +65,11 @@ protected:
 	// matrices placeholders
 	arma::SpMat<_T> H_sparse_;
 	arma::Mat<_T> H_dense_;
+
+	// matrix-free representation: when set, the operator is applied through
+	// this callable and no sparse/dense matrix is materialized.
+	bool isMatrixFree_ = false;
+	std::function<arma::Col<_T>(const arma::Col<_T>&)> matvec_;
 
 public:
 
@@ -97,6 +121,16 @@ public:
 	{
 		this->n_cols	= _H.n_cols;
 		this->n_rows	= _H.n_rows;
+		CONSTRUCTOR_CALL;
+	}
+
+	// Matrix-free constructor: the operator of dimension _Nh is defined only
+	// through its action _matvec(x) = A x; no matrix is ever stored. Use this
+	// to feed iterative solvers / Lanczos without spawning the matrix.
+	GeneralizedMatrix(u64 _Nh, std::function<arma::Col<_T>(const arma::Col<_T>&)> _matvec)
+		: n_rows(_Nh), n_cols(_Nh), isSparse_(false), Nh_(_Nh),
+		  isMatrixFree_(true), matvec_(std::move(_matvec))
+	{
 		CONSTRUCTOR_CALL;
 	}
 
@@ -189,6 +223,30 @@ public:
 	auto diagSp(size_t k)	-> arma::spdiagview<_T>				{ return this->H_sparse_.diag(k);			}
 	auto getNh()			const -> u64						{ return this->Nh_;							}
 	auto isSparse()			const -> bool						{ return this->isSparse_;					}
+	auto isMatrixFree()		const -> bool						{ return this->isMatrixFree_;				}
+
+	// In-place y = A x — reuses the caller's buffer; no allocation when y is pre-sized.
+	// Solvers and Lanczos loops should use this overload to avoid per-iteration allocation.
+	void apply(const arma::Col<_T>& _x, arma::Col<_T>& _y) const
+	{
+		if (this->isMatrixFree_)
+		{
+			if (!this->matvec_)
+				throw std::runtime_error("GeneralizedMatrix: matrix-free operator has no callable.");
+			_y = this->matvec_(_x);
+			return;
+		}
+		_y = this->isSparse_ ? this->H_sparse_ * _x : this->H_dense_ * _x;
+	}
+	// Returning form — backward-compatible; implemented via in-place overload.
+	[[nodiscard]] auto apply(const arma::Col<_T>& _x) const -> arma::Col<_T>
+	{
+		arma::Col<_T> _y(_x.n_elem);
+		this->apply(_x, _y);
+		return _y;
+	}
+	// operator* on a column is the natural spelling of apply.
+	[[nodiscard]] auto operator*(const arma::Col<_T>& _x) const -> arma::Col<_T>	{ return this->apply(_x); }
 	auto getSparse()		-> arma::SpMat<_T>&					{ return this->H_sparse_;					}
 	auto getSparse()		const -> const arma::SpMat<_T>&		{ return this->H_sparse_;					}
 	auto getDense()			-> arma::Mat<_T>&					{ return this->H_dense_;					}
@@ -792,3 +850,7 @@ namespace algebra{
 		return _result;
 	};
 };
+
+// ------------------------------------------------------------------------------------------------------------------
+//! EOF
+// ------------------------------------------------------------------------------------------------------------------

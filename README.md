@@ -31,18 +31,43 @@ cd build
 cmake ..
 make
 ```
-### From here as a shared library
+### Building standalone
 
-#### Required Libraries
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+```
 
-Before compiling the project, make sure you have the following libraries installed:
+This produces a static `genutils` library (`genutils::genutils`). Consumers
+(such as cpqusolver) link the target and inherit its include directories and
+backend definitions automatically:
 
-- **Intel MKL (Math Kernel Library)**:
-    - Used for optimized mathematical operations and parallel computing.
-- **HDF5**:
-    - Used for high-performance storage of large datasets.
-- **Armadillo**:
-    - C++ library for linear algebra and scientific computing.
+```cmake
+add_subdirectory(general_cpp)
+target_link_libraries(my_app PRIVATE genutils::genutils)
+```
+
+#### Backends are optional features
+
+All third-party backends are optional and selected by CMake feature flags;
+the core builds with none of them. On macOS the Accelerate framework supplies
+BLAS/LAPACK and **MKL is never required**.
+
+| Option | Default | Effect | Definition |
+|---|---|---|---|
+| `GENUTILS_USE_ARMADILLO` | ON | Armadillo linear-algebra backend | `GENUTILS_HAS_ARMADILLO` |
+| `GENUTILS_USE_HDF5` | ON | HDF5 dataset IO | `GENUTILS_HAS_HDF5` |
+| `GENUTILS_USE_MKL` | OFF | Intel MKL acceleration (non-Apple) | `GENUTILS_HAS_MKL` |
+| `GENUTILS_BUILD_SHARED` | OFF | build a shared instead of static library | - |
+
+When a requested backend is not found the build prints a status line and
+continues with the feature disabled rather than failing.
+
+- **Armadillo** (recommended): header-only linear algebra. Either point
+  `ARMADILLO_INCL_DIR` at an unpacked source tree (no wrapper library needed)
+  or install a system package found by `find_package(Armadillo)`.
+- **HDF5** (optional): high-performance storage of large datasets.
+- **Intel MKL** (optional, non-Apple): optimized BLAS/LAPACK and allocators.
 
 #### Installing Libraries
 
@@ -69,74 +94,30 @@ If these libraries are not already installed, you can follow the instructions be
 
 #### Environmental Variables
 
-The following environment variables need to be set in your system to help the build system find the required libraries and include directories. You can set these in your shell configuration file (e.g., `.bashrc` or `.zshrc` for Linux/macOS) or manually before building.
+All of these are **optional** - the build finds system packages on its own and
+disables any backend it cannot locate. Set them only to point at a non-standard
+install (e.g. an unpacked Armadillo source tree). They can go in your shell
+profile (`.bashrc` / `.zshrc`) or be exported before configuring.
 
-##### 1. **MKL_INCL_DIR**
-- **Description**: Path to the Intel MKL include directory.
-- **Example**:
-    ```bash
-    export MKL_INCL_DIR=/opt/intel/oneapi/mkl/latest/include
-    ```
-
-##### 2. **MKL_LIB_DIR**
-- **Description**: Path to the Intel MKL library directory.
-- **Example**:
-    ```bash
-    export MKL_LIB_DIR=/opt/intel/oneapi/mkl/latest/lib/intel64
-    ```
-
-##### 3. **HDF5_INCL_DIR**
-- **Description**: Path to the HDF5 include directory.
-- **Example**:
-    ```bash
-    export HDF5_INCL_DIR=/usr/include/hdf5/serial
-    ```
-
-##### 4. **HDF5_LIB_DIR**
-- **Description**: Path to the HDF5 library directory.
-- **Example**:
-    ```bash
-    export HDF5_LIB_DIR=/usr/lib/x86_64-linux-gnu/hdf5/serial
-    ```
-
-##### 5. **ARMADILLO_INCL_DIR**
-- **Description**: Path to the Armadillo include directory.
-- **Example**:
-    ```bash
-    export ARMADILLO_INCL_DIR=/usr/include
-    ```
-
-#### Verify the Setup
-
-To verify that the necessary environmental variables are set, you can check each variable by running:
+| Variable | Backend | When needed |
+|---|---|---|
+| `ARMADILLO_INCL_DIR` | Armadillo | Path to an unpacked Armadillo source tree (root containing `include/armadillo`, or the dir containing `armadillo` itself). Skipped if a system Armadillo is found. |
+| `HDF5_INCL_DIR` / `HDF5_LIB_DIR` | HDF5 | Fallback when `find_package(HDF5)` fails. |
+| `MKL_INCL_DIR` / `MKL_LIB_DIR` | MKL | Only with `-DGENUTILS_USE_MKL=ON` on non-Apple platforms. |
 
 ```bash
-echo $MKL_INCL_DIR
-echo $MKL_LIB_DIR
-echo $HDF5_INCL_DIR
-echo $HDF5_LIB_DIR
-echo $ARMADILLO_INCL_DIR
+# Armadillo source tree (header-only, no wrapper library required)
+export ARMADILLO_INCL_DIR=/path/to/armadillo-15.2.7
+# HDF5 fallback (Linux example)
+export HDF5_INCL_DIR=/usr/include/hdf5/serial
+export HDF5_LIB_DIR=/usr/lib/x86_64-linux-gnu/hdf5/serial
+# MKL (non-Apple, only with GENUTILS_USE_MKL=ON)
+export MKL_INCL_DIR=/opt/intel/oneapi/mkl/latest/include
+export MKL_LIB_DIR=/opt/intel/oneapi/mkl/latest/lib/intel64
 ```
-```
-src/
-├── user_interface/
-│   ├── ui_check_eth.cpp
-│   ├── ui_check_nqs.cpp
-│   ├── ui_check_quadratic.cpp
-│   └── ui_check_symmetries.cpp
-├── LinearAlgebra/
-│   ├── Solvers/
-│   │   ├── solvers_cg.cpp
-│   │   ├── solvers_minres.cpp
-│   │   └── solvers_minresqlp.cpp
-│   ├── preconditioners.cpp
-│   └── pfaffian.cpp
-├── Lattices/
-│   ├── hexagonal.cpp
-│   └── square.cpp
-├── nqs.cpp
-└── operator_parser.cpp
-```
+
+> macOS uses the Accelerate framework for BLAS/LAPACK; MKL is never required.
+
 ## Usage
 
 

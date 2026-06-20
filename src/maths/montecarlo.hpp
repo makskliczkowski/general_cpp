@@ -1,6 +1,6 @@
 #ifndef MONTE_CARLO_H
 #define MONTE_CARLO_H
-#include "../lin_alg.h"
+#include "../algebra/lin_alg.h"
 #include "armadillo"
 #include <cstddef>
 #include <limits>

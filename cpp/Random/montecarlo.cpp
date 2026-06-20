@@ -1,5 +1,5 @@
-#include "../../src/Include/random.h"
-#include "../../src/flog.h"
+#include "../../src/maths/random.h"
+#include "../../src/common/flog.h"
 #include "../../src/common.h"
 #include <limits>
 #include <memory>

@@ -1,8 +1,24 @@
+/******************************************************************************
+ *
+ *  @file src/Include/str.h
+ *  @brief String utilities, formatting, precise conversion, and colorizer.
+ *
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
+ *
+ *  @copyright   (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ ******************************************************************************/
+
 #pragma once
 #include <string>
 #include <string_view>
 #include <vector>
-#include <iostream> 
+#include <iostream>
+#include <sstream>
+#include <charconv>
+#include <type_traits>
 #include <complex>
 #include <utility>
 #include <cstdint>
@@ -36,35 +52,46 @@ using strVec = v_1d<::std::string>;
 */
 template <typename _T>
 inline std::string str_p(const _T v, const int n = 2, bool scientific = false) {
-	std::ostringstream out;
-	out.precision(n);
-	if (scientific)
-		out << std::scientific;
-	else
-		out << std::fixed;
-	out << v;
-	return out.str();
+	// Fast path for the common float/double case: std::to_chars writes into a
+	// stack buffer with no stream construction, allocation or locale lookup,
+	// matching the old std::fixed / std::scientific formatting byte-for-byte.
+	if constexpr (std::is_same_v<_T, float> || std::is_same_v<_T, double>) {
+		char _buf[64];
+		const auto _fmt = scientific ? std::chars_format::scientific
+									 : std::chars_format::fixed;
+		const auto _res = std::to_chars(_buf, _buf + sizeof(_buf), v, _fmt, n);
+		return std::string(_buf, _res.ptr);
+	} else {
+		std::ostringstream out;
+		out.precision(n);
+		if (scientific)
+			out << std::scientific;
+		else
+			out << std::fixed;
+		out << v;
+		return out.str();
+	}
 }
 
 template <>
 inline std::string str_p(const int v, const int n, bool scientific) {
-	std::ostringstream out;
-	if (scientific)
-		out << std::scientific;
-	out << v;
-	return out.str();
+	(void)n; (void)scientific;	// integers ignore precision / scientific
+	char _buf[32];
+	const auto _res = std::to_chars(_buf, _buf + sizeof(_buf), v);
+	return std::string(_buf, _res.ptr);
 }
 
 template <>
 inline std::string str_p(const std::complex<double> v, const int n, bool scientific) {
-	std::ostringstream out;
-	out.precision(n);
-	if (scientific)
-		out << std::scientific;
-	else
-		out << std::fixed;
-	out << "[" << std::real(v) << ", " << std::imag(v) << "]";
-	return out.str();
+	char buf[128];
+	const auto fmt = scientific ? std::chars_format::scientific : std::chars_format::fixed;
+	char* p = buf;
+	*p++ = '[';
+	auto r = std::to_chars(p, buf + sizeof(buf) - 4, v.real(), fmt, n);
+	p = r.ptr; *p++ = ','; *p++ = ' ';
+	r = std::to_chars(p, buf + sizeof(buf) - 1, v.imag(), fmt, n);
+	p = r.ptr; *p++ = ']';
+	return std::string(buf, p);
 }
 template <>
 inline std::string str_p(std::string_view v, const int n, bool scientific) {
@@ -76,11 +103,15 @@ inline std::string str_p(const char* v, const int n, bool scientific) {
 }
 template <>
 inline std::string str_p(strVec v, const int n, bool scientific) {
-	std::string tmp = "";
-	for (auto& i : v)
-		tmp += i + " ";
-	tmp.pop_back();
-	return tmp;
+	if (v.empty()) return {};
+	std::size_t total = v.size() - 1;
+	for (const auto& s : v) total += s.size();
+	std::string out; out.reserve(total);
+	for (std::size_t i = 0; i < v.size(); ++i) {
+		if (i) out += ' ';
+		out += v[i];
+	}
+	return out;
 }
 
 namespace StrParser
@@ -100,13 +131,9 @@ namespace StrParser
 	};
 
 	template <typename _T = std::string>
-	inline std::string colorize(const _T& v, std::string_view color [[maybe_unused]] = StrColors::white) 
+	inline std::string colorize(const _T& v, std::string_view color = StrColors::white) 
 	{
-#ifdef _WIN32
-		return color + v + "\033[0m";
-#else
-		return v;
-#endif
+		return std::string(color) + str_p(v) + "\033[0m";
 	}
 
 	// ###################################################################################################################################

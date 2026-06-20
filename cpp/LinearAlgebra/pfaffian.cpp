@@ -1,5 +1,5 @@
-#include "../../src/lin_alg.h"
-#include "../../src/flog.h"
+#include "../../src/algebra/lin_alg.h"
+#include "../../src/common/flog.h"
 
 namespace algebra {
     namespace Pfaffian {

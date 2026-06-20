@@ -1,3 +1,15 @@
+/******************************************************************************
+ *
+ *  @file src/lin_alg.h
+ *  @brief Linear algebra aliases and helper functions using Armadillo.
+ *
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
+ *
+ *  @copyright   (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ ******************************************************************************/
 /*******************************
 * Contains the possible methods
 * for linear algebra usage.
@@ -16,30 +28,10 @@
 using uint = unsigned int;
 // ################################################ INCLUDE FROM ARMADILLO ###############################################
 
-// #define ARMA_WARN_LEVEL 1
-#define ARMA_USE_LAPACK             
-#define ARMA_PRINT_EXCEPTIONS
-//#define ARMA_BLAS_LONG_LONG                                                                 // using long long inside LAPACK call
-//#define ARMA_DONT_USE_FORTRAN_HIDDEN_ARGS
-//#define ARMA_DONT_USE_WRAPPER
-//#define ARMA_USE_SUPERLU
-//#define ARMA_USE_ARPACK 
-// check if we are using the MKL library - if the system is macos, we do not use it
-#ifndef __APPLE__
-#	define ARMA_USE_MKL_ALLOC
-#	define ARMA_USE_MKL_TYPES
-#endif
-#define ARMA_DONT_USE_OPENMP
-#define ARMA_USE_HDF5
-////#define ARMA_USE_OPENMP
-#define ARMA_ALLOW_FAKE_GCC
-#define ARMA_DONT_PRINT_CXX11_WARNING
-#define ARMA_DONT_PRINT_CXX03_WARNING
-#define ARMA_DONT_PRINT_FAST_MATH_WARNING
-#include <armadillo>
+// All backend (Armadillo / BLAS / HDF5 / MKL) configuration is centralized in
+// backend_config.h and driven by the build system, rather than hardcoded here.
+#include "backend_config.h"
 // #######################################################################################################################
-#define DH5_USE_110_API
-#define D_HDF5USEDLL_ 
 
 using u64 = arma::u64;
 
@@ -326,8 +318,8 @@ public:
 
 // #######################################################################################################################
 
-#include "./Include/maths.h"
-#include "./Include/files.h"
+#include "../maths/maths.h"
+#include "../common/files.h"
 
 namespace algebra 
 {
@@ -477,8 +469,8 @@ namespace algebra
 
 
 // dynamic bitset
-#include "Include/str.h"
-#include "Include/directories.h"
+#include "../common/str.h"
+#include "../common/directories.h"
 
 // ###################################################### S A V E R ######################################################
 

@@ -1,3 +1,15 @@
+/******************************************************************************
+ *
+ *  @file src/Include/maths.h
+ *  @brief Mathematical utilities, thread pool, and numerical helper functions.
+ *
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
+ *
+ *  @copyright   (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ ******************************************************************************/
 #pragma once
 #include <condition_variable>
 #include <iostream>
@@ -339,7 +351,7 @@ namespace Threading
 		std::queue<Task>& taskQueue() 		{ return this->taskQueue_; }
 	};
 	// %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-};
+} // namespace Threading
 
 namespace algebra 
 {
@@ -355,23 +367,32 @@ namespace algebra
 	inline auto conjugate(int x)													-> int		{ return x; };
 
 	template <typename _T>
-	inline auto real(_T x)															-> double	{ return std::real(x); };
+	[[nodiscard]] inline constexpr auto real(_T x) noexcept
+		-> decltype(std::real(x))													{ return std::real(x); };
 	template <>
-	inline auto real(double x)														-> double	{ return x; };
+	[[nodiscard]] inline constexpr auto real(double x) noexcept	-> double		{ return x; };
+	template <>
+	[[nodiscard]] inline constexpr auto real(float x) noexcept		-> float		{ return x; };
 
 	template <typename _T>
-	inline auto imag(_T x)															-> double	{ return std::imag(x); };
+	[[nodiscard]] inline constexpr auto imag(_T x) noexcept
+		-> decltype(std::imag(x))													{ return std::imag(x); };
 	template <>
-	inline auto imag(double x)														-> double	{ return 0.0; };
-	
+	[[nodiscard]] inline constexpr auto imag(double x) noexcept	-> double		{ return 0.0; };
+	template <>
+	[[nodiscard]] inline constexpr auto imag(float x) noexcept		-> float		{ return 0.0f; };
+
 	template <typename _T>
-	inline auto norm(_T x)															-> double	{ return algebra::real(x * algebra::conjugate(x)); };	
+	[[nodiscard]] inline constexpr auto norm(_T x) noexcept
+		-> decltype(algebra::real(x * algebra::conjugate(x)))						{ return algebra::real(x * algebra::conjugate(x)); };
 	template <>
-	inline auto norm(double x)														-> double	{ return x * x; };
+	[[nodiscard]] inline constexpr auto norm(double x) noexcept	-> double		{ return x * x; };
+	template <>
+	[[nodiscard]] inline constexpr auto norm(float x) noexcept		-> float		{ return x * x; };
 	template <typename _T, typename ... _Ts>
-	inline auto norm(_T x, _Ts... y)												-> double	{ return algebra::norm(x) + algebra::norm(y...); };
+	[[nodiscard]] inline constexpr auto norm(_T x, _Ts... y) noexcept -> double	{ return algebra::norm(x) + algebra::norm(y...); };
 	template <typename ..._Ts>
-	inline auto norm(_Ts... y)														-> double	{ return algebra::norm(y...); };
+	[[nodiscard]] inline constexpr auto norm(_Ts... y) noexcept	-> double		{ return algebra::norm(y...); };
 	
 	// -----------------------------------------------------------------------------------------------------------------------------------------
     /** 
@@ -408,71 +429,80 @@ namespace algebra
 
 	// -----------------------------------------------------------------------------------------------------------------------------------------
 
+#ifdef __cpp_concepts
+	// Concept covering arithmetic scalars and std::complex<float/double/long double>.
+	template<typename T>
+	concept ComplexArithmetic = std::is_arithmetic_v<T>
+		|| std::same_as<T, std::complex<float>>
+		|| std::same_as<T, std::complex<double>>
+		|| std::same_as<T, std::complex<long double>>;
+#endif
+
 	template <typename _T, typename _T2>
-	inline bool gr(_T x, _T2 y)														{ return x > y; };
+	[[nodiscard]] inline constexpr bool gr(_T x, _T2 y) noexcept					{ return x > y; };
 	template <typename _T>
-	inline bool gr(_T x, _T y)														{ return x > y; };
+	[[nodiscard]] inline constexpr bool gr(_T x, _T y) noexcept					{ return x > y; };
 	template <>
-	inline bool gr(std::complex<double> x, std::complex<double> y)					{ return std::real(x) > std::real(y); };
+	[[nodiscard]] inline bool gr(std::complex<double> x, std::complex<double> y) noexcept	{ return std::real(x) > std::real(y); };
 	template <>
-	inline bool gr(double x, std::complex<double> y)								{ return x > std::real(y); };
+	[[nodiscard]] inline bool gr(double x, std::complex<double> y) noexcept		{ return x > std::real(y); };
 	template <>
-	inline bool gr(std::complex<double> x, double y)								{ return std::real(x) > y; };
+	[[nodiscard]] inline bool gr(std::complex<double> x, double y) noexcept		{ return std::real(x) > y; };
 
 	template <typename _T1, typename _T2>
-	inline bool ls(_T1 x, _T2 y)													{ return x > y; };
+	[[nodiscard]] inline constexpr bool ls(_T1 x, _T2 y) noexcept					{ return x < y; };  // was x > y (bug)
 	template <typename _T>
-	inline bool ls(_T x, _T y)														{ return x < y; };
+	[[nodiscard]] inline constexpr bool ls(_T x, _T y) noexcept					{ return x < y; };
 	template <>
-	inline bool ls(std::complex<double> x, std::complex<double> y)					{ return std::real(x) < std::real(y); };
+	[[nodiscard]] inline bool ls(std::complex<double> x, std::complex<double> y) noexcept	{ return std::real(x) < std::real(y); };
 	template <>
-	inline bool ls(double x, std::complex<double> y)								{ return x < std::real(y); };
+	[[nodiscard]] inline bool ls(double x, std::complex<double> y) noexcept		{ return x < std::real(y); };
 	template <>
-	inline bool ls(std::complex<double> x, double y)								{ return std::real(x) < y; };
+	[[nodiscard]] inline bool ls(std::complex<double> x, double y) noexcept		{ return std::real(x) < y; };
 
 	template <typename _T1, typename _T2>
-	inline bool eq(_T1 x, _T2 y)													{ return x == y; };
+	[[nodiscard]] inline constexpr bool eq(_T1 x, _T2 y) noexcept					{ return x == y; };
 	template <typename _T>
-	inline bool eq(_T x, _T y)														{ return x == y; };
+	[[nodiscard]] inline constexpr bool eq(_T x, _T y) noexcept					{ return x == y; };
 	template <>
-	inline bool eq(std::complex<double> x, std::complex<double> y)					{ return std::abs(x - y) < 1e-10; };
+	[[nodiscard]] inline bool eq(std::complex<double> x, std::complex<double> y) noexcept	{ return std::abs(x - y) < 1e-10; };
 	template <>
-	inline bool eq(double x, std::complex<double> y)								{ return std::abs(x - std::real(y)) < 1e-10; };
+	[[nodiscard]] inline bool eq(double x, std::complex<double> y) noexcept		{ return std::abs(x - std::real(y)) < 1e-10; };
 	template <>
-	inline bool eq(std::complex<double> x, double y)								{ return std::abs(std::real(x) - y) < 1e-10; };
-	
-	template <typename _T1, typename _T2>
-	inline bool neq(_T1 x, _T2 y)													{ return x != y; };
-	template <typename _T>
-	inline bool neq(_T x, _T y)														{ return x != y; };
-	template <>
-	inline bool neq(std::complex<double> x, std::complex<double> y)					{ return std::abs(x - y) > 1e-10; };
-	template <>
-	inline bool neq(double x, std::complex<double> y)								{ return std::abs(x - std::real(y)) > 1e-10; };
-	template <>
-	inline bool neq(std::complex<double> x, double y)								{ return std::abs(std::real(x) - y) > 1e-10; };
+	[[nodiscard]] inline bool eq(std::complex<double> x, double y) noexcept		{ return std::abs(std::real(x) - y) < 1e-10; };
 
 	template <typename _T1, typename _T2>
-	inline bool geq(_T1 x, _T2 y)													{ return x >= y; };
+	[[nodiscard]] inline constexpr bool neq(_T1 x, _T2 y) noexcept					{ return x != y; };
 	template <typename _T>
-	inline bool geq(_T x, _T y)														{ return x >= y; };
+	[[nodiscard]] inline constexpr bool neq(_T x, _T y) noexcept					{ return x != y; };
 	template <>
-	inline bool geq(std::complex<double> x, std::complex<double> y)					{ return std::real(x) >= std::real(y); };
+	[[nodiscard]] inline bool neq(std::complex<double> x, std::complex<double> y) noexcept	{ return std::abs(x - y) > 1e-10; };
 	template <>
-	inline bool geq(double x, std::complex<double> y)								{ return x >= std::real(y); };
+	[[nodiscard]] inline bool neq(double x, std::complex<double> y) noexcept		{ return std::abs(x - std::real(y)) > 1e-10; };
 	template <>
-	inline bool geq(std::complex<double> x, double y)								{ return std::real(x) >= y; };
+	[[nodiscard]] inline bool neq(std::complex<double> x, double y) noexcept		{ return std::abs(std::real(x) - y) > 1e-10; };
 
 	template <typename _T1, typename _T2>
-	inline bool leq(_T1 x, _T2 y)													{ return x <= y; };
+	[[nodiscard]] inline constexpr bool geq(_T1 x, _T2 y) noexcept					{ return x >= y; };
 	template <typename _T>
-	inline bool leq(_T x, _T y)														{ return x <= y; };
+	[[nodiscard]] inline constexpr bool geq(_T x, _T y) noexcept					{ return x >= y; };
 	template <>
-	inline bool leq(std::complex<double> x, std::complex<double> y)					{ return std::real(x) <= std::real(y); };
+	[[nodiscard]] inline bool geq(std::complex<double> x, std::complex<double> y) noexcept	{ return std::real(x) >= std::real(y); };
 	template <>
-	inline bool leq(double x, std::complex<double> y)								{ return x <= std::real(y); };
+	[[nodiscard]] inline bool geq(double x, std::complex<double> y) noexcept		{ return x >= std::real(y); };
 	template <>
-	inline bool leq(std::complex<double> x, double y)								{ return std::real(x) <= y; };
+	[[nodiscard]] inline bool geq(std::complex<double> x, double y) noexcept		{ return std::real(x) >= y; };
+
+	template <typename _T1, typename _T2>
+	[[nodiscard]] inline constexpr bool leq(_T1 x, _T2 y) noexcept					{ return x <= y; };
+	template <typename _T>
+	[[nodiscard]] inline constexpr bool leq(_T x, _T y) noexcept					{ return x <= y; };
+	template <>
+	[[nodiscard]] inline bool leq(std::complex<double> x, std::complex<double> y) noexcept	{ return std::real(x) <= std::real(y); };
+	template <>
+	[[nodiscard]] inline bool leq(double x, std::complex<double> y) noexcept		{ return x <= std::real(y); };
+	template <>
+	[[nodiscard]] inline bool leq(std::complex<double> x, double y) noexcept		{ return std::real(x) <= y; };
 	
 	// ###################################################################### CAST #####################################################################
 
@@ -483,7 +513,7 @@ namespace algebra
 	template <>
 	inline auto cast<double>(std::complex<double> x)								-> double							{ return std::real(x); };
 
-};
+} // namespace algebra
 
 
 #endif

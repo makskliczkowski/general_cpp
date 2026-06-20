@@ -1,7 +1,20 @@
+/******************************************************************************
+ *
+ *  @file cpp/time.cpp
+ *  @brief Implementations for Timer and time-related utilities.
+ *
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
+ *
+ *  @copyright   (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ ******************************************************************************/
+
 #ifndef __TIME_H__
 #define __TIME_H__
 
-#include "../src/Include/time.h"
+#include "../src/common/time.h"
 #include <map>
 #include <type_traits>
 
@@ -339,28 +352,16 @@ template long Timer::elapsed(const std::string& _point, TimePrecision _prec);
 
 // #################################################################################################################################################
 
-/*
-* @brief pretty prints the time point
-* @param _tp specific timepoint
-* @returns string time in a given format %Y-%m-%d:%X
-*/
 std::string prettyTime(std::time_t now)
 {
-	// take the time
 	char buf[42];
+	std::tm now_tm{};
 #ifdef _WIN32
-	std::tm* now_tm		= new tm;
-	gmtime_s(now_tm, &now);
-#elif defined __linux__ 
-	std::tm* now_tm 	= std::localtime(&now);
+	localtime_s(&now_tm, &now);
 #else
-    std::tm* now_tm 	= std::localtime(&now);
+	localtime_r(&now, &now_tm);
 #endif
-	std::strftime(buf, 42, "%Y-%m-%d:%X", now_tm);
-	// clear memory
-#ifdef _WIN32
-	delete now_tm;
-#endif
+	std::strftime(buf, sizeof(buf), "%Y-%m-%d:%X", &now_tm);
 	return std::string(buf);
 }
 #endif // __TIME_H__

@@ -1,4 +1,17 @@
-#include "../src/Include/str.h"
+/******************************************************************************
+ *
+ *  @file cpp/str.cpp
+ *  @brief Implementations for string parsing, splitting, and checking.
+ *
+ *  @project general_cpp
+ *  @author  Maksymilian Kliczkowski
+ *
+ *  @copyright   (c) 2024-2026 Maksymilian Kliczkowski
+ *  SPDX-License-Identifier: MIT
+ *
+ ******************************************************************************/
+
+#include "../src/common/str.h"
 
 // ######################################################## STRING RELATED FUNCTIONS ########################################################
 
@@ -50,8 +63,10 @@ strVec fromPtr(int argc, char** argv, unsigned int offset)
 */
 bool StrParser::isAlphanum(std::string_view s)
 {
-	for (auto& c : s)
-		if (!std::isalnum(c))
+	if (s.empty())
+		return false;
+	for (auto c : s)
+		if (!std::isalnum(static_cast<unsigned char>(c)))
 			return false;
 	return true;
 }
@@ -65,8 +80,10 @@ bool StrParser::isAlphanum(std::string_view s)
 */
 bool StrParser::isNumber(std::string_view s)
 {
-	for (auto& c : s)
-		if (!std::isdigit(c))
+	if (s.empty())
+		return false;
+	for (auto c : s)
+		if (!std::isdigit(static_cast<unsigned char>(c)))
 			return false;
 	return true;
 }
