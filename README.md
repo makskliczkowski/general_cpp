@@ -63,6 +63,36 @@ const auto verbose = arguments.flag("verbose");
 `Slurm::checkpoint_signal_spec(180)` returns `B:USR1@180` for an early
 pre-timeout checkpoint signal; no I/O is performed inside the signal handler.
 
+#### Binning and jackknife errors
+
+`maths/resampling.hpp` is an STL-only, model-independent statistics interface.
+`BinnedAccumulator<T>` stores completed bin means rather than every sample, and
+`RatioBinnedAccumulator<N, D>` performs correlated delete-one-bin jackknife
+resampling for ratios such as reweighted measurements. Real and complex values
+are supported; complex errors use the squared magnitude of replica deviations.
+
+```cpp
+#include <maths/resampling.hpp>
+
+genutils::statistics::BinnedAccumulator<double> energy(32);
+energy.reserve_bins(expected_measurements / 32);
+energy.add(measurements);
+const auto result = energy.estimate();
+// Save result.value, result.standard_error, result.samples, and result.bins.
+
+genutils::statistics::RatioBinnedAccumulator<
+	std::complex<double>, std::complex<double>> reweighted(32);
+reweighted.add(phase * observable, phase);
+const auto ratio = reweighted.estimate();
+// Check ratio.reliable before saving ratio.value and ratio.standard_error.
+```
+
+The central estimate retains a final partial bin. Error estimates use only
+completed equal-sized bins, since mixing bin sizes invalidates the ordinary
+delete-one-bin formula. `jackknife(samples, estimator)` is provided for simple
+nonlinear estimators; it materializes replicas and is intended for modest data
+sets rather than sweep hot paths.
+
 #### Backends are optional features
 
 All third-party backends are optional and selected by CMake feature flags;

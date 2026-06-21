@@ -205,6 +205,10 @@ if(BUILD_TESTING)
     add_executable(genutils_cli_tests tests/cli_arguments.cpp)
     target_link_libraries(genutils_cli_tests PRIVATE genutils::genutils)
     add_test(NAME genutils.cli COMMAND genutils_cli_tests)
+
+    add_executable(genutils_statistics_tests tests/statistics.cpp)
+    target_link_libraries(genutils_statistics_tests PRIVATE genutils::genutils)
+    add_test(NAME genutils.statistics COMMAND genutils_statistics_tests)
 endif()
 
 # ---------------------------------------------------------------------------
