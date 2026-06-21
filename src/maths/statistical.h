@@ -256,7 +256,7 @@ public:
 	// ######## Getters ########
 
 	const arma::vec& edges()				const { return this->binEdges_;		}
-	const arma::vec& edgesCol()				const { return this->binEdges_;		}
+	const arma::vec& edgesCol()				const { return edges();				}
 
 	// -------------------------
 
