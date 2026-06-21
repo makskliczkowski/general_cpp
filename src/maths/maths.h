@@ -439,8 +439,14 @@ namespace algebra
 #endif
 
 	template <typename _T, typename _T2>
+#ifdef __cpp_concepts
+	requires (ComplexArithmetic<_T> && ComplexArithmetic<_T2>)
+#endif
 	[[nodiscard]] inline constexpr bool gr(_T x, _T2 y) noexcept					{ return x > y; };
 	template <typename _T>
+#ifdef __cpp_concepts
+	requires ComplexArithmetic<_T>
+#endif
 	[[nodiscard]] inline constexpr bool gr(_T x, _T y) noexcept					{ return x > y; };
 	template <>
 	[[nodiscard]] inline bool gr(std::complex<double> x, std::complex<double> y) noexcept	{ return std::real(x) > std::real(y); };
@@ -450,8 +456,14 @@ namespace algebra
 	[[nodiscard]] inline bool gr(std::complex<double> x, double y) noexcept		{ return std::real(x) > y; };
 
 	template <typename _T1, typename _T2>
-	[[nodiscard]] inline constexpr bool ls(_T1 x, _T2 y) noexcept					{ return x < y; };  // was x > y (bug)
+#ifdef __cpp_concepts
+	requires (ComplexArithmetic<_T1> && ComplexArithmetic<_T2>)
+#endif
+	[[nodiscard]] inline constexpr bool ls(_T1 x, _T2 y) noexcept					{ return x < y; };
 	template <typename _T>
+#ifdef __cpp_concepts
+	requires ComplexArithmetic<_T>
+#endif
 	[[nodiscard]] inline constexpr bool ls(_T x, _T y) noexcept					{ return x < y; };
 	template <>
 	[[nodiscard]] inline bool ls(std::complex<double> x, std::complex<double> y) noexcept	{ return std::real(x) < std::real(y); };
@@ -461,8 +473,14 @@ namespace algebra
 	[[nodiscard]] inline bool ls(std::complex<double> x, double y) noexcept		{ return std::real(x) < y; };
 
 	template <typename _T1, typename _T2>
+#ifdef __cpp_concepts
+	requires (ComplexArithmetic<_T1> && ComplexArithmetic<_T2>)
+#endif
 	[[nodiscard]] inline constexpr bool eq(_T1 x, _T2 y) noexcept					{ return x == y; };
 	template <typename _T>
+#ifdef __cpp_concepts
+	requires ComplexArithmetic<_T>
+#endif
 	[[nodiscard]] inline constexpr bool eq(_T x, _T y) noexcept					{ return x == y; };
 	template <>
 	[[nodiscard]] inline bool eq(std::complex<double> x, std::complex<double> y) noexcept	{ return std::abs(x - y) < 1e-10; };
@@ -472,8 +490,14 @@ namespace algebra
 	[[nodiscard]] inline bool eq(std::complex<double> x, double y) noexcept		{ return std::abs(std::real(x) - y) < 1e-10; };
 
 	template <typename _T1, typename _T2>
+#ifdef __cpp_concepts
+	requires (ComplexArithmetic<_T1> && ComplexArithmetic<_T2>)
+#endif
 	[[nodiscard]] inline constexpr bool neq(_T1 x, _T2 y) noexcept					{ return x != y; };
 	template <typename _T>
+#ifdef __cpp_concepts
+	requires ComplexArithmetic<_T>
+#endif
 	[[nodiscard]] inline constexpr bool neq(_T x, _T y) noexcept					{ return x != y; };
 	template <>
 	[[nodiscard]] inline bool neq(std::complex<double> x, std::complex<double> y) noexcept	{ return std::abs(x - y) > 1e-10; };
@@ -483,8 +507,14 @@ namespace algebra
 	[[nodiscard]] inline bool neq(std::complex<double> x, double y) noexcept		{ return std::abs(std::real(x) - y) > 1e-10; };
 
 	template <typename _T1, typename _T2>
+#ifdef __cpp_concepts
+	requires (ComplexArithmetic<_T1> && ComplexArithmetic<_T2>)
+#endif
 	[[nodiscard]] inline constexpr bool geq(_T1 x, _T2 y) noexcept					{ return x >= y; };
 	template <typename _T>
+#ifdef __cpp_concepts
+	requires ComplexArithmetic<_T>
+#endif
 	[[nodiscard]] inline constexpr bool geq(_T x, _T y) noexcept					{ return x >= y; };
 	template <>
 	[[nodiscard]] inline bool geq(std::complex<double> x, std::complex<double> y) noexcept	{ return std::real(x) >= std::real(y); };
@@ -494,8 +524,14 @@ namespace algebra
 	[[nodiscard]] inline bool geq(std::complex<double> x, double y) noexcept		{ return std::real(x) >= y; };
 
 	template <typename _T1, typename _T2>
+#ifdef __cpp_concepts
+	requires (ComplexArithmetic<_T1> && ComplexArithmetic<_T2>)
+#endif
 	[[nodiscard]] inline constexpr bool leq(_T1 x, _T2 y) noexcept					{ return x <= y; };
 	template <typename _T>
+#ifdef __cpp_concepts
+	requires ComplexArithmetic<_T>
+#endif
 	[[nodiscard]] inline constexpr bool leq(_T x, _T y) noexcept					{ return x <= y; };
 	template <>
 	[[nodiscard]] inline bool leq(std::complex<double> x, std::complex<double> y) noexcept	{ return std::real(x) <= std::real(y); };

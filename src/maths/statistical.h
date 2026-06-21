@@ -162,7 +162,7 @@ class Histogram
 protected:
 	u64 nBins_		= 1;
 
-	std::vector<double> binEdges_;
+	arma::vec binEdges_;
 	std::vector<u64> binCounts_;
 
 public:
@@ -170,19 +170,19 @@ public:
 	virtual ~Histogram() = default;
 	Histogram()
 	{
-		binEdges_	=	std::vector<double>(this->nBins_, 0);
+		binEdges_	=	arma::zeros(this->nBins_);
 		binCounts_	=	std::vector<u64>(this->nBins_ + 1, 0);
 	}
 	Histogram(u64 _N)
 		: nBins_(_N)
 	{
-		binEdges_	=	std::vector<double>(_N, 0);
+		binEdges_	=	arma::zeros(_N);
 		binCounts_	=	std::vector<u64>(_N + 1, 0);
 	}
 	Histogram(const std::vector<double>& _edges)
 		: nBins_(_edges.size())
 	{
-		binEdges_	=	_edges;
+		binEdges_	=	arma::conv_to<arma::vec>::from(_edges);
 		binCounts_	=	std::vector<u64>(_edges.size() + 1, 0);
 	}
 
@@ -204,13 +204,11 @@ public:
 		{
 			double _min		= _values.min();
 			double _max		= _values.max();
-			arma::vec edges	= arma::linspace(_min, _max, (const arma::uword)this->nBins_);
-			this->binEdges_	= arma::conv_to<v_1d<double>>::from(edges);
+			this->binEdges_	= arma::linspace(_min, _max, (const arma::uword)this->nBins_);
 		}
 
 		// get the histogram of counts
-		const arma::vec edges_arma = arma::conv_to<arma::vec>::from(this->binEdges_);
-		auto _binCounts		= arma::hist(_values, edges_arma);
+		auto _binCounts		= arma::hist(_values, this->binEdges_);
 		this->binCounts_	= arma::conv_to<v_1d<u64>>::from(_binCounts);
 	}
 
@@ -223,13 +221,11 @@ public:
 		{
 			double _min		= _values.min();
 			double _max		= _values.max();
-			arma::vec edges	= arma::linspace(_min, _max, (const arma::uword)this->nBins_);
-			this->binEdges_	= arma::conv_to<v_1d<double>>::from(edges);
+			this->binEdges_	= arma::linspace(_min, _max, (const arma::uword)this->nBins_);
 		}
 
 		// get the histogram of counts
-		const arma::vec edges_arma = arma::conv_to<arma::vec>::from(this->binEdges_);
-		auto _binCounts		= arma::hist(_values, edges_arma);
+		auto _binCounts		= arma::hist(_values, this->binEdges_);
 		this->binCounts_	= arma::conv_to<v_1d<u64>>::from(_binCounts);
 	}
 
@@ -253,14 +249,14 @@ public:
 
 	void setEdges(const arma::Col<double>& _edges)
 	{
-		this->binEdges_ = arma::conv_to<v_1d<double>>::from(_edges);
+		this->binEdges_ = _edges;
 		this->nBins_	= _edges.n_elem - 1;
 	}
 
 	// ######## Getters ########
 
-	const std::vector<double>& edges()		const { return this->binEdges_;											}
-	arma::Col<double> edgesCol()			const { return arma::conv_to<arma::Col<double>>::from(this->binEdges_); }
+	const arma::vec& edges()				const { return this->binEdges_;		}
+	const arma::vec& edgesCol()				const { return this->binEdges_;		}
 
 	// -------------------------
 
@@ -311,20 +307,16 @@ public:
 
 	// ######## Setters ########
 
-	virtual void reset()					
-	{ 
-		for (u64 i = 0; i < this->nBins_; i++)
-		{
-			this->binEdges_[i] = 0;
-			this->binCounts_[i] = 0;
-		}
-		this->binCounts_[this->nBins_] = 0;
+	virtual void reset()
+	{
+		this->binEdges_.zeros();
+		std::fill(this->binCounts_.begin(), this->binCounts_.end(), 0);
 	}
 
 	virtual void reset(u64 _N)
 	{
 		nBins_		=   _N;
-		binEdges_	=	std::vector<double>(_N, 0);
+		binEdges_	=	arma::zeros(_N);
 		binCounts_	=	std::vector<u64>(_N + 1, 0);
 	}
 	
@@ -342,7 +334,7 @@ public:
 
 		// create the bin edges
 		for (u64 i = 0; i < this->nBins_; i++)
-			this->binEdges_[i] = _min + i * binWidth;
+			this->binEdges_(i) = _min + i * binWidth;
 	}
 	
 	/*
@@ -374,8 +366,7 @@ public:
 		auto _edges = arma::logspace(_minin, _maxin, this->nBins_ + 1);
 
 		// create the bin edges
-		for (u64 i = 0; i < this->nBins_; i++)
-			this->binEdges_[i] = _edges(i);
+		this->binEdges_ = _edges.head(this->nBins_);
 	}
 
 	// ######## Methods ########
@@ -385,15 +376,15 @@ public:
 	* @param _value the value to append
 	* @returns the bin index
 	*/
-	u64 append(long double _value) 
+	u64 append(long double _value)
 	{
-		if (_value < this->binEdges_.front()) 
+		if (_value < this->binEdges_(0))
 		{
 			// first bin counts values in [-INF, a0)
 			++binCounts_[0];
 			return 0;
 		}
-		else if (_value >= this->binEdges_.back()) 
+		else if (_value >= this->binEdges_(this->nBins_ - 1))
 		{
 			// last bin counts values in [aN-1, +INF)
 			++binCounts_[this->nBins_];
