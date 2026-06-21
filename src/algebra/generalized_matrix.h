@@ -236,7 +236,8 @@ public:
 			_y = this->matvec_(_x);
 			return;
 		}
-		_y = this->isSparse_ ? this->H_sparse_ * _x : this->H_dense_ * _x;
+		if (this->isSparse_) _y = this->H_sparse_ * _x;
+		else                 _y = this->H_dense_  * _x;
 	}
 	// Returning form — backward-compatible; implemented via in-place overload.
 	[[nodiscard]] auto apply(const arma::Col<_T>& _x) const -> arma::Col<_T>
