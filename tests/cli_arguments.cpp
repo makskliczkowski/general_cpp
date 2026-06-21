@@ -1,4 +1,5 @@
 #include "UserInterface/ui.h"
+#include "runtime/slurm.h"
 
 #include <filesystem>
 #include <fstream>
@@ -54,6 +55,17 @@ int main() {
                 "quoted file value");
         require(file_arguments.flag("enabled"), "explicit boolean flag");
         require(file_arguments.require<int>("value") == -3, "negative file value");
+
+        require(Slurm::checkpoint_signal_spec(90) == "B:USR1@90",
+                "Slurm checkpoint signal specification");
+        Slurm::install_checkpoint_signal_handlers();
+#if defined(SIGUSR1)
+        std::raise(SIGUSR1);
+        require(Slurm::checkpoint_requested() && Slurm::checkpoint_signal() == SIGUSR1,
+                "Slurm pre-timeout signal notification");
+        Slurm::clear_checkpoint_request();
+        require(!Slurm::checkpoint_requested(), "Slurm checkpoint request reset");
+#endif
 
         std::cout << "GenUtils CLI tests passed\n";
         return 0;

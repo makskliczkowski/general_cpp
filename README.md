@@ -57,6 +57,12 @@ const auto threads = arguments.get_or<std::size_t>("threads", 1);
 const auto verbose = arguments.flag("verbose");
 ```
 
+`runtime/slurm.h` provides scheduler-neutral stop notification through
+`Slurm::install_checkpoint_signal_handlers()`. Applications poll
+`Slurm::checkpoint_requested()` between durable work units. For Slurm,
+`Slurm::checkpoint_signal_spec(180)` returns `B:USR1@180` for an early
+pre-timeout checkpoint signal; no I/O is performed inside the signal handler.
+
 #### Backends are optional features
 
 All third-party backends are optional and selected by CMake feature flags;

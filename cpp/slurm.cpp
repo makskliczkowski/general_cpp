@@ -17,10 +17,37 @@
 #include <cstdio>
 #include <array>
 #include <string>
+#include <stdexcept>
 #include <chrono>
+#include <csignal>
+#include <string>
+
+namespace {
+volatile std::sig_atomic_t checkpoint_signal_value = 0;
+extern "C" void record_checkpoint_signal(int signal) { checkpoint_signal_value = signal; }
+}
 
 namespace Slurm
 {
+	void install_checkpoint_signal_handlers()
+	{
+		std::signal(SIGINT, record_checkpoint_signal);
+		std::signal(SIGTERM, record_checkpoint_signal);
+#if defined(SIGUSR1)
+		std::signal(SIGUSR1, record_checkpoint_signal);
+#endif
+	}
+
+	bool checkpoint_requested() noexcept { return checkpoint_signal_value != 0; }
+	int checkpoint_signal() noexcept { return checkpoint_signal_value; }
+	void clear_checkpoint_request() noexcept { checkpoint_signal_value = 0; }
+
+	std::string checkpoint_signal_spec(int lead_seconds)
+	{
+		if (lead_seconds <= 0) throw std::invalid_argument("checkpoint signal lead time must be positive");
+		return "B:USR1@" + std::to_string(lead_seconds);
+	}
+
 	bool is_slurm()
 	{
 		return std::getenv("SLURM_JOB_ID") != nullptr;

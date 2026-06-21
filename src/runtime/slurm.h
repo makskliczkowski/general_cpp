@@ -15,6 +15,9 @@
 #ifndef GENUTILS_SLURM_H
 #define GENUTILS_SLURM_H
 
+#include <csignal>
+#include <string>
+
 namespace Slurm
 {
 	/**
@@ -45,6 +48,17 @@ namespace Slurm
 	 * @brief Checks if the remaining time is less than the limit, caching the SLURM scontrol query for a given interval.
 	 */
 	bool is_overtime_cached(int limit_seconds, int poll_interval_seconds = 30);
+
+	/** Install async-signal-safe stop notification for scheduler pre-timeout signals. */
+	void install_checkpoint_signal_handlers();
+	/** True after SIGUSR1, SIGTERM, or SIGINT. Safe to poll between work units. */
+	bool checkpoint_requested() noexcept;
+	/** Signal that requested the stop, or zero. */
+	int checkpoint_signal() noexcept;
+	/** Clear a handled request after the application has saved durable state. */
+	void clear_checkpoint_request() noexcept;
+	/** Recommended sbatch directive value, e.g. "B:USR1@120". */
+	std::string checkpoint_signal_spec(int lead_seconds = 120);
 }
 
 #endif // GENUTILS_SLURM_H
