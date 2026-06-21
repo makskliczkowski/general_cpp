@@ -280,7 +280,7 @@
 		/*
 		* @brief Multiply the UDT decomposition by a matrix from the left
 		* @param Ml left matrix
-		* @link https://github.com/carstenbauer/StableDQMC.jl/blob/master/src/qr_udt.jl
+		* Re-factorizes Ml*U*D and composes the resulting triangular factor with T.
 		*/
 		void factMult(const arma::Mat<_T>& Ml) override {
 			if (!arma::qr(this->U, this->R, this->P, (Ml * this->U) * DIAG(this->R))) 

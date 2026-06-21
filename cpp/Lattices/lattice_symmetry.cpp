@@ -1,4 +1,4 @@
-#include "../../src/lattices/lattice_symmetry.h"
+#include "../../src/Lattices/lattice_symmetry.h"
 
 #include <map>
 #include <stdexcept>

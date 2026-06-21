@@ -1,9 +1,11 @@
 
 # GenUtils C++ Project
 
-This repository is a C++ project that involves linear algebra utilities, random number generation, and other utility functions used in quantum systems simulations. Below you will find instructions on how to set up the environment, configure the project, and the necessary libraries and environmental variables.
-
-This library provides a set of tools and functions to solve eigenvalue problems in quantum mechanics using C++.
+GenUtils is a consumer-independent C++20 scientific utility library. It provides
+linear algebra, iterative solvers, random-number generation, statistics, lattice
+and graph data structures, IO, and runtime helpers. Public APIs operate on
+matrices, vectors, callables, indices, and generic containers; application models,
+simulation state, and domain-specific control flow belong in consumer projects.
 
 ## Features
 
@@ -22,15 +24,6 @@ This library provides a set of tools and functions to solve eigenvalue problems 
 
 To install the library, clone the repository and build it using CMake:
 
-### From the QuantumEigenSolver
-```sh
-git clone https://github.com/makskliczkowski/QuantumEigenSolver.git
-cd QuantumEigenSolver
-mkdir build
-cd build
-cmake ..
-make
-```
 ### Building standalone
 
 ```sh
@@ -38,13 +31,30 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 ```
 
-This produces a static `genutils` library (`genutils::genutils`). Consumers
-(such as cpqusolver) link the target and inherit its include directories and
-backend definitions automatically:
+This produces a static `genutils` library (`genutils::genutils`). Consumers link
+the target and inherit its include directories and backend definitions
+automatically:
 
 ```cmake
 add_subdirectory(general_cpp)
 target_link_libraries(my_app PRIVATE genutils::genutils)
+```
+
+#### Command-line parsing
+
+`genutils::cli::Arguments` is a backend-independent C++20 parser for command-line
+tokens and configuration files. It supports `--key=value`, `--key value`, short
+or long flags, repeated options, negative numeric values, positional arguments,
+quoted file values, comments, and explicit typed conversion errors. It does not
+create directories, generate random values, or substitute defaults after invalid
+input.
+
+```cpp
+#include <UserInterface/ui.h>
+
+const auto arguments = genutils::cli::Arguments::from_argv(argc, argv);
+const auto threads = arguments.get_or<std::size_t>("threads", 1);
+const auto verbose = arguments.flag("verbose");
 ```
 
 #### Backends are optional features

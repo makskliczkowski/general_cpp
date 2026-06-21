@@ -10,7 +10,7 @@
  *  SPDX-License-Identifier: MIT
  *
  ******************************************************************************/
-#include "../../src/lattices/hexagonal.h"
+#include "../../src/Lattices/hexagonal.h"
 
 /*
 * @brief Constructor for the hexagonal lattice

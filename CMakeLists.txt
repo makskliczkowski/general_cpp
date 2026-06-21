@@ -46,7 +46,6 @@ set(GENUTILS_CORE_SOURCES
     cpp/ui.cpp
     cpp/Lattices/lattice_symmetry.cpp
     cpp/LinearAlgebra/lin_alg.cpp
-    cpp/LinearAlgebra/preconditioners.cpp
 )
 
 set(GENUTILS_ARMA_SOURCES
@@ -57,6 +56,7 @@ set(GENUTILS_ARMA_SOURCES
     cpp/Lattices/hexagonal.cpp
     cpp/LinearAlgebra/ode.cpp
     cpp/LinearAlgebra/pfaffian.cpp
+    cpp/LinearAlgebra/preconditioners.cpp
     cpp/LinearAlgebra/solvers.cpp
     cpp/Random/montecarlo.cpp
 )
@@ -81,6 +81,9 @@ add_library(genutils::genutils ALIAS genutils)
 
 target_compile_features(genutils PUBLIC cxx_std_20)
 target_include_directories(genutils PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+if(NOT GENUTILS_USE_ARMADILLO)
+    target_compile_definitions(genutils PUBLIC GENUTILS_NO_ARMADILLO)
+endif()
 
 # ---------------------------------------------------------------------------
 # Armadillo: a source tree pointed to by ARMADILLO_INCL_DIR takes precedence
@@ -196,6 +199,13 @@ set_target_properties(genutils PROPERTIES
     VERSION ${PROJECT_VERSION}
     DEBUG_POSTFIX "_debug"
 )
+
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(genutils_cli_tests tests/cli_arguments.cpp)
+    target_link_libraries(genutils_cli_tests PRIVATE genutils::genutils)
+    add_test(NAME genutils.cli COMMAND genutils_cli_tests)
+endif()
 
 # ---------------------------------------------------------------------------
 #! EOF
