@@ -209,6 +209,11 @@ if(BUILD_TESTING)
     add_executable(genutils_statistics_tests tests/statistics.cpp)
     target_link_libraries(genutils_statistics_tests PRIVATE genutils::genutils)
     add_test(NAME genutils.statistics COMMAND genutils_statistics_tests)
+
+    # header-only coloured-graph / plaquette helpers (STL only)
+    add_executable(genutils_colored_graph_tests tests/colored_graph_test.cpp)
+    target_link_libraries(genutils_colored_graph_tests PRIVATE genutils::genutils)
+    add_test(NAME genutils.colored_graph COMMAND genutils_colored_graph_tests)
 endif()
 
 # ---------------------------------------------------------------------------
